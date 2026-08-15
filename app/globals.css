@@ -82,6 +82,16 @@
     letter-spacing: -0.04em;
     font-weight: 700;
   }
+
+  .landing-page h1,
+  .landing-page h2,
+  .landing-page h3,
+  .landing-page h4,
+  .landing-page h5,
+  .landing-page .font-display {
+    font-family: var(--font-heading), ui-sans-serif, sans-serif;
+    letter-spacing: -0.02em;
+  }
 }
 
 @layer utilities {

@@ -9,8 +9,9 @@ import { cn } from "@/lib/utils";
 
 const navLinks = [
   { href: "/doctors", label: "Doctors" },
-  { href: "/#care", label: "Care" },
-  { href: "/#visit", label: "Visit" },
+  { href: "/#services", label: "Services" },
+  { href: "/#visit", label: "How it works" },
+  { href: "/#reviews", label: "Reviews" },
   { href: "/#faq", label: "FAQ" },
 ];
 
@@ -141,7 +142,7 @@ export function LandingHeader({ overlay = false }: LandingHeaderProps) {
                 key={link.href}
                 href={link.href}
                 onClick={() => setMobileOpen(false)}
-                className="font-display px-2 py-3 text-xl font-semibold text-brand-900"
+                className="font-heading px-2 py-3 text-xl font-semibold text-brand-900"
               >
                 {link.label}
               </Link>

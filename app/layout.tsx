@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Syne, Manrope } from "next/font/google";
+import { Syne, Manrope, Poppins } from "next/font/google";
 import { ServiceWorkerRegistration } from "@/components/pwa/ServiceWorkerRegistration";
 import { BRAND } from "@/lib/brand/site";
 import "./globals.css";
@@ -13,6 +13,13 @@ const manrope = Manrope({
 const syne = Syne({
   subsets: ["latin"],
   variable: "--font-display",
+  display: "swap",
+});
+
+const poppins = Poppins({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700", "800"],
+  variable: "--font-heading",
   display: "swap",
 });
 
@@ -59,7 +66,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${manrope.variable} ${syne.variable}`}>
+    <html lang="en" className={`${manrope.variable} ${syne.variable} ${poppins.variable}`}>
       <body className="font-sans antialiased">
         <ServiceWorkerRegistration />
         {children}

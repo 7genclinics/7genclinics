@@ -112,12 +112,14 @@ export function DoctorsBrowse({
   return (
     <div className="space-y-6">
       <div>
-        <p className="text-xs font-medium text-slate-400">
-          Wasl Clinic › Find Doctors
-          {filters.city ? ` › ${filters.city}` : ""}
-          {filters.specialty ? ` › ${filters.specialty}` : ""}
-        </p>
-        <h1 className="mt-2 font-display text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
+        {!title && (
+          <p className="text-xs font-medium text-slate-400">
+            Wasl Clinic › Find Doctors
+            {filters.city ? ` › ${filters.city}` : ""}
+            {filters.specialty ? ` › ${filters.specialty}` : ""}
+          </p>
+        )}
+        <h1 className="mt-2 font-heading text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl lg:text-4xl">
           {filteredDoctors.length > 0 ? filteredDoctors.length : ""}{" "}
           {pageTitle}
         </h1>

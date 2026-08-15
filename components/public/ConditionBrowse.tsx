@@ -47,7 +47,9 @@ export function ConditionBrowse({ title, items, type, viewAllHref }: ConditionBr
     <section>
       <div className="mb-6 flex items-end justify-between">
         <div>
-          <h2 className="text-xl font-bold text-slate-900 sm:text-2xl">{title}</h2>
+          <h2 className="font-heading text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
+            {title}
+          </h2>
           <p className="mt-1 text-sm text-slate-500">
             {type === "symptom"
               ? "Pick what you're feeling to find the right specialist."
