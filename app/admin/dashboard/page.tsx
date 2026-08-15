@@ -1,0 +1,695 @@
+"use client";
+
+import { useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/Card";
+import { Button } from "@/components/ui/Button";
+import {
+  Users, UserCheck, Calendar, DollarSign, Star, Activity, AlertTriangle,
+  CheckCircle2, RefreshCw, BarChart3, MessageSquare, XCircle, Loader2, Filter, X,
+} from "lucide-react";
+import {
+  Area, AreaChart, ResponsiveContainer, Tooltip, XAxis, YAxis,
+  Bar, BarChart, CartesianGrid,
+} from "recharts";
+import { useAdmin } from "@/contexts/AdminContext";
+import { DashboardWelcomeBanner } from "@/components/shared/DashboardWelcomeBanner";
+import {
+  approveDoctor,
+  rejectDoctor,
+  approvePatient,
+  getAdminDoctors,
+  getAdminPatients,
+  getAdminAppointments,
+  getAdminPayments,
+  buildAdminStats,
+  revenueByMonth,
+  appointmentsByDay,
+  topDoctors as buildTopDoctors,
+  buildRecentActivity,
+} from "@/lib/admin/api";
+import { checkDashboardConsistency } from "@/lib/admin/consistency";
+import type { AdminAppointment, AdminDoctor, AdminPayment } from "@/lib/admin/types";
+import type { Profile } from "@/types";
+
+import { type FilterPeriod, FILTER_LABELS, getDateRange, inDateRange } from "@/lib/utils/dateFilter";
+import { getErrorMessage } from "@/lib/errors";
+
+function formatPKR(value: number) {
+  return `₨${Math.round(value).toLocaleString("en-PK")}`;
+}
+
+function formatShortPKR(value: number) {
+  if (value >= 1000) return `₨${(value / 1000).toFixed(value >= 10000 ? 0 : 1)}k`;
+  return `₨${Math.round(value)}`;
+}
+
+export default function AdminDashboardPage() {
+  const { profile } = useAdmin();
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [actionId, setActionId] = useState<string | null>(null);
+
+  const [doctors, setDoctors] = useState<AdminDoctor[]>([]);
+  const [patients, setPatients] = useState<Profile[]>([]);
+  const [appointments, setAppointments] = useState<AdminAppointment[]>([]);
+  const [payments, setPayments] = useState<AdminPayment[]>([]);
+
+  // --- Date filter state ---
+  const [filterPeriod, setFilterPeriod] = useState<FilterPeriod>("month");
+  const [customFrom, setCustomFrom] = useState("");
+  const [customTo, setCustomTo] = useState("");
+  const [showCustom, setShowCustom] = useState(false);
+
+  const dateRange = useMemo(
+    () => getDateRange(filterPeriod, customFrom, customTo),
+    [filterPeriod, customFrom, customTo]
+  );
+
+  const periodPayments = useMemo(
+    () => payments.filter((p) => inDateRange(p.created_at, dateRange)),
+    [payments, dateRange]
+  );
+
+  const periodAppointments = useMemo(
+    () => appointments.filter((a) => inDateRange(a.scheduled_at, dateRange)),
+    [appointments, dateRange]
+  );
+
+  const periodPatients = useMemo(
+    () => patients.filter((p) => inDateRange(p.created_at, dateRange)),
+    [patients, dateRange]
+  );
+
+  const periodRevenue = useMemo(
+    () =>
+      periodPayments
+        .filter((p) => p.status === "completed")
+        .reduce((s, p) => s + Number(p.platform_fee), 0),
+    [periodPayments]
+  );
+
+  const periodGrossVolume = useMemo(
+    () =>
+      periodPayments
+        .filter((p) => p.status === "completed")
+        .reduce((s, p) => s + Number(p.amount), 0),
+    [periodPayments]
+  );
+
+  const periodActiveAppointments = useMemo(
+    () => periodAppointments.filter((a) => a.status !== "cancelled").length,
+    [periodAppointments]
+  );
+
+  const periodUpcoming = useMemo(
+    () =>
+      periodAppointments.filter(
+        (a) => a.status === "scheduled" || a.status === "ongoing"
+      ).length,
+    [periodAppointments]
+  );
+
+  const periodCompleted = useMemo(
+    () => periodAppointments.filter((a) => a.status === "completed").length,
+    [periodAppointments]
+  );
+
+  const handleFilterChange = (period: FilterPeriod) => {
+    setFilterPeriod(period);
+    setShowCustom(period === "custom");
+  };
+
+  const clearCustom = () => {
+    setCustomFrom("");
+    setCustomTo("");
+    setFilterPeriod("month");
+    setShowCustom(false);
+  };
+
+  const loadData = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const [docs, pats, apts, pays] = await Promise.all([
+        getAdminDoctors(),
+        getAdminPatients(),
+        getAdminAppointments(),
+        getAdminPayments(),
+      ]);
+      setDoctors(docs);
+      setPatients(pats);
+      setAppointments(apts);
+      setPayments(pays);
+    } catch (err) {
+      setError(getErrorMessage(err, "Failed to load dashboard data"));
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  const handleApprove = async (doctorId: string) => {
+    setActionId(doctorId);
+    try {
+      await approveDoctor(doctorId, profile.id);
+      await loadData();
+    } catch (err) {
+      setError(getErrorMessage(err, "Failed to approve doctor"));
+    } finally {
+      setActionId(null);
+    }
+  };
+
+  const handleReject = async (doctorId: string) => {
+    setActionId(doctorId);
+    try {
+      await rejectDoctor(doctorId);
+      await loadData();
+    } catch (err) {
+      setError(getErrorMessage(err, "Failed to reject doctor"));
+    } finally {
+      setActionId(null);
+    }
+  };
+
+  const handleApprovePatient = async (userId: string) => {
+    setActionId(userId);
+    try {
+      await approvePatient(userId, profile.id);
+      await loadData();
+    } catch (err) {
+      setError(getErrorMessage(err, "Failed to approve patient"));
+    } finally {
+      setActionId(null);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-24">
+        <Loader2 className="h-8 w-8 animate-spin text-brand-500" />
+      </div>
+    );
+  }
+
+  const stats = buildAdminStats(doctors, patients, appointments, payments);
+  const revenueData = revenueByMonth(payments, 6);
+  const appointmentData = appointmentsByDay(appointments);
+  const pendingDoctors = doctors.filter((d) => d.status === "pending");
+  const pendingPatients = patients.filter((p) => p.account_status === "pending");
+  const topDocs = buildTopDoctors(doctors, payments, appointments, 4);
+  const recentActivity = buildRecentActivity(appointments, payments, patients, doctors, 5);
+  const onlineDoctors = doctors.filter((d) => d.status === "approved" && d.is_available).length;
+
+  // Cross-check related stats derive from the same source of truth. In healthy
+  // data this is empty; if it ever fires, related numbers have drifted apart.
+  const consistencyWarnings = checkDashboardConsistency({
+    doctors: buildTopDoctors(doctors, payments, appointments, doctors.length).map((d) => ({
+      id: d.id,
+      name: d.name,
+      consultations: d.consultations,
+      earnings: d.earnings,
+    })),
+    totalPatients: stats.totalPatients,
+    newPatientsInPeriod: periodPatients.length,
+    activePatients: stats.activePatients,
+    activeAppointments: periodActiveAppointments,
+    upcomingAppointments: periodUpcoming,
+    completedAppointments: periodCompleted,
+  });
+
+  const periodLabel = FILTER_LABELS[filterPeriod];
+
+  const statCards = [
+    {
+      title: "Platform Revenue",
+      value: formatPKR(periodRevenue),
+      change: `${formatPKR(periodGrossVolume)} gross volume`,
+      icon: DollarSign,
+      positive: true,
+      description: `Commission — ${periodLabel}`,
+    },
+    {
+      title: "Active Doctors",
+      value: String(stats.activeDoctors),
+      change: stats.newDoctorsThisMonth > 0 ? `+${stats.newDoctorsThisMonth} this month` : "No new joins",
+      icon: UserCheck,
+      positive: true,
+      description: `${onlineDoctors} available now`,
+    },
+    {
+      // Headline is ALWAYS the true total registered count so it never
+      // contradicts the "total registered" subtext. New-in-period and active
+      // counts are shown as reconciling context (total ≥ active ≥ new).
+      title: "Patients",
+      value: String(stats.totalPatients),
+      change: `+${periodPatients.length} new — ${periodLabel}`,
+      icon: Users,
+      positive: true,
+      description: `${stats.activePatients} active · ${stats.totalPatients} registered`,
+    },
+    {
+      // Active = non-cancelled in period. Breakdown (upcoming + completed)
+      // always sums to ≤ active so the three numbers reconcile.
+      title: "Appointments",
+      value: String(periodActiveAppointments),
+      change: `${periodUpcoming} upcoming · ${periodCompleted} completed`,
+      icon: Calendar,
+      positive: true,
+      description: `${periodActiveAppointments} active — ${periodLabel}`,
+    },
+    {
+      title: "Pending Reviews",
+      value: String(stats.pendingDoctors),
+      change: stats.pendingDoctors > 0 ? "Action needed" : "All caught up",
+      icon: AlertTriangle,
+      positive: stats.pendingDoctors === 0,
+      description: "Doctor applications",
+    },
+    {
+      title: "Avg Rating",
+      value: stats.avgRating > 0 ? stats.avgRating.toFixed(1) : "—",
+      change: `${stats.totalReviews} reviews`,
+      icon: Star,
+      positive: true,
+      description: "Across rated doctors",
+    },
+  ];
+
+  return (
+    <div className="p-4 sm:p-6 space-y-4 sm:space-y-6 max-w-[1600px] mx-auto">
+      <DashboardWelcomeBanner
+        name={profile.full_name}
+        avatarUrl={profile.avatar_url}
+        badge={
+          <span className="inline-flex items-center gap-1 rounded-full bg-white/20 px-2 py-0.5 text-[10px] font-medium backdrop-blur-md sm:gap-1.5 sm:px-3 sm:py-1 sm:text-xs">
+            <Activity className="h-3 w-3" />
+            Platform Admin
+          </span>
+        }
+        title={`Welcome back, ${profile.full_name.split(" ")[0] || profile.full_name}`}
+        description="Live overview of platform performance, reviews, and activity across Stress Saviors."
+        decoration={<BarChart3 className="h-28 w-28 text-white sm:h-36 sm:w-36 lg:h-44 lg:w-44" />}
+        meta={
+          <button
+            type="button"
+            onClick={loadData}
+            className="inline-flex items-center gap-1 rounded-full bg-white/15 px-2 py-0.5 text-[10px] font-medium text-white/90 transition-colors hover:bg-white/25 sm:gap-1.5 sm:px-2.5 sm:py-1 sm:text-[11px]"
+          >
+            <RefreshCw className="h-3 w-3" />
+            Refresh
+          </button>
+        }
+      />
+
+      {error && (
+        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {error}
+        </div>
+      )}
+
+      {consistencyWarnings.length > 0 && (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          <div className="flex items-center gap-2 font-semibold">
+            <AlertTriangle className="h-4 w-4" />
+            Data consistency check ({consistencyWarnings.length})
+          </div>
+          <ul className="mt-2 list-disc pl-6 space-y-1 text-xs text-amber-700">
+            {consistencyWarnings.map((w) => (
+              <li key={w.code + w.message}>{w.message}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {/* ── Date filter bar ── */}
+      <Card className="border-slate-200">
+        <CardContent className="p-3 sm:p-4">
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex items-center gap-1.5 text-xs font-medium text-slate-500 shrink-0">
+              <Filter className="h-3.5 w-3.5" />
+              Period:
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {(["today", "week", "month", "3months", "custom"] as FilterPeriod[]).map((p) => (
+                <button
+                  key={p}
+                  onClick={() => handleFilterChange(p)}
+                  className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all border ${
+                    filterPeriod === p
+                      ? "bg-brand-500 text-white border-brand-500 shadow-sm"
+                      : "bg-white text-slate-600 border-slate-200 hover:border-brand-300 hover:text-brand-600"
+                  }`}
+                >
+                  {FILTER_LABELS[p]}
+                </button>
+              ))}
+            </div>
+
+            {showCustom && (
+              <div className="flex items-center gap-2 ml-1 flex-wrap">
+                <input
+                  type="date"
+                  value={customFrom}
+                  max={customTo || new Date().toISOString().split("T")[0]}
+                  onChange={(e) => setCustomFrom(e.target.value)}
+                  className="h-7 px-2 text-xs rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-400/20 focus:border-brand-400"
+                />
+                <span className="text-xs text-slate-400">to</span>
+                <input
+                  type="date"
+                  value={customTo}
+                  min={customFrom}
+                  max={new Date().toISOString().split("T")[0]}
+                  onChange={(e) => setCustomTo(e.target.value)}
+                  className="h-7 px-2 text-xs rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-400/20 focus:border-brand-400"
+                />
+                <button
+                  onClick={clearCustom}
+                  className="h-7 w-7 flex items-center justify-center rounded-lg border border-slate-200 text-slate-400 hover:text-slate-700 hover:border-slate-300 transition-colors"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            )}
+
+            <span className="ml-auto text-[11px] text-slate-400 hidden sm:block">
+              Showing stats for: <span className="font-semibold text-slate-600">{periodLabel}</span>
+            </span>
+          </div>
+        </CardContent>
+      </Card>
+
+      <div className="grid gap-3 sm:gap-4 grid-cols-1 xs:grid-cols-2 lg:grid-cols-3">
+        {statCards.map((stat, i) => {
+          const Icon = stat.icon;
+          return (
+            <Card key={i} className="relative overflow-hidden hover:shadow-md transition-shadow">
+              <CardContent className="p-4 sm:p-6">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="space-y-1 sm:space-y-2 flex-1 min-w-0">
+                    <p className="text-xs sm:text-sm font-medium text-slate-600 truncate">{stat.title}</p>
+                    <div className="flex items-baseline gap-1 sm:gap-2 flex-wrap">
+                      <h3 className="text-2xl sm:text-3xl font-semibold text-slate-900">{stat.value}</h3>
+                    </div>
+                    <p className="text-[11px] sm:text-xs font-medium text-slate-500 truncate">{stat.change}</p>
+                    <p className="text-[10px] sm:text-xs text-slate-400 truncate">{stat.description}</p>
+                  </div>
+                  <div className={`p-2 sm:p-3 rounded-lg ${stat.positive ? "bg-brand-50" : "bg-amber-50"} flex-shrink-0`}>
+                    <Icon className={`h-4 w-4 sm:h-5 sm:w-5 ${stat.positive ? "text-brand-500" : "text-amber-600"}`} />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })}
+      </div>
+
+      <div className="grid gap-4 sm:gap-6 lg:grid-cols-7">
+        <div className="lg:col-span-4 space-y-4 sm:space-y-6">
+          <Card>
+            <CardHeader className="pb-3 sm:pb-6">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <div>
+                  <CardTitle className="text-base sm:text-lg">Revenue Overview</CardTitle>
+                  <CardDescription className="text-xs sm:text-sm">Monthly platform commission</CardDescription>
+                </div>
+                <Link href="/admin/payments">
+                  <Button variant="outline" size="sm" className="w-full sm:w-auto">
+                    <BarChart3 className="h-4 w-4 mr-2" />
+                    <span className="text-xs sm:text-sm">View Report</span>
+                  </Button>
+                </Link>
+              </div>
+            </CardHeader>
+            <CardContent className="px-2 sm:px-6">
+              <div className="h-[250px] sm:h-[300px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={revenueData} margin={{ top: 5, right: 5, left: -20, bottom: 5 }}>
+                    <defs>
+                      <linearGradient id="revenue" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#0d9488" stopOpacity={0.3} />
+                        <stop offset="95%" stopColor="#0d9488" stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                    <XAxis dataKey="month" stroke="#94a3b8" fontSize={10} />
+                    <YAxis stroke="#94a3b8" fontSize={10} tickFormatter={(value) => formatShortPKR(value)} />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: "white",
+                        border: "1px solid #e2e8f0",
+                        borderRadius: "8px",
+                        fontSize: "12px",
+                      }}
+                      formatter={(value) => [formatPKR(Number(value ?? 0)), "Commission"]}
+                    />
+                    <Area type="monotone" dataKey="revenue" stroke="#0d9488" strokeWidth={2} fillOpacity={1} fill="url(#revenue)" />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-3 sm:pb-6">
+              <CardTitle className="text-base sm:text-lg">Weekly Appointments</CardTitle>
+              <CardDescription className="text-xs sm:text-sm">Bookings over the last 7 days</CardDescription>
+            </CardHeader>
+            <CardContent className="px-2 sm:px-6">
+              <div className="h-[200px] sm:h-[250px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={appointmentData} margin={{ top: 5, right: 5, left: -20, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                    <XAxis dataKey="day" stroke="#94a3b8" fontSize={10} />
+                    <YAxis stroke="#94a3b8" fontSize={10} allowDecimals={false} />
+                    <Tooltip contentStyle={{ backgroundColor: "white", border: "1px solid #e2e8f0", borderRadius: "8px", fontSize: "12px" }} />
+                    <Bar dataKey="count" name="Appointments" fill="#0ea5e9" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Pending Doctor Verifications</CardTitle>
+              <CardDescription>Applications awaiting review</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {pendingDoctors.map((doc) => (
+                <div key={doc.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-full bg-brand-50 flex items-center justify-center text-brand-600 font-medium text-sm">
+                      {(doc.profile?.full_name ?? "Dr")
+                        .split(" ")
+                        .map((n) => n[0])
+                        .slice(0, 2)
+                        .join("")}
+                    </div>
+                    <div>
+                      <p className="font-medium text-slate-900">{doc.profile?.full_name ?? "Unnamed doctor"}</p>
+                      <p className="text-sm text-slate-600">{doc.specialization}</p>
+                      <div className="flex items-center gap-2 mt-1 text-xs text-slate-500 flex-wrap">
+                        <span>{doc.pmdc_number}</span>
+                        <span>•</span>
+                        <span>{doc.experience_years} yrs</span>
+                        <span>•</span>
+                        <span>Applied {new Date(doc.created_at).toLocaleDateString("en-PK", { month: "short", day: "numeric" })}</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      onClick={() => handleApprove(doc.id)}
+                      disabled={actionId === doc.id}
+                      className="bg-brand-500 hover:bg-brand-600"
+                    >
+                      {actionId === doc.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4 mr-1" />}
+                      Approve
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleReject(doc.id)}
+                      disabled={actionId === doc.id}
+                      className="border-red-200 text-red-600 hover:bg-red-50"
+                    >
+                      <XCircle className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+              {pendingDoctors.length === 0 && (
+                <div className="text-center py-12 border border-dashed border-slate-300 rounded-lg">
+                  <CheckCircle2 className="h-12 w-12 mx-auto mb-3 text-slate-400" />
+                  <p className="text-sm font-medium text-slate-900">All caught up!</p>
+                  <p className="text-sm text-slate-600 mt-1">No pending verifications</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Pending Patient Approvals</CardTitle>
+              <CardDescription>New registrations awaiting review</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {pendingPatients.slice(0, 5).map((patient) => (
+                <div
+                  key={patient.id}
+                  className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors"
+                >
+                  <div>
+                    <p className="font-medium text-slate-900">{patient.full_name}</p>
+                    <p className="text-sm text-slate-600">{patient.email}</p>
+                    <p className="text-xs text-slate-500 mt-1">
+                      {patient.city ?? "—"} · Applied{" "}
+                      {new Date(patient.created_at).toLocaleDateString("en-PK", {
+                        month: "short",
+                        day: "numeric",
+                      })}
+                    </p>
+                  </div>
+                  <Button
+                    size="sm"
+                    onClick={() => handleApprovePatient(patient.id)}
+                    disabled={actionId === patient.id}
+                    className="bg-brand-500 hover:bg-brand-600"
+                  >
+                    {actionId === patient.id ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <CheckCircle2 className="h-4 w-4 mr-1" />
+                    )}
+                    Approve
+                  </Button>
+                </div>
+              ))}
+              {pendingPatients.length === 0 && (
+                <div className="text-center py-8 border border-dashed border-slate-300 rounded-lg">
+                  <CheckCircle2 className="h-10 w-10 mx-auto mb-2 text-slate-400" />
+                  <p className="text-sm text-slate-600">No pending patient registrations</p>
+                </div>
+              )}
+              {pendingPatients.length > 0 && (
+                <Link href="/admin/patients">
+                  <Button variant="outline" className="w-full" size="sm">
+                    View all patients
+                  </Button>
+                </Link>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="lg:col-span-3 space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Recent Activity</CardTitle>
+              <CardDescription>Latest platform events</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {recentActivity.map((activity) => (
+                  <div key={activity.id} className="flex items-start gap-3 pb-4 border-b border-slate-200 last:border-0 last:pb-0">
+                    <div className="h-8 w-8 rounded-full bg-slate-100 flex items-center justify-center flex-shrink-0">
+                      <Activity className="h-4 w-4 text-slate-600" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm text-slate-900">{activity.text}</p>
+                      <p className="text-xs text-slate-500 mt-1">
+                        {new Date(activity.at).toLocaleDateString("en-PK", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+                {recentActivity.length === 0 && (
+                  <p className="text-sm text-slate-500 text-center py-6">No activity yet.</p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Top Performing Doctors</CardTitle>
+              <CardDescription>Highest earners</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {topDocs.map((doctor, i) => (
+                  <div key={doctor.id} className="flex items-center justify-between p-3 border border-slate-200 rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <div className="h-8 w-8 rounded-full bg-gradient-to-br from-brand-400 to-brand-300 flex items-center justify-center text-white font-semibold text-xs">
+                        #{i + 1}
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-slate-900">{doctor.name}</p>
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className="text-xs text-slate-600">{doctor.consultations} sessions</span>
+                          {doctor.rating > 0 && (
+                            <>
+                              <span className="text-xs text-slate-400">•</span>
+                              <span className="text-xs text-yellow-600 flex items-center gap-0.5">
+                                <Star className="h-3 w-3 fill-yellow-600" />
+                                {doctor.rating.toFixed(1)}
+                              </span>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm font-semibold text-brand-500">{formatShortPKR(doctor.earnings)}</p>
+                    </div>
+                  </div>
+                ))}
+                {topDocs.length === 0 && (
+                  <p className="text-sm text-slate-500 text-center py-6">No doctors yet.</p>
+                )}
+              </div>
+              <Link href="/admin/doctors">
+                <Button variant="outline" className="w-full mt-4" size="sm">
+                  View All Doctors
+                </Button>
+              </Link>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Quick Actions</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              <Link href="/admin/doctors">
+                <Button variant="outline" className="w-full justify-start" size="sm">
+                  <UserCheck className="h-4 w-4 mr-2" />
+                  Review Doctors
+                </Button>
+              </Link>
+              <Link href="/admin/reports">
+                <Button variant="outline" className="w-full justify-start" size="sm">
+                  <BarChart3 className="h-4 w-4 mr-2" />
+                  View Reports
+                </Button>
+              </Link>
+              <Link href="/admin/appointments">
+                <Button variant="outline" className="w-full justify-start" size="sm">
+                  <MessageSquare className="h-4 w-4 mr-2" />
+                  Monitor Appointments
+                </Button>
+              </Link>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    </div>
+  );
+}

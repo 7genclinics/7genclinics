@@ -1,0 +1,148 @@
+@import "tailwindcss";
+@config "../tailwind.config.ts";
+
+@layer base {
+  :root {
+    /* Cone palette — 7 sampled triangle colors */
+    --cone-teal: 171 42% 48%;
+    --cone-muted: 184 34% 46%;
+    --cone-blue: 219 46% 47%;
+    --cone-deep: 218 41% 42%;
+    --cone-steel: 210 54% 22%;
+    --cone-navy: 229 47% 11%;
+    --cone-ink: 228 52% 9%;
+
+    --brand-pale: 171 42% 93%;
+    --brand-light: var(--cone-teal);
+    --brand-cyan: var(--cone-muted);
+    --brand-primary: var(--cone-teal);
+    --brand-royal: var(--cone-blue);
+    --brand-navy: var(--cone-navy);
+    --brand-slate: var(--cone-steel);
+
+    --background: 0 0% 100%;
+    --foreground: var(--cone-navy);
+    --card: 0 0% 100%;
+    --card-foreground: var(--cone-navy);
+    --popover: 0 0% 100%;
+    --popover-foreground: var(--cone-navy);
+    --primary: var(--cone-teal);
+    --primary-foreground: 0 0% 100%;
+    --secondary: var(--brand-pale);
+    --secondary-foreground: var(--cone-navy);
+    --muted: 171 30% 95%;
+    --muted-foreground: var(--cone-steel);
+    --accent: 219 40% 95%;
+    --accent-foreground: var(--cone-navy);
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 219 18% 88%;
+    --input: 219 18% 88%;
+    --ring: var(--cone-teal);
+    --radius: 0.5rem;
+  }
+
+  .dark {
+    --background: var(--cone-ink);
+    --foreground: 171 30% 95%;
+    --card: var(--cone-navy);
+    --card-foreground: 171 30% 95%;
+    --popover: var(--cone-navy);
+    --popover-foreground: 171 30% 95%;
+    --primary: var(--cone-teal);
+    --primary-foreground: var(--cone-ink);
+    --secondary: var(--cone-steel);
+    --secondary-foreground: 171 30% 95%;
+    --muted: 229 30% 16%;
+    --muted-foreground: 219 20% 72%;
+    --accent: var(--cone-steel);
+    --accent-foreground: 171 30% 95%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 229 25% 20%;
+    --input: 229 25% 20%;
+    --ring: var(--cone-teal);
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5 {
+    font-family: var(--font-display), ui-sans-serif, sans-serif;
+    letter-spacing: -0.04em;
+    font-weight: 700;
+  }
+}
+
+@layer utilities {
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  @keyframes wasl-letter {
+    from {
+      opacity: 0;
+      letter-spacing: 0.12em;
+      transform: translateY(16px);
+    }
+    to {
+      opacity: 1;
+      letter-spacing: -0.06em;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes wasl-fade-up {
+    from {
+      opacity: 0;
+      transform: translateY(18px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes wasl-soft-pan {
+    from {
+      transform: scale(1.06) translateX(0);
+    }
+    to {
+      transform: scale(1.12) translateX(-1.5%);
+    }
+  }
+
+  .animate-wasl-letter {
+    animation: wasl-letter 1.05s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  .animate-wasl-fade-up {
+    animation: wasl-fade-up 0.8s ease-out both;
+  }
+
+  .animate-wasl-fade-up-delay {
+    animation: wasl-fade-up 0.9s ease-out 0.15s both;
+  }
+
+  .animate-wasl-fade-up-delay-2 {
+    animation: wasl-fade-up 0.9s ease-out 0.3s both;
+  }
+
+  .animate-wasl-soft-pan {
+    animation: wasl-soft-pan 18s ease-in-out alternate infinite;
+  }
+}
