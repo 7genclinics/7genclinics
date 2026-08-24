@@ -27,6 +27,7 @@ export interface SubscriptionPayment {
   reviewed_at: string | null;
   rejection_reason: string | null;
   created_at: string;
+  plan_name?: string | null;
 }
 
 export interface SubscriptionSnapshot {
@@ -41,6 +42,7 @@ export interface SubscriptionSnapshot {
   plan: SubscriptionPlan;
   plans: SubscriptionPlan[];
   pending: SubscriptionPayment | null;
+  payments: SubscriptionPayment[];
 }
 
 export function formatBillingCycle(cycle: string): string {

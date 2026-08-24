@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Label } from "@/components/ui/Label";
+import { PaymentHistoryList } from "@/components/subscription/PaymentHistoryList";
 import { useSubscription } from "@/contexts/SubscriptionContext";
 import {
   getSubscriptionPayments,
@@ -14,7 +15,6 @@ import { uploadSubscriptionProof } from "@/lib/subscription/upload";
 import {
   formatBillingCycle,
   formatPkr,
-  subscriptionStatusLabel,
   type SubscriptionPayment,
 } from "@/lib/subscription/types";
 import { getErrorMessage } from "@/lib/errors";
@@ -37,8 +37,8 @@ export function SubscriptionWorkspace({
   userId: string;
   roleLabel: string;
 }) {
-  const { snapshot, loading, refresh } = useSubscription();
-  const [history, setHistory] = useState<SubscriptionPayment[]>([]);
+  const { snapshot, loading, error: snapshotError, refresh } = useSubscription();
+  const [fetchedHistory, setFetchedHistory] = useState<SubscriptionPayment[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [planId, setPlanId] = useState("");
   const [method, setMethod] = useState("");
@@ -49,8 +49,12 @@ export function SubscriptionWorkspace({
   const [message, setMessage] = useState<string | null>(null);
 
   const loadHistory = useCallback(async () => {
-    setHistory(await getSubscriptionPayments());
+    setFetchedHistory(await getSubscriptionPayments());
   }, []);
+
+  useEffect(() => {
+    void refresh();
+  }, [refresh]);
 
   useEffect(() => {
     void loadHistory().catch((err) => setError(getErrorMessage(err)));
@@ -63,6 +67,8 @@ export function SubscriptionWorkspace({
   useEffect(() => {
     if (snapshot?.plan.id && !planId) setPlanId(snapshot.plan.id);
   }, [snapshot, planId]);
+
+  const history = snapshot?.payments.length ? snapshot.payments : fetchedHistory;
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -89,10 +95,29 @@ export function SubscriptionWorkspace({
     }
   };
 
-  if (loading || !snapshot) {
+  if (loading && !snapshot) {
     return (
       <div className="flex justify-center py-20">
         <Loader2 className="h-6 w-6 animate-spin text-brand-500" />
+      </div>
+    );
+  }
+
+  if (!snapshot) {
+    return (
+      <div className="space-y-3 py-12 text-center">
+        <p className="text-sm text-rose-700">
+          {snapshotError ?? error ?? "Could not load subscription."}
+        </p>
+        <Button
+          variant="outline"
+          onClick={() => {
+            setError(null);
+            void refresh();
+          }}
+        >
+          Try again
+        </Button>
       </div>
     );
   }
@@ -186,13 +211,21 @@ export function SubscriptionWorkspace({
                   ))}
                 </ul>
                 {accounts.length > 0 && (
-                  <div className="rounded-lg border bg-muted/30 p-3 text-xs space-y-2">
+                  <div className="rounded-lg border bg-muted/30 p-3 text-xs space-y-3">
                     <p className="font-medium">Pay to</p>
                     {accounts.map((acc) => (
-                      <p key={acc.id}>
-                        {acc.account_title} · {acc.account_number}
-                        {acc.bank_name ? ` · ${acc.bank_name}` : ""}
-                      </p>
+                      <div key={acc.id} className="space-y-0.5">
+                        <p className="font-medium text-foreground">
+                          {acc.account_title}
+                          {acc.method ? ` · ${acc.method}` : ""}
+                        </p>
+                        <p>
+                          {acc.account_number}
+                          {acc.bank_name ? ` · ${acc.bank_name}` : ""}
+                        </p>
+                        {acc.iban ? <p>IBAN: {acc.iban}</p> : null}
+                        {acc.instructions ? <p>{acc.instructions}</p> : null}
+                      </div>
                     ))}
                   </div>
                 )}
@@ -231,53 +264,7 @@ export function SubscriptionWorkspace({
             <CardDescription>Invoices, dates, and approval or rejection reasons.</CardDescription>
           </CardHeader>
           <CardContent>
-            {history.length === 0 ? (
-              <p className="py-8 text-center text-sm text-muted-foreground">No submissions yet.</p>
-            ) : (
-              <ul className="divide-y">
-                {history.map((row) => (
-                  <li key={row.id} className="py-3 text-sm">
-                    <div className="flex items-start justify-between gap-2">
-                      <div>
-                        <p className="font-medium">
-                          {formatBillingCycle(row.billing_cycle)} · {formatPkr(row.amount)}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          Submitted {new Date(row.submitted_at).toLocaleString("en-PK")}
-                          {row.reviewed_at
-                            ? ` · Reviewed ${new Date(row.reviewed_at).toLocaleString("en-PK")}`
-                            : ""}
-                        </p>
-                        {row.status === "rejected" && row.rejection_reason && (
-                          <p className="mt-1 text-xs text-rose-700">Reason: {row.rejection_reason}</p>
-                        )}
-                      </div>
-                      <span
-                        className={`shrink-0 rounded-full border px-2 py-0.5 text-[11px] font-semibold ${
-                          row.status === "approved"
-                            ? "border-emerald-200 bg-emerald-50 text-emerald-800"
-                            : row.status === "rejected"
-                              ? "border-rose-200 bg-rose-50 text-rose-800"
-                              : "border-amber-200 bg-amber-50 text-amber-800"
-                        }`}
-                      >
-                        {subscriptionStatusLabel(row.status)}
-                      </span>
-                    </div>
-                    {row.proof_url && (
-                      <a
-                        href={row.proof_url}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="mt-1 inline-block text-xs text-brand-600 hover:underline"
-                      >
-                        View proof
-                      </a>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            )}
+            <PaymentHistoryList rows={history} />
           </CardContent>
         </Card>
       </div>

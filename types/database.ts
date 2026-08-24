@@ -1996,6 +1996,14 @@ export type Database = {
         }
         Returns: undefined
       }
+      clinic_subscription_is_frozen: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
+      clinic_subscription_snapshot: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
       complete_manual_refund: {
         Args: {
           p_admin_id: string

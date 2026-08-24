@@ -6,16 +6,19 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
 import { getSubscriptionSnapshot } from "@/lib/subscription/api";
 import type { SubscriptionSnapshot } from "@/lib/subscription/types";
 import { createClient } from "@/lib/supabase/client";
+import { getErrorMessage } from "@/lib/errors";
 
 interface SubscriptionContextValue {
   snapshot: SubscriptionSnapshot | null;
   loading: boolean;
+  error: string | null;
   refresh: () => Promise<void>;
 }
 
@@ -24,12 +27,18 @@ const SubscriptionContext = createContext<SubscriptionContextValue | null>(null)
 export function SubscriptionProvider({ children }: { children: ReactNode }) {
   const [snapshot, setSnapshot] = useState<SubscriptionSnapshot | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const snapshotRef = useRef(snapshot);
+  snapshotRef.current = snapshot;
 
   const refresh = useCallback(async () => {
+    if (!snapshotRef.current) setLoading(true);
     try {
-      setSnapshot(await getSubscriptionSnapshot());
-    } catch {
-      setSnapshot(null);
+      const next = await getSubscriptionSnapshot();
+      setSnapshot(next);
+      setError(null);
+    } catch (err) {
+      setError(getErrorMessage(err, "Could not load subscription"));
     } finally {
       setLoading(false);
     }
@@ -64,8 +73,8 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
   }, [refresh]);
 
   const value = useMemo(
-    () => ({ snapshot, loading, refresh }),
-    [snapshot, loading, refresh]
+    () => ({ snapshot, loading, error, refresh }),
+    [snapshot, loading, error, refresh]
   );
 
   return <SubscriptionContext.Provider value={value}>{children}</SubscriptionContext.Provider>;
@@ -77,6 +86,7 @@ export function useSubscription() {
     return {
       snapshot: null,
       loading: false,
+      error: null,
       refresh: async () => undefined,
     } satisfies SubscriptionContextValue;
   }

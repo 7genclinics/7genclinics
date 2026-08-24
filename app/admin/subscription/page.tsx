@@ -15,15 +15,15 @@ import {
 import {
   formatBillingCycle,
   formatPkr,
-  subscriptionStatusLabel,
   type SubscriptionPayment,
   type SubscriptionPlan,
 } from "@/lib/subscription/types";
+import { PaymentHistoryList } from "@/components/subscription/PaymentHistoryList";
 import { getErrorMessage } from "@/lib/errors";
 import { Loader2 } from "lucide-react";
 
 export default function AdminSubscriptionPage() {
-  const { snapshot, loading, refresh } = useSubscription();
+  const { snapshot, loading, error: snapshotError, refresh } = useSubscription();
   const [rows, setRows] = useState<SubscriptionPayment[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -36,6 +36,10 @@ export default function AdminSubscriptionPage() {
   const load = useCallback(async () => {
     setRows(await getSubscriptionPayments());
   }, []);
+
+  useEffect(() => {
+    void refresh();
+  }, [refresh]);
 
   useEffect(() => {
     void load().catch((err) => setError(getErrorMessage(err)));
@@ -60,7 +64,7 @@ export default function AdminSubscriptionPage() {
     }
   };
 
-  if (loading || !snapshot) {
+  if (loading && !snapshot) {
     return (
       <div className="flex justify-center py-20">
         <Loader2 className="h-6 w-6 animate-spin text-brand-500" />
@@ -68,7 +72,27 @@ export default function AdminSubscriptionPage() {
     );
   }
 
-  const pending = rows.filter((r) => r.status === "pending");
+  if (!snapshot) {
+    return (
+      <div className="space-y-3 py-12 text-center">
+        <p className="text-sm text-rose-700">
+          {snapshotError ?? error ?? "Could not load subscription."}
+        </p>
+        <Button
+          variant="outline"
+          onClick={() => {
+            setError(null);
+            void refresh();
+          }}
+        >
+          Try again
+        </Button>
+      </div>
+    );
+  }
+
+  const history = snapshot.payments.length ? snapshot.payments : rows;
+  const pending = history.filter((r) => r.status === "pending");
 
   return (
     <div className="space-y-6">
@@ -284,17 +308,7 @@ export default function AdminSubscriptionPage() {
           <CardTitle className="text-base">History</CardTitle>
         </CardHeader>
         <CardContent>
-          <ul className="divide-y">
-            {rows.map((row) => (
-              <li key={row.id} className="flex items-center justify-between py-2 text-sm">
-                <span>
-                  {formatBillingCycle(row.billing_cycle)} · {formatPkr(row.amount)}
-                  {row.rejection_reason ? ` · ${row.rejection_reason}` : ""}
-                </span>
-                <span className="text-xs">{subscriptionStatusLabel(row.status)}</span>
-              </li>
-            ))}
-          </ul>
+          <PaymentHistoryList rows={history} />
         </CardContent>
       </Card>
     </div>
