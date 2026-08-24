@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import {
   Bell, BellRing, User, Settings, LogOut, ChevronDown, Menu,
   Calendar, CreditCard, ShieldCheck, Info, X, CheckCheck,
-  MessageSquare, ClipboardList,
+  MessageSquare,
 } from "lucide-react";
 import { logout } from "@/lib/auth/session";
 import { timeAgo } from "@/lib/doctor/mappers";
