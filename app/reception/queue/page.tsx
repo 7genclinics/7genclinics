@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import {
@@ -144,6 +145,14 @@ export default function ReceptionQueuePage() {
                     <p className="text-xs text-muted-foreground">
                       {apt.doctor?.profile?.full_name} · {formatTime(apt.scheduled_at)}
                     </p>
+                    {apt.patient_id && (
+                      <Link
+                        href={`/reception/patients/${apt.patient_id}?visit=${apt.id}`}
+                        className="block text-xs font-medium text-brand-600 hover:underline"
+                      >
+                        Record vitals / history
+                      </Link>
+                    )}
 
                     {(apt.status === "scheduled" || apt.status === "checked_in") && (
                       <Button

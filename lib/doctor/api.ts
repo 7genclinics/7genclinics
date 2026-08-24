@@ -179,7 +179,7 @@ export async function getDoctorAppointments(
       `
       *,
       patient:profiles!appointments_patient_id_fkey (
-        id, full_name, email, phone, city, date_of_birth, gender, avatar_url
+        id, full_name, email, phone, city, date_of_birth, gender, avatar_url, patient_code
       )
     `
     )

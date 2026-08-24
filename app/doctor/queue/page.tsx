@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { useDoctor } from "@/contexts/DoctorContext";
 import { callNextPatient, getTodayClinicAppointments, openConsultation } from "@/lib/clinic/api";
-import { clinicStatusClass, clinicStatusLabel, type ClinicAppointment } from "@/lib/clinic/types";
+import { type ClinicAppointment } from "@/lib/clinic/types";
 import { useClinicQueueRealtime } from "@/lib/realtime/useClinicQueueRealtime";
 import { formatTime } from "@/lib/doctor/mappers";
 import { getErrorMessage } from "@/lib/errors";
@@ -132,7 +132,14 @@ export default function DoctorQueuePage() {
               </p>
               <p className="text-xs text-muted-foreground">{current.patient?.phone}</p>
             </div>
-            <Button onClick={() => void openExisting(current.id)}>Continue consult</Button>
+            <div className="flex gap-2">
+              {current.patient_id && (
+                <Link href={`/doctor/patients/${current.patient_id}`}>
+                  <Button variant="outline">Details</Button>
+                </Link>
+              )}
+              <Button onClick={() => void openExisting(current.id)}>Continue consult</Button>
+            </div>
           </CardContent>
         </Card>
       )}
@@ -164,11 +171,23 @@ export default function DoctorQueuePage() {
                       {(apt.booking_source ?? "online").replace("_", "-")}
                     </p>
                   </div>
-                  <span
-                    className={`rounded-full border px-2 py-0.5 text-xs ${clinicStatusClass(apt.status)}`}
-                  >
-                    {clinicStatusLabel(apt.status)}
-                  </span>
+                  <div className="flex gap-2">
+                    {apt.patient_id && (
+                      <Link href={`/doctor/patients/${apt.patient_id}`}>
+                        <Button size="sm" variant="ghost">
+                          Details
+                        </Button>
+                      </Link>
+                    )}
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={busy}
+                      onClick={() => void openExisting(apt.id)}
+                    >
+                      Open
+                    </Button>
+                  </div>
                 </li>
               ))}
             </ul>

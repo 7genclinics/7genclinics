@@ -13,11 +13,29 @@ export const BASE_DOCTOR_SELECT = `
 
 export const DOCTOR_SELECT_WITH_TAXONOMY = `
   ${BASE_DOCTOR_SELECT},
-  ${DOCTOR_TAXONOMY_SELECT}
+  ${DOCTOR_TAXONOMY_SELECT},
+  landing_page:doctor_landing_pages ( slug, status )
 `;
 
+function attachLandingSlug<T extends Record<string, unknown>>(
+  doctor: T & { landing_page?: unknown },
+): T & { landing_slug: string | null } {
+  const raw = doctor.landing_page;
+  const landing = (Array.isArray(raw) ? raw[0] : raw) as
+    | { slug?: string; status?: string }
+    | null
+    | undefined;
+  const { landing_page: _ignored, ...rest } = doctor;
+  return {
+    ...(rest as T),
+    landing_slug: landing?.status === "published" ? landing.slug ?? null : null,
+  };
+}
+
 export function mapDoctorRows(rows: Record<string, unknown>[]): DoctorWithProfile[] {
-  return rows.map((row) => attachTaxonomyToDoctor(row)) as unknown as DoctorWithProfile[];
+  return rows.map((row) =>
+    attachTaxonomyToDoctor(attachLandingSlug(row)),
+  ) as unknown as DoctorWithProfile[];
 }
 
 export function mapDoctorRowsWithoutTaxonomy(

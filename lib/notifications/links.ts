@@ -56,6 +56,12 @@ const BY_TYPE: Record<string, Record<PortalRole, string>> = {
     admin: "/admin/dashboard",
     receptionist: "/reception/dashboard",
   },
+  subscription: {
+    patient: "/patient/dashboard",
+    doctor: "/doctor/subscription",
+    admin: "/admin/subscription",
+    receptionist: "/reception/subscription",
+  },
 };
 
 export function asPortalRole(role: string): PortalRole {

@@ -64,7 +64,7 @@ export function DashboardWelcomeBanner({
       </div>
 
       {decoration ? (
-        <div className="pointer-events-none absolute inset-y-0 right-0 hidden w-1/4 items-center justify-center opacity-20 sm:flex lg:w-1/3 lg:opacity-25">
+        <div className="pointer-events-none absolute inset-y-0 right-0 hidden w-[42%] items-center justify-end pr-4 opacity-45 sm:flex sm:pr-6 lg:w-1/2 lg:pr-10 lg:opacity-55">
           {decoration}
         </div>
       ) : (

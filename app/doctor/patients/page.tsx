@@ -1,17 +1,25 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { 
   Users, FileText, Calendar, Eye, Search, X, Plus, Clock, Stethoscope,
-  ChevronLeft, ChevronRight, Filter, UserPlus, Phone, Mail, MapPin,
+  ChevronLeft, ChevronRight, Filter, Phone, Mail, MapPin,
   Edit, Trash2, TrendingUp, Paperclip,
   AlertTriangle, Upload
 } from "lucide-react";
 import { useDoctor } from "@/contexts/DoctorContext";
 import { getDoctorAppointments, saveClinicalRecords } from "@/lib/doctor/api";
-import { mapPatientsFromAppointments, type UIPatient } from "@/lib/doctor/mappers";
+import { mapPatientsFromAppointments, mergeClinicPatientsIntoRegistry, type UIPatient } from "@/lib/doctor/mappers";
+import { getTodayClinicAppointments } from "@/lib/clinic/api";
+import {
+  clinicStatusClass,
+  clinicStatusLabel,
+  type ClinicAppointment,
+} from "@/lib/clinic/types";
+import { useClinicQueueRealtime } from "@/lib/realtime/useClinicQueueRealtime";
 
 interface Patient extends UIPatient {
   emergencyContact?: string;
@@ -22,7 +30,7 @@ interface Patient extends UIPatient {
 export default function DoctorPatientsPage() {
   const { doctorProfile } = useDoctor();
   const [searchQuery, setSearchQuery] = useState("");
-  const [patientFilter, setPatientFilter] = useState<"all" | "active" | "inactive">("all");
+  const [patientFilter, setPatientFilter] = useState<"all" | "active" | "inactive" | "clinic">("all");
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
   const [showPatientModal, setShowPatientModal] = useState(false);
   const [showAddPatientModal, setShowAddPatientModal] = useState(false);
@@ -36,28 +44,40 @@ export default function DoctorPatientsPage() {
   const patientsPerPage = 6;
   const [patients, setPatients] = useState<Patient[]>([]);
   const [rawAppointments, setRawAppointments] = useState<Awaited<ReturnType<typeof getDoctorAppointments>>>([]);
+  const [todayClinic, setTodayClinic] = useState<ClinicAppointment[]>([]);
 
   const showToast = (message: string) => {
     setToastMessage(message);
     setTimeout(() => setToastMessage(""), 3000);
   };
 
-  const loadPatients = async () => {
-    setIsLoading(true);
+  const loadPatients = useCallback(async (opts?: { silent?: boolean }) => {
+    if (!opts?.silent) setIsLoading(true);
     try {
-      const appointments = await getDoctorAppointments(doctorProfile.id);
+      const [appointments, clinic] = await Promise.all([
+        getDoctorAppointments(doctorProfile.id),
+        getTodayClinicAppointments(doctorProfile.id),
+      ]);
       setRawAppointments(appointments);
-      setPatients(mapPatientsFromAppointments(appointments));
+      setTodayClinic(clinic);
+      setPatients(mergeClinicPatientsIntoRegistry(mapPatientsFromAppointments(appointments), clinic));
     } catch {
       showToast("Failed to load patients.");
     } finally {
-      setIsLoading(false);
+      if (!opts?.silent) setIsLoading(false);
     }
-  };
+  }, [doctorProfile.id]);
 
   useEffect(() => {
-    loadPatients();
-  }, [doctorProfile.id]);
+    void loadPatients();
+  }, [loadPatients]);
+
+  useClinicQueueRealtime({
+    onChange: () => {
+      void loadPatients({ silent: true });
+    },
+    doctorId: doctorProfile.id,
+  });
 
   const [newPatientForm, setNewPatientForm] = useState({
     name: "",
@@ -91,6 +111,22 @@ export default function DoctorPatientsPage() {
     medication: "",
     dosage: "",
   });
+
+  const clinicByPatient = useMemo(() => {
+    const map = new Map<string, ClinicAppointment>();
+    for (const apt of todayClinic) {
+      if (!apt.patient_id) continue;
+      const current = map.get(apt.patient_id);
+      const rank = (status: string) =>
+        status === "with_doctor" ? 4 : status === "waiting" ? 3 : status === "checked_in" ? 2 : 1;
+      if (!current || rank(apt.status) > rank(current.status)) map.set(apt.patient_id, apt);
+    }
+    return map;
+  }, [todayClinic]);
+
+  const inClinic = todayClinic.filter((a) =>
+    ["waiting", "with_doctor", "checked_in"].includes(a.status)
+  );
 
   const getLatestAppointmentForPatient = (patientId: string) => {
     return rawAppointments
@@ -197,6 +233,7 @@ export default function DoctorPatientsPage() {
     setActiveTab(tab);
     setShowPatientModal(true);
   };
+  void openPatientModal;
 
   // Open Edit Patient Modal
   const openEditPatientModal = (patient: Patient) => {
@@ -215,13 +252,16 @@ export default function DoctorPatientsPage() {
 
   // Filtered and Pagination
   const filteredPatients = patients.filter((pt) => {
-    const matchesSearch =
+            const matchesSearch =
       pt.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      pt.condition.toLowerCase().includes(searchQuery.toLowerCase());
+      pt.condition.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      pt.phone.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      pt.code.toLowerCase().includes(searchQuery.toLowerCase());
 
     if (!matchesSearch) return false;
     if (patientFilter === "active") return pt.sessionsCompleted > 0;
     if (patientFilter === "inactive") return pt.sessionsCompleted === 0;
+    if (patientFilter === "clinic") return clinicByPatient.has(pt.id);
     return true;
   });
 
@@ -280,13 +320,15 @@ export default function DoctorPatientsPage() {
         <div>
           <h2 className="text-2xl font-bold tracking-tight">Patient Registry</h2>
           <p className="text-sm text-muted-foreground mt-1">
-            Manage your patients, session notes, and prescriptions.
+            Full visit history, reception vitals, and prescriptions stay in sync with the clinic queue.
           </p>
         </div>
-        <Button className="flex items-center gap-2 bg-brand-500 hover:bg-brand-600 text-white" onClick={() => setShowAddPatientModal(true)}>
-          <UserPlus className="h-4 w-4" />
-          Add New Patient
-        </Button>
+        <Link href="/doctor/queue">
+          <Button className="flex items-center gap-2 bg-brand-500 hover:bg-brand-600 text-white">
+            <Stethoscope className="h-4 w-4" />
+            Clinic queue
+          </Button>
+        </Link>
       </div>
 
       {/* Filters & Search */}
@@ -295,7 +337,7 @@ export default function DoctorPatientsPage() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <input
             type="text"
-            placeholder="Search patient by name or condition..."
+            placeholder="Search patient by name, phone, or notes..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full h-10 pl-9 pr-4 rounded-lg border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-brand-400/20 focus:border-brand-400 transition-all"
@@ -309,11 +351,53 @@ export default function DoctorPatientsPage() {
             className="h-10 px-3 rounded-lg border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-brand-400/20 focus:border-brand-400 transition-all"
           >
             <option value="all">All Patients</option>
+            <option value="clinic">In clinic today</option>
             <option value="active">Active (Had sessions)</option>
             <option value="inactive">New Patients</option>
           </select>
         </div>
       </div>
+
+      {inClinic.length > 0 && (
+        <Card className="border-brand-200 bg-brand-50/40">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">Waiting from reception ({inClinic.length})</CardTitle>
+            <CardDescription>
+              Patients sent to your queue with the clinic record and vitals attached.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {inClinic.map((apt) => (
+              <div
+                key={apt.id}
+                className="flex flex-col gap-2 rounded-lg border bg-background px-3 py-2 sm:flex-row sm:items-center sm:justify-between"
+              >
+                <div>
+                  <p className="font-medium">
+                    {apt.token_number ?? "—"} · {apt.patient?.full_name}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    <span className={`mr-2 rounded-full border px-2 py-0.5 ${clinicStatusClass(apt.status)}`}>
+                      {clinicStatusLabel(apt.status)}
+                    </span>
+                    {apt.patient?.phone ?? apt.patient?.patient_code}
+                  </p>
+                </div>
+                <div className="flex gap-2">
+                  <Link href={`/doctor/patients/${apt.patient_id}`}>
+                    <Button size="sm" variant="outline">
+                      Details
+                    </Button>
+                  </Link>
+                  <Link href={`/doctor/consultations/${apt.id}`}>
+                    <Button size="sm">Open consult</Button>
+                  </Link>
+                </div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Patient Cards Grid */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -322,10 +406,18 @@ export default function DoctorPatientsPage() {
             <Card key={pt.id} className="hover:shadow-md transition-shadow duration-200 group overflow-hidden">
               <CardHeader className="pb-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-mono text-muted-foreground bg-muted/50 px-2 py-0.5 rounded">{pt.id}</span>
-                  <span className="text-xs text-brand-500 bg-brand-400/10 px-2 py-0.5 rounded-full font-semibold">
-                    {pt.sessionsCompleted} Sessions
+                  <span className="text-[10px] font-mono text-muted-foreground bg-muted/50 px-2 py-0.5 rounded">
+                    {pt.code}
                   </span>
+                  {clinicByPatient.get(pt.id) ? (
+                    <span className={`text-xs px-2 py-0.5 rounded-full font-semibold border ${clinicStatusClass(clinicByPatient.get(pt.id)!.status)}`}>
+                      {clinicByPatient.get(pt.id)!.token_number} · {clinicStatusLabel(clinicByPatient.get(pt.id)!.status)}
+                    </span>
+                  ) : (
+                    <span className="text-xs text-brand-500 bg-brand-400/10 px-2 py-0.5 rounded-full font-semibold">
+                      {pt.sessionsCompleted} Sessions
+                    </span>
+                  )}
                 </div>
                 <CardTitle className="text-base mt-2">{pt.name}</CardTitle>
                 <CardDescription>
@@ -335,37 +427,39 @@ export default function DoctorPatientsPage() {
               <CardContent className="space-y-4">
                 <div className="border-t border-border pt-3 space-y-2 text-xs">
                   <div>
-                    <span className="text-muted-foreground">Primary Diagnosis:</span>
+                    <span className="text-muted-foreground">Notes / diagnosis:</span>
                     <p className="font-semibold text-foreground mt-0.5">{pt.condition}</p>
                   </div>
                   <div className="flex items-center justify-between text-muted-foreground pt-1">
                     <span className="flex items-center gap-1">
                       <Calendar className="h-3.5 w-3.5" />
-                      Last session:
+                      Last visit:
                     </span>
                     <span className="font-medium text-foreground">{pt.lastConsultation}</span>
                   </div>
                 </div>
 
                 <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="flex-1 flex items-center justify-center gap-1.5"
-                    onClick={() => openPatientModal(pt, 'overview')}
-                  >
-                    <Eye className="h-3.5 w-3.5" />
-                    <span>View Profile</span>
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="flex-1 flex items-center justify-center gap-1.5 text-brand-500 hover:bg-brand-400/10 hover:text-brand-500"
-                    onClick={() => openPatientModal(pt, 'sessions')}
-                  >
-                    <FileText className="h-3.5 w-3.5" />
-                    <span>History</span>
-                  </Button>
+                  <Link href={`/doctor/patients/${pt.id}`} className="flex-1">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full flex items-center justify-center gap-1.5"
+                    >
+                      <Eye className="h-3.5 w-3.5" />
+                      <span>View Profile</span>
+                    </Button>
+                  </Link>
+                  <Link href={`/doctor/patients/${pt.id}?tab=visits`} className="flex-1">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="w-full flex items-center justify-center gap-1.5 text-brand-500 hover:bg-brand-400/10 hover:text-brand-500"
+                    >
+                      <FileText className="h-3.5 w-3.5" />
+                      <span>History</span>
+                    </Button>
+                  </Link>
                 </div>
               </CardContent>
             </Card>

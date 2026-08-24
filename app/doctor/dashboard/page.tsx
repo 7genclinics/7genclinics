@@ -19,7 +19,6 @@ import {
   Clock,
   ArrowRight,
   ShieldCheck,
-  Brain,
   Star,
   ChevronDown,
   ChevronUp,
@@ -28,7 +27,6 @@ import {
   CheckCircle,
   Activity,
   Check,
-  TrendingUp,
   Wallet,
 } from "lucide-react";
 import { Bar, BarChart, ResponsiveContainer, Tooltip as RechartsTooltip, XAxis, YAxis } from "recharts";
@@ -39,6 +37,7 @@ import { useAppointmentSessionSync } from "@/lib/hooks/useAppointmentSessionSync
 import { AppointmentSessionAlert } from "@/components/shared/AppointmentSessionAlert";
 import { UserAvatar } from "@/components/shared/UserAvatar";
 import { DashboardWelcomeBanner } from "@/components/shared/DashboardWelcomeBanner";
+import { DashboardBrandDecoration } from "@/components/shared/DashboardBrandDecoration";
 import {
   buildLastVisitMap,
   getDoctorAppointments,
@@ -69,9 +68,6 @@ export default function DoctorDashboardPage() {
   const [toastMessage, setToastMessage] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [sessions, setSessions] = useState<DashboardSession[]>([]);
-  const [patientMoods, setPatientMoods] = useState<
-    Array<{ name: string; type: string; value: string; level: string; color: string }>
-  >([]);
   const [earningsData, setEarningsData] = useState<Array<{ name: string; amount: number }>>([]);
   const [weekSchedule, setWeekSchedule] = useState<
     Array<{ day: string; date: string; sessions: number }>
@@ -114,27 +110,6 @@ export default function DoctorDashboardPage() {
         .map((apt) => mapToDashboardSession(apt, lastVisitMap));
 
       setSessions(mappedSessions);
-
-      const todayAppointments = appointments.filter((apt) => isToday(apt.scheduled_at));
-      setPatientMoods(
-        todayAppointments
-          .filter((apt) => apt.patient_notes?.trim())
-          .slice(0, 3)
-          .map((apt, idx) => {
-            const colors = [
-              "text-emerald-600 bg-emerald-50 border-emerald-200",
-              "text-amber-600 bg-amber-50 border-amber-200",
-              "text-rose-600 bg-rose-50 border-rose-200",
-            ];
-            return {
-              name: apt.patient?.full_name ?? "Patient",
-              type: "Patient Intake Note",
-              value: String((apt.patient_notes?.length ?? 0) % 20 || 1),
-              level: apt.patient_notes?.slice(0, 40) ?? "No notes",
-              color: colors[idx % colors.length],
-            };
-          })
-      );
 
       const patientIds = new Set(appointments.map((apt) => apt.patient_id));
       setUniquePatients(patientIds.size);
@@ -424,7 +399,7 @@ export default function DoctorDashboardPage() {
         }
         title={`Welcome Back, ${profile.full_name.split(" ")[0] || profile.full_name}`}
         description={`Your clinical room is open. You have ${todaySessions.filter((s) => !s.completed).length} consultations scheduled on your agenda today.`}
-        decoration={<Brain className="h-28 w-28 animate-pulse text-white sm:h-36 sm:w-36 lg:h-44 lg:w-44" />}
+        decoration={<DashboardBrandDecoration />}
       />
 
       {/* Stats Grid */}
@@ -654,46 +629,6 @@ export default function DoctorDashboardPage() {
                   </p>
                 </div>
               )}
-            </CardContent>
-          </Card>
-
-          {/* Today's Mood Trends (Stress Saviours Thematic Metric Panel) */}
-          <Card>
-            <CardHeader className="pb-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle>Mood & Anxiety Intake Log</CardTitle>
-                  <CardDescription>Latest scores submitted by today's patients</CardDescription>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="flex items-center gap-1 text-xs text-emerald-600 font-semibold bg-emerald-50 px-2.5 py-1 rounded-full">
-                    <TrendingUp className="h-3.5 w-3.5" />
-                    Active
-                  </span>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="grid gap-4 sm:grid-cols-3">
-                {patientMoods.length > 0 ? patientMoods.map((mood, idx) => (
-                  <div key={idx} className={`p-4 rounded-2xl border text-left transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 ${mood.color}`}>
-                    <div className="flex items-center justify-between mb-3">
-                      <p className="text-xs font-bold uppercase opacity-80">{mood.name}</p>
-                      <div className="h-2 w-2 rounded-full opacity-75" style={{ backgroundColor: mood.color.split(' ').find(c => c.includes('text'))?.replace('text-', '').replace('bg-', '') === 'emerald' ? '#10b981' : 
-                        mood.color.includes('amber') ? '#f59e0b' : '#f43f5e' }} />
-                    </div>
-                    <p className="text-3xl font-extrabold tracking-tight">{mood.value}</p>
-                    <div className="mt-3 pt-2 border-t border-black/5">
-                      <p className="text-[11px] font-medium">{mood.type}</p>
-                      <p className="text-[10px] font-semibold opacity-80 mt-0.5">{mood.level}</p>
-                    </div>
-                  </div>
-                )) : (
-                  <p className="text-sm text-muted-foreground col-span-3 text-center py-6">
-                    No patient intake notes submitted for today yet.
-                  </p>
-                )}
-              </div>
             </CardContent>
           </Card>
 

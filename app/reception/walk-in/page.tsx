@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/Input";
 import { Label } from "@/components/ui/Label";
 import {
   createWalkIn,
+  getClinicAppointment,
   getClinicDoctors,
   getClinicServices,
   searchPatients,
@@ -76,7 +77,7 @@ export default function WalkInPage() {
     setSaving(true);
     setError(null);
     try {
-      await createWalkIn({
+      const aptId = await createWalkIn({
         existingPatientId: existingId,
         fullName,
         phone,
@@ -87,7 +88,12 @@ export default function WalkInPage() {
         serviceId: serviceId || null,
         notes,
       });
-      router.push("/reception/queue");
+      const apt = await getClinicAppointment(aptId);
+      router.push(
+        apt?.patient_id
+          ? `/reception/patients/${apt.patient_id}?visit=${aptId}`
+          : "/reception/queue"
+      );
     } catch (err) {
       setError(getErrorMessage(err, "Could not register walk-in"));
     } finally {
@@ -100,8 +106,8 @@ export default function WalkInPage() {
       <div>
         <h2 className="text-xl font-semibold">Register walk-in</h2>
         <p className="text-sm text-muted-foreground">
-          Search an existing patient by phone or name, or create a new record and add them to today&apos;s
-          queue.
+          Search an existing patient by phone or name, or create a new record. You will record
+          vitals next, then add them to the doctor&apos;s queue.
         </p>
       </div>
 

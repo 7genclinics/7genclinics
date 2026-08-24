@@ -7,10 +7,13 @@ import type {
   ClinicAppointment,
   ClinicConsultation,
   ClinicDoctorOption,
+  ClinicEmrVisit,
   ClinicInvoice,
   ClinicPrescriptionItem,
   ClinicService,
   ClinicVitals,
+  DoctorMedicine,
+  MasterMedicine,
   WalkInInput,
 } from "./types";
 
@@ -236,6 +239,30 @@ export async function getPatientById(patientId: string): Promise<Profile | null>
   return (data as Profile | null) ?? null;
 }
 
+export async function updateClinicPatient(input: {
+  id: string;
+  full_name: string;
+  phone: string | null;
+  city: string | null;
+  gender: Gender | null;
+  date_of_birth: string | null;
+}): Promise<Profile> {
+  const { data, error } = await table("profiles")
+    .update({
+      full_name: input.full_name.trim(),
+      phone: input.phone?.trim() || null,
+      city: input.city?.trim() || null,
+      gender: input.gender,
+      date_of_birth: input.date_of_birth || null,
+    })
+    .eq("id", input.id)
+    .eq("role", "patient")
+    .select("*")
+    .single();
+  if (error) throw error;
+  return data as Profile;
+}
+
 export async function getPatientClinicHistory(patientId: string): Promise<ClinicAppointment[]> {
   const { data, error } = await table("appointments")
     .select(CLINIC_APPOINTMENT_SELECT)
@@ -427,14 +454,16 @@ export async function saveConsultationDraft(input: {
     weight: input.vitals.weight,
     height: input.vitals.height,
     spo2: input.vitals.spo2,
-    recorded_by: input.recordedBy,
   };
 
   if (existingVitals?.id) {
     const { error } = await table("vitals").update(vitalsPayload).eq("id", existingVitals.id);
     if (error) throw error;
   } else {
-    const { error } = await table("vitals").insert(vitalsPayload);
+    const { error } = await table("vitals").insert({
+      ...vitalsPayload,
+      recorded_by: input.recordedBy,
+    });
     if (error) throw error;
   }
 
@@ -595,6 +624,209 @@ export async function getDeskPayments(limit = 200): Promise<
     received_at: string;
     invoice_id: string;
   }>;
+}
+
+export async function ensureConsultation(appointmentId: string): Promise<string> {
+  const { data, error } = await rpc("clinic_ensure_consultation", {
+    p_appointment_id: appointmentId,
+  });
+  if (error) throw new Error(getErrorMessage(error, "Could not open the visit record"));
+  return data as string;
+}
+
+export async function recordVisitVitals(input: {
+  appointmentId: string;
+  vitals: Omit<ClinicVitals, "id" | "consultation_id">;
+}): Promise<string> {
+  const { data, error } = await rpc("clinic_record_vitals", {
+    p_appointment_id: input.appointmentId,
+    p_blood_pressure: input.vitals.blood_pressure || null,
+    p_temperature: input.vitals.temperature,
+    p_pulse: input.vitals.pulse,
+    p_weight: input.vitals.weight,
+    p_height: input.vitals.height,
+    p_spo2: input.vitals.spo2,
+  });
+  if (error) throw new Error(getErrorMessage(error, "Could not save vitals"));
+  return data as string;
+}
+
+function mapEmrVisit(row: Record<string, unknown>): ClinicEmrVisit {
+  const vitalsRaw = row.vitals;
+  const rxRaw = row.prescriptions;
+  const rx = Array.isArray(rxRaw) ? rxRaw[0] : rxRaw;
+  const vitals = Array.isArray(vitalsRaw) ? vitalsRaw[0] : vitalsRaw;
+  const doctor = row.doctor as
+    | { specialization?: string; profile?: { full_name?: string } | { full_name?: string }[] }
+    | null;
+  const doctorProfile = Array.isArray(doctor?.profile) ? doctor?.profile[0] : doctor?.profile;
+  const appointment = Array.isArray(row.appointment) ? row.appointment[0] : row.appointment;
+  const apt = (appointment ?? {}) as {
+    scheduled_at?: string;
+    status?: string;
+    token_number?: string | null;
+    appointment_type?: string;
+  };
+
+  return {
+    id: row.id as string,
+    appointment_id: row.appointment_id as string,
+    patient_id: row.patient_id as string,
+    doctor_id: row.doctor_id as string,
+    doctor_name: doctorProfile?.full_name ?? "Doctor",
+    specialization: doctor?.specialization ?? null,
+    scheduled_at: apt.scheduled_at ?? (row.created_at as string),
+    token_number: apt.token_number ?? null,
+    appointment_type: apt.appointment_type ?? "in_person",
+    status: apt.status ?? "",
+    chief_complaint: (row.chief_complaint as string | null) ?? null,
+    symptoms: (row.symptoms as string | null) ?? null,
+    diagnosis: (row.diagnosis as string | null) ?? null,
+    treatment_notes: (row.treatment_notes as string | null) ?? null,
+    follow_up_date: (row.follow_up_date as string | null) ?? null,
+    completed_at: (row.completed_at as string | null) ?? null,
+    created_at: row.created_at as string,
+    vitals: (vitals as ClinicVitals) ?? null,
+    prescription: rx
+      ? {
+          id: (rx as { id: string }).id,
+          instructions: (rx as { instructions: string | null }).instructions,
+          items: ((rx as { prescription_items?: ClinicPrescriptionItem[] }).prescription_items ??
+            []) as ClinicPrescriptionItem[],
+        }
+      : null,
+  };
+}
+
+const EMR_SELECT = `
+  *,
+  vitals (*),
+  prescriptions (
+    id, instructions, appointment_id, created_at,
+    prescription_items (*)
+  ),
+  doctor:doctor_profiles!consultations_doctor_id_fkey (
+    id, specialization,
+    profile:profiles!doctor_profiles_user_id_fkey ( full_name )
+  ),
+  appointment:appointments!consultations_appointment_id_fkey (
+    id, scheduled_at, status, token_number, appointment_type
+  )
+`;
+
+export async function getPatientEmrHistory(patientId: string): Promise<ClinicEmrVisit[]> {
+  const { data, error } = await table("consultations")
+    .select(EMR_SELECT)
+    .eq("patient_id", patientId)
+    .order("created_at", { ascending: false })
+    .limit(100);
+  if (error) throw error;
+  return ((data ?? []) as Record<string, unknown>[]).map(mapEmrVisit);
+}
+
+export async function getMasterMedicines(includeInactive = false): Promise<MasterMedicine[]> {
+  let query = table("master_medicines").select("*").order("name");
+  if (!includeInactive) query = query.eq("is_active", true);
+  const { data, error } = await query;
+  if (error) throw error;
+  return (data ?? []) as MasterMedicine[];
+}
+
+export async function upsertMasterMedicine(input: {
+  id?: string;
+  name: string;
+  category: string;
+  dosage_options: string[];
+  is_active: boolean;
+}): Promise<MasterMedicine> {
+  const payload = {
+    name: input.name.trim(),
+    category: input.category,
+    dosage_options: input.dosage_options.filter((d) => d.trim()),
+    is_active: input.is_active,
+  };
+  if (input.id) {
+    const { data, error } = await table("master_medicines")
+      .update(payload)
+      .eq("id", input.id)
+      .select("*")
+      .single();
+    if (error) throw error;
+    return data as MasterMedicine;
+  }
+  const { data, error } = await table("master_medicines").insert(payload).select("*").single();
+  if (error) throw error;
+  return data as MasterMedicine;
+}
+
+export async function getDoctorMedicines(doctorId: string): Promise<DoctorMedicine[]> {
+  const { data, error } = await table("doctor_medicines")
+    .select("*")
+    .eq("doctor_id", doctorId)
+    .eq("is_active", true)
+    .order("name");
+  if (error) throw error;
+  return (data ?? []) as DoctorMedicine[];
+}
+
+export async function getDoctorMedicinesAll(doctorId: string): Promise<DoctorMedicine[]> {
+  const { data, error } = await table("doctor_medicines")
+    .select("*")
+    .eq("doctor_id", doctorId)
+    .order("name");
+  if (error) throw error;
+  return (data ?? []) as DoctorMedicine[];
+}
+
+export async function upsertDoctorMedicine(input: {
+  id?: string;
+  doctor_id: string;
+  name: string;
+  category: string;
+  dosage_options: string[];
+  notes?: string | null;
+  is_active?: boolean;
+}): Promise<DoctorMedicine> {
+  const payload = {
+    doctor_id: input.doctor_id,
+    name: input.name.trim(),
+    category: input.category,
+    dosage_options: input.dosage_options.filter((d) => d.trim()),
+    notes: input.notes || null,
+    is_active: input.is_active ?? true,
+  };
+  if (input.id) {
+    const { data, error } = await table("doctor_medicines")
+      .update(payload)
+      .eq("id", input.id)
+      .select("*")
+      .single();
+    if (error) throw error;
+    return data as DoctorMedicine;
+  }
+  const { data, error } = await table("doctor_medicines").insert(payload).select("*").single();
+  if (error) throw error;
+  return data as DoctorMedicine;
+}
+
+export async function importMasterMedicines(ids: string[]): Promise<number> {
+  const { data, error } = await rpc("clinic_import_master_medicines", {
+    p_medicine_ids: ids,
+  });
+  if (error) throw new Error(getErrorMessage(error, "Could not import medicines"));
+  return Number(data ?? 0);
+}
+
+export async function importMasterMedicinesForDoctor(
+  doctorId: string,
+  ids: string[]
+): Promise<number> {
+  const { data, error } = await rpc("clinic_desk_import_master_medicines", {
+    p_doctor_id: doctorId,
+    p_medicine_ids: ids,
+  });
+  if (error) throw new Error(getErrorMessage(error, "Could not import medicines for doctor"));
+  return Number(data ?? 0);
 }
 
 export function calcAgeYears(dateOfBirth: string | null | undefined): number | null {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
@@ -8,25 +8,38 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Label } from "@/components/ui/Label";
 import { useDoctor } from "@/contexts/DoctorContext";
+import { VitalsForm } from "@/components/clinic/VitalsForm";
+import { VisitHistoryTimeline } from "@/components/clinic/VisitHistoryTimeline";
+import { MedicinePicker } from "@/components/clinic/MedicinePicker";
+import { PrescriptionPad } from "@/components/clinic/PrescriptionPad";
 import {
   calcAgeYears,
   completeConsultation,
   getClinicAppointment,
   getConsultationByAppointment,
-  getPatientClinicHistory,
+  getDoctorMedicines,
   getPatientDocuments,
+  getPatientEmrHistory,
   openConsultation,
   saveConsultationDraft,
   uploadPatientDocument,
   type ClinicPatientDocument,
 } from "@/lib/clinic/api";
-import type { ClinicAppointment, ClinicPrescriptionItem, ClinicVitals } from "@/lib/clinic/types";
+import { downloadPrescriptionPdf } from "@/lib/clinic/prescription-pdf";
+import {
+  emptyVitals,
+  vitalsHaveValues,
+  type ClinicAppointment,
+  type ClinicEmrVisit,
+  type ClinicPrescriptionItem,
+  type ClinicVitals,
+  type DoctorMedicine,
+} from "@/lib/clinic/types";
 import { formatClinicalNotes } from "@/lib/doctor/notes";
 import { updateAppointment } from "@/lib/doctor/api";
 import { formatDate, formatTime } from "@/lib/doctor/mappers";
 import { getErrorMessage } from "@/lib/errors";
-import { BRAND } from "@/lib/brand/site";
-import { Loader2, Plus, Printer, Trash2, Upload } from "lucide-react";
+import { FileDown, Loader2, Plus, Printer, Trash2, Upload } from "lucide-react";
 
 const emptyItem = (sort_order: number): ClinicPrescriptionItem => ({
   medicine_name: "",
@@ -45,22 +58,17 @@ export default function DoctorConsultationPage() {
   const fileRef = useRef<HTMLInputElement>(null);
 
   const [appointment, setAppointment] = useState<ClinicAppointment | null>(null);
-  const [history, setHistory] = useState<ClinicAppointment[]>([]);
+  const [history, setHistory] = useState<ClinicEmrVisit[]>([]);
   const [docs, setDocs] = useState<ClinicPatientDocument[]>([]);
+  const [medicines, setMedicines] = useState<DoctorMedicine[]>([]);
   const [consultationId, setConsultationId] = useState<string | null>(null);
   const [chiefComplaint, setChiefComplaint] = useState("");
   const [symptoms, setSymptoms] = useState("");
   const [diagnosis, setDiagnosis] = useState("");
   const [treatmentNotes, setTreatmentNotes] = useState("");
   const [followUpDate, setFollowUpDate] = useState("");
-  const [vitals, setVitals] = useState<Omit<ClinicVitals, "id" | "consultation_id">>({
-    blood_pressure: "",
-    temperature: null,
-    pulse: null,
-    weight: null,
-    height: null,
-    spo2: null,
-  });
+  const [vitals, setVitals] = useState<Omit<ClinicVitals, "id" | "consultation_id">>(emptyVitals());
+  const [vitalsStamp, setVitalsStamp] = useState<string | null>(null);
   const [rxInstructions, setRxInstructions] = useState("");
   const [items, setItems] = useState<ClinicPrescriptionItem[]>([emptyItem(0)]);
   const [loading, setLoading] = useState(true);
@@ -75,14 +83,6 @@ export default function DoctorConsultationPage() {
     try {
       const apt = await getClinicAppointment(appointmentId);
       setAppointment(apt);
-      if (apt?.patient_id) {
-        const [visits, documents] = await Promise.all([
-          getPatientClinicHistory(apt.patient_id),
-          getPatientDocuments(apt.patient_id),
-        ]);
-        setHistory(visits.filter((v) => v.id !== appointmentId).slice(0, 8));
-        setDocs(documents);
-      }
       const consultId = await openConsultation(appointmentId);
       setConsultationId(consultId);
       const existing = await getConsultationByAppointment(appointmentId);
@@ -101,18 +101,29 @@ export default function DoctorConsultationPage() {
             height: existing.vitals.height,
             spo2: existing.vitals.spo2,
           });
+          setVitalsStamp(existing.vitals.recorded_at ?? null);
         }
         setRxInstructions(existing.prescription?.instructions ?? "");
         if (existing.prescription?.items?.length) {
           setItems(existing.prescription.items);
         }
       }
+      if (apt?.patient_id) {
+        const [records, documents, meds] = await Promise.all([
+          getPatientEmrHistory(apt.patient_id),
+          getPatientDocuments(apt.patient_id),
+          getDoctorMedicines(doctorProfile.id),
+        ]);
+        setHistory(records);
+        setDocs(documents);
+        setMedicines(meds);
+      }
     } catch (err) {
       setError(getErrorMessage(err, "Failed to open consultation"));
     } finally {
       setLoading(false);
     }
-  }, [appointmentId]);
+  }, [appointmentId, doctorProfile.id]);
 
   useEffect(() => {
     void load();
@@ -206,6 +217,36 @@ export default function DoctorConsultationPage() {
     }
   };
 
+  const padProps = useMemo(() => {
+    if (!appointment) return null;
+    return {
+      doctorName: profile.full_name,
+      specialization: doctorProfile.specialization,
+      pmdcNumber: doctorProfile.pmdc_number,
+      patientName: appointment.patient?.full_name ?? "Patient",
+      patientCode: appointment.patient?.patient_code,
+      age: calcAgeYears(appointment.patient?.date_of_birth),
+      gender: appointment.patient?.gender,
+      dateLabel: formatDate(new Date()),
+      token: appointment.token_number,
+      diagnosis,
+      items,
+      instructions: rxInstructions,
+      followUp: followUpDate ? formatDate(followUpDate) : null,
+      notes: treatmentNotes,
+    };
+  }, [
+    appointment,
+    profile.full_name,
+    doctorProfile.specialization,
+    doctorProfile.pmdc_number,
+    diagnosis,
+    items,
+    rxInstructions,
+    followUpDate,
+    treatmentNotes,
+  ]);
+
   if (loading) {
     return (
       <div className="flex justify-center py-20">
@@ -214,12 +255,13 @@ export default function DoctorConsultationPage() {
     );
   }
 
-  if (!appointment) {
+  if (!appointment || !padProps) {
     return <p className="text-sm text-muted-foreground">Appointment not found.</p>;
   }
 
   const age = calcAgeYears(appointment.patient?.date_of_birth);
-  const meds = items.filter((i) => i.medicine_name.trim());
+  const doseOptionsFor = (name: string) =>
+    medicines.find((m) => m.name.toLowerCase() === name.trim().toLowerCase())?.dosage_options ?? [];
 
   return (
     <div className="space-y-6 print:space-y-2">
@@ -233,17 +275,26 @@ export default function DoctorConsultationPage() {
             {age != null ? `Age ${age}` : "Age —"} · {appointment.patient?.gender ?? "—"} ·{" "}
             {formatTime(appointment.scheduled_at)}
           </p>
-          <Link
-            href={`/doctor/patients`}
-            className="mt-1 inline-block text-xs text-brand-600 hover:underline"
-          >
+          <Link href="/doctor/patients" className="mt-1 inline-block text-xs text-brand-600 hover:underline">
             Patient registry
           </Link>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Button variant="outline" onClick={() => window.print()}>
             <Printer className="mr-2 h-4 w-4" />
             Print Rx
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() =>
+              downloadPrescriptionPdf(
+                padProps,
+                `prescription-${appointment.patient?.patient_code ?? appointment.id}.pdf`
+              )
+            }
+          >
+            <FileDown className="mr-2 h-4 w-4" />
+            PDF
           </Button>
           <Button variant="outline" disabled={saving} onClick={() => void saveDraft()}>
             Save draft
@@ -269,62 +320,8 @@ export default function DoctorConsultationPage() {
         </p>
       )}
 
-      {/* Professional printable prescription */}
-      <div className="hidden print:block space-y-4 text-slate-900">
-        <div className="border-b pb-3">
-          <p className="text-2xl font-bold tracking-tight">{BRAND.name}</p>
-          <p className="text-sm">
-            {profile.full_name}
-            {doctorProfile.specialization ? ` · ${doctorProfile.specialization}` : ""}
-          </p>
-          <p className="text-xs text-slate-600">
-            {BRAND.phone} · {BRAND.supportEmail}
-          </p>
-        </div>
-        <div className="grid grid-cols-2 gap-2 text-sm">
-          <p>
-            <strong>Patient:</strong> {appointment.patient?.full_name} (
-            {appointment.patient?.patient_code})
-          </p>
-          <p>
-            <strong>Date:</strong> {formatDate(new Date())}
-          </p>
-          <p>
-            <strong>Age / Gender:</strong> {age ?? "—"} / {appointment.patient?.gender ?? "—"}
-          </p>
-          <p>
-            <strong>Token:</strong> {appointment.token_number ?? "—"}
-          </p>
-        </div>
-        {diagnosis && (
-          <p className="text-sm">
-            <strong>Diagnosis:</strong> {diagnosis}
-          </p>
-        )}
-        <div>
-          <p className="mb-2 text-lg font-semibold">Rx</p>
-          <ol className="list-decimal space-y-2 pl-5 text-sm">
-            {meds.map((item, i) => (
-              <li key={i}>
-                <span className="font-medium">{item.medicine_name}</span>
-                <br />
-                {[item.dose, item.frequency, item.duration].filter(Boolean).join(" · ")}
-                {item.instructions ? ` — ${item.instructions}` : ""}
-              </li>
-            ))}
-          </ol>
-          {meds.length === 0 && <p className="text-sm text-slate-500">No medicines listed.</p>}
-        </div>
-        {rxInstructions && (
-          <p className="text-sm">
-            <strong>Instructions:</strong> {rxInstructions}
-          </p>
-        )}
-        {followUpDate && (
-          <p className="text-sm">
-            <strong>Follow-up:</strong> {formatDate(followUpDate)}
-          </p>
-        )}
+      <div className="hidden print:block">
+        <PrescriptionPad {...padProps} />
       </div>
 
       <div className="grid gap-4 lg:grid-cols-3 print:hidden">
@@ -370,89 +367,30 @@ export default function DoctorConsultationPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Vitals</CardTitle>
+            <CardTitle className="text-base">This visit vitals</CardTitle>
           </CardHeader>
-          <CardContent className="grid grid-cols-2 gap-3">
-            <div className="col-span-2 space-y-1">
-              <Label>BP</Label>
-              <Input
-                value={vitals.blood_pressure ?? ""}
-                onChange={(e) => setVitals((v) => ({ ...v, blood_pressure: e.target.value }))}
-                placeholder="120/80"
-              />
-            </div>
-            <div className="space-y-1">
-              <Label>Temp °C</Label>
-              <Input
-                type="number"
-                value={vitals.temperature ?? ""}
-                onChange={(e) =>
-                  setVitals((v) => ({
-                    ...v,
-                    temperature: e.target.value ? Number(e.target.value) : null,
-                  }))
-                }
-              />
-            </div>
-            <div className="space-y-1">
-              <Label>Pulse</Label>
-              <Input
-                type="number"
-                value={vitals.pulse ?? ""}
-                onChange={(e) =>
-                  setVitals((v) => ({
-                    ...v,
-                    pulse: e.target.value ? Number(e.target.value) : null,
-                  }))
-                }
-              />
-            </div>
-            <div className="space-y-1">
-              <Label>Weight kg</Label>
-              <Input
-                type="number"
-                value={vitals.weight ?? ""}
-                onChange={(e) =>
-                  setVitals((v) => ({
-                    ...v,
-                    weight: e.target.value ? Number(e.target.value) : null,
-                  }))
-                }
-              />
-            </div>
-            <div className="space-y-1">
-              <Label>Height cm</Label>
-              <Input
-                type="number"
-                value={vitals.height ?? ""}
-                onChange={(e) =>
-                  setVitals((v) => ({
-                    ...v,
-                    height: e.target.value ? Number(e.target.value) : null,
-                  }))
-                }
-              />
-            </div>
-            <div className="col-span-2 space-y-1">
-              <Label>SpO2 %</Label>
-              <Input
-                type="number"
-                value={vitals.spo2 ?? ""}
-                onChange={(e) =>
-                  setVitals((v) => ({
-                    ...v,
-                    spo2: e.target.value ? Number(e.target.value) : null,
-                  }))
-                }
-              />
-            </div>
+          <CardContent className="space-y-3">
+            {vitalsStamp && vitalsHaveValues(vitals) && (
+              <p className="text-xs text-muted-foreground">
+                Recorded by reception {formatDate(vitalsStamp)} {formatTime(vitalsStamp)}
+              </p>
+            )}
+            <VitalsForm value={vitals} onChange={setVitals} />
           </CardContent>
         </Card>
       </div>
 
       <Card className="print:hidden">
         <CardHeader className="flex-row items-center justify-between">
-          <CardTitle className="text-base">Prescription</CardTitle>
+          <div>
+            <CardTitle className="text-base">Prescription</CardTitle>
+            <p className="text-xs text-muted-foreground">
+              Select from your medicine list, then pick dosage.{" "}
+              <Link href="/doctor/medicines" className="text-brand-600 hover:underline">
+                Manage list
+              </Link>
+            </p>
+          </div>
           <Button
             type="button"
             size="sm"
@@ -464,75 +402,109 @@ export default function DoctorConsultationPage() {
           </Button>
         </CardHeader>
         <CardContent className="space-y-3">
-          {items.map((item, index) => (
-            <div key={index} className="grid gap-2 sm:grid-cols-12">
-              <Input
-                className="sm:col-span-3"
-                placeholder="Medicine"
-                value={item.medicine_name}
-                onChange={(e) =>
-                  setItems((rows) =>
-                    rows.map((r, i) => (i === index ? { ...r, medicine_name: e.target.value } : r))
-                  )
-                }
-              />
-              <Input
-                className="sm:col-span-2"
-                placeholder="Dose"
-                value={item.dose}
-                onChange={(e) =>
-                  setItems((rows) =>
-                    rows.map((r, i) => (i === index ? { ...r, dose: e.target.value } : r))
-                  )
-                }
-              />
-              <Input
-                className="sm:col-span-2"
-                placeholder="Frequency"
-                value={item.frequency}
-                onChange={(e) =>
-                  setItems((rows) =>
-                    rows.map((r, i) => (i === index ? { ...r, frequency: e.target.value } : r))
-                  )
-                }
-              />
-              <Input
-                className="sm:col-span-2"
-                placeholder="Duration"
-                value={item.duration}
-                onChange={(e) =>
-                  setItems((rows) =>
-                    rows.map((r, i) => (i === index ? { ...r, duration: e.target.value } : r))
-                  )
-                }
-              />
-              <div className="flex gap-2 sm:col-span-3">
-                <Input
-                  placeholder="Instructions"
-                  value={item.instructions ?? ""}
-                  onChange={(e) =>
+          {items.map((item, index) => {
+            const options = doseOptionsFor(item.medicine_name);
+            return (
+              <div key={index} className="grid gap-2 sm:grid-cols-12">
+                <MedicinePicker
+                  medicines={medicines}
+                  value={item.medicine_name}
+                  onSelect={(med) =>
                     setItems((rows) =>
                       rows.map((r, i) =>
-                        i === index ? { ...r, instructions: e.target.value } : r
+                        i === index
+                          ? {
+                              ...r,
+                              medicine_name: med.name,
+                              dose: "dosage_options" in med && med.dosage_options[0] && !r.dose
+                                ? med.dosage_options[0]
+                                : r.dose,
+                            }
+                          : r
                       )
                     )
                   }
                 />
-                <Button
-                  type="button"
-                  size="icon"
-                  variant="ghost"
-                  onClick={() =>
+                {options.length > 0 ? (
+                  <select
+                    className="h-10 rounded-lg border border-input bg-background px-3 text-sm sm:col-span-2"
+                    value={item.dose}
+                    onChange={(e) =>
+                      setItems((rows) =>
+                        rows.map((r, i) => (i === index ? { ...r, dose: e.target.value } : r))
+                      )
+                    }
+                  >
+                    <option value="">Dose</option>
+                    {options.map((opt) => (
+                      <option key={opt} value={opt}>
+                        {opt}
+                      </option>
+                    ))}
+                    {item.dose && !options.includes(item.dose) ? (
+                      <option value={item.dose}>{item.dose}</option>
+                    ) : null}
+                  </select>
+                ) : (
+                  <Input
+                    className="sm:col-span-2"
+                    placeholder="Dose"
+                    value={item.dose}
+                    onChange={(e) =>
+                      setItems((rows) =>
+                        rows.map((r, i) => (i === index ? { ...r, dose: e.target.value } : r))
+                      )
+                    }
+                  />
+                )}
+                <Input
+                  className="sm:col-span-2"
+                  placeholder="Frequency"
+                  value={item.frequency}
+                  onChange={(e) =>
                     setItems((rows) =>
-                      rows.filter((_, i) => i !== index).map((r, i) => ({ ...r, sort_order: i }))
+                      rows.map((r, i) => (i === index ? { ...r, frequency: e.target.value } : r))
                     )
                   }
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
+                />
+                <Input
+                  className="sm:col-span-2"
+                  placeholder="Duration"
+                  value={item.duration}
+                  onChange={(e) =>
+                    setItems((rows) =>
+                      rows.map((r, i) => (i === index ? { ...r, duration: e.target.value } : r))
+                    )
+                  }
+                />
+                <div className="flex gap-2 sm:col-span-3">
+                  <Input
+                    placeholder="Instructions"
+                    value={item.instructions ?? ""}
+                    onChange={(e) =>
+                      setItems((rows) =>
+                        rows.map((r, i) =>
+                          i === index ? { ...r, instructions: e.target.value } : r
+                        )
+                      )
+                    }
+                  />
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="ghost"
+                    onClick={() =>
+                      setItems((rows) =>
+                        rows.filter((_, i) => i !== index).map((r, i) => ({ ...r, sort_order: i }))
+                      )
+                    }
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
           <div className="space-y-1">
             <Label>General instructions</Label>
             <textarea
@@ -541,6 +513,15 @@ export default function DoctorConsultationPage() {
               onChange={(e) => setRxInstructions(e.target.value)}
             />
           </div>
+        </CardContent>
+      </Card>
+
+      <Card className="print:hidden">
+        <CardHeader>
+          <CardTitle className="text-base">Prescription pad preview</CardTitle>
+        </CardHeader>
+        <CardContent className="rounded-xl border bg-muted/20 p-4">
+          <PrescriptionPad {...padProps} />
         </CardContent>
       </Card>
 
@@ -588,21 +569,10 @@ export default function DoctorConsultationPage() {
 
       <Card className="print:hidden">
         <CardHeader>
-          <CardTitle className="text-base">Previous visits</CardTitle>
+          <CardTitle className="text-base">Full visit history</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-2">
-          {history.length === 0 && (
-            <p className="text-sm text-muted-foreground">No earlier visits.</p>
-          )}
-          {history.map((visit) => (
-            <div key={visit.id} className="rounded-lg border px-3 py-2 text-sm">
-              {formatDate(visit.scheduled_at)} · {visit.appointment_type.replace("_", " ")} ·{" "}
-              {visit.status}
-              {visit.doctor_notes ? (
-                <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">{visit.doctor_notes}</p>
-              ) : null}
-            </div>
-          ))}
+        <CardContent>
+          <VisitHistoryTimeline visits={history} excludeAppointmentId={appointmentId} />
         </CardContent>
       </Card>
     </div>

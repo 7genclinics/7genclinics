@@ -14,6 +14,7 @@ import {
 } from "recharts";
 import { useAdmin } from "@/contexts/AdminContext";
 import { DashboardWelcomeBanner } from "@/components/shared/DashboardWelcomeBanner";
+import { DashboardBrandDecoration } from "@/components/shared/DashboardBrandDecoration";
 import {
   approveDoctor,
   rejectDoctor,
@@ -293,7 +294,7 @@ export default function AdminDashboardPage() {
         }
         title={`Welcome back, ${profile.full_name.split(" ")[0] || profile.full_name}`}
         description="Live overview of platform performance, reviews, and activity across Stress Saviors."
-        decoration={<BarChart3 className="h-28 w-28 text-white sm:h-36 sm:w-36 lg:h-44 lg:w-44" />}
+        decoration={<DashboardBrandDecoration />}
         meta={
           <button
             type="button"

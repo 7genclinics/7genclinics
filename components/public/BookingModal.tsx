@@ -26,14 +26,33 @@ interface BookingModalProps {
   doctor: BookingDoctorInfo;
   onClose: () => void;
   onSuccess: () => void;
+  initialType?: AppointmentType;
+  allowedTypes?: AppointmentType[];
+  serviceId?: string | null;
 }
 
-export function BookingModal({ doctor, onClose, onSuccess }: BookingModalProps) {
+const TYPE_OPTIONS: { value: AppointmentType; label: string }[] = [
+  { value: "in_person", label: "In-Person Visit" },
+  { value: "video", label: "Video Consultation" },
+  { value: "chat", label: "Chat Consultation" },
+];
+
+export function BookingModal({
+  doctor,
+  onClose,
+  onSuccess,
+  initialType,
+  allowedTypes,
+  serviceId,
+}: BookingModalProps) {
   const tomorrow = useMemo(() => getPkDateWithOffset(1), []);
+  const types = allowedTypes?.length ? allowedTypes : TYPE_OPTIONS.map((opt) => opt.value);
 
   const [bookDate, setBookDate] = useState(tomorrow);
   const [bookTime, setBookTime] = useState("10:00");
-  const [bookType, setBookType] = useState<AppointmentType>("video");
+  const [bookType, setBookType] = useState<AppointmentType>(
+    initialType && types.includes(initialType) ? initialType : types[0],
+  );
   const [bookNotes, setBookNotes] = useState("");
   const [booking, setBooking] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -101,6 +120,7 @@ export function BookingModal({ doctor, onClose, onSuccess }: BookingModalProps) 
         consultationFee: doctor.consultationFeeRaw,
         durationMinutes: sessionDuration,
         paymentMethod: "jazzcash",
+        serviceId,
       });
       onSuccess();
     } catch (err) {
@@ -172,9 +192,11 @@ export function BookingModal({ doctor, onClose, onSuccess }: BookingModalProps) 
               onChange={(e) => setBookType(e.target.value as AppointmentType)}
               className="h-10 w-full rounded-lg border border-slate-200 px-4 text-sm"
             >
-              <option value="video">Video Consultation</option>
-              <option value="chat">Chat Consultation</option>
-              <option value="in_person">In-Person Visit</option>
+              {TYPE_OPTIONS.filter((opt) => types.includes(opt.value)).map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
             </select>
           </div>
 

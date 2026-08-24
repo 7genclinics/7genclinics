@@ -18,7 +18,8 @@ export type NotificationType =
   | "approval"
   | "chat"
   | "assessment"
-  | "system";
+  | "system"
+  | "subscription";
 
 /** Fetch the latest notifications for a user, newest first. */
 export async function getNotifications(

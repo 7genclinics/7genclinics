@@ -57,7 +57,7 @@ export interface AppointmentWithPatient {
   updated_at: string;
   patient: Pick<
     Profile,
-    "id" | "full_name" | "email" | "phone" | "city" | "date_of_birth" | "gender" | "avatar_url"
+    "id" | "full_name" | "email" | "phone" | "city" | "date_of_birth" | "gender" | "avatar_url" | "patient_code"
   > | null;
 }
 

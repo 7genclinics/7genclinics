@@ -153,6 +153,7 @@ export default function PatientAppointmentsPage() {
         reviewComment
       );
       setShowReviewModal(false);
+      setSuccessMessage("Thank you. Your review is pending moderation and will appear on the doctor’s page after approval.");
       await loadAppointments();
     } catch (err) {
       setError(getErrorMessage(err, "Failed to submit review"));

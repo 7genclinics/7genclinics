@@ -156,3 +156,18 @@
     animation: wasl-soft-pan 18s ease-in-out alternate infinite;
   }
 }
+
+@media print {
+  @page {
+    size: A4;
+    margin: 12mm;
+  }
+
+  body {
+    background: white !important;
+  }
+
+  .print\:hidden {
+    display: none !important;
+  }
+}

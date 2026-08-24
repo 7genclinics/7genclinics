@@ -8,6 +8,7 @@ import { AuthSessionListener } from "@/components/auth/AuthSessionListener";
 import { AdminProvider, useAdmin } from "@/contexts/AdminContext";
 import { NotificationProvider } from "@/contexts/NotificationContext";
 import { ChatProvider } from "@/contexts/ChatContext";
+import { SubscriptionProvider } from "@/contexts/SubscriptionContext";
 
 function AdminLayoutShell({ children }: { children: React.ReactNode }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -17,10 +18,13 @@ function AdminLayoutShell({ children }: { children: React.ReactNode }) {
   const getPageTitle = (path: string) => {
     if (path.includes("/dashboard")) return "Dashboard Overview";
     if (path.includes("/doctors")) return "Manage Doctors";
+    if (path.includes("/doctor-pages")) return "Doctor Public Pages";
     if (path.includes("/patients")) return "Manage Patients";
     if (path.includes("/appointments")) return "Manage Appointments";
     if (path.includes("/services")) return "Clinic Services";
+    if (path.includes("/medicines")) return "Master Medicines";
     if (path.includes("/payments")) return "Financial Oversight";
+    if (path.includes("/subscription")) return "Subscription";
     if (path.includes("/staff")) return "Staff Management";
     if (path.includes("/reports")) return "Reports & Analytics";
     if (path.includes("/settings")) return "Settings";
@@ -75,7 +79,9 @@ function AdminLayoutShell({ children }: { children: React.ReactNode }) {
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   return (
     <AdminProvider>
-      <AdminLayoutShell>{children}</AdminLayoutShell>
+      <SubscriptionProvider>
+        <AdminLayoutShell>{children}</AdminLayoutShell>
+      </SubscriptionProvider>
     </AdminProvider>
   );
 }

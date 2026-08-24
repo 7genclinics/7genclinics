@@ -158,6 +158,23 @@ export async function updateSession(request: NextRequest) {
       ) {
         return NextResponse.redirect(new URL(dashboardPath, request.url));
       }
+
+      const clinicPortal =
+        (role === "doctor" && path.startsWith("/doctor")) ||
+        (role === "receptionist" && path.startsWith("/reception"));
+      if (clinicPortal && !path.includes("/subscription")) {
+        const { data, error } = await supabase.rpc("clinic_subscription_snapshot");
+        const frozen =
+          !error &&
+          data &&
+          typeof data === "object" &&
+          (data as { frozen?: boolean }).frozen;
+        if (frozen) {
+          const dest =
+            role === "receptionist" ? "/reception/subscription" : "/doctor/subscription";
+          return NextResponse.redirect(new URL(dest, request.url));
+        }
+      }
     }
   }
 

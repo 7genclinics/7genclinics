@@ -24,11 +24,9 @@ import { LandingHeader } from "@/components/public/LandingHeader";
 import { LandingFooter } from "@/components/public/LandingFooter";
 import { DoctorsBrowse } from "@/components/public/DoctorsBrowse";
 import { DoctorSearchHero } from "@/components/public/DoctorSearchHero";
-import { ConditionBrowse } from "@/components/public/ConditionBrowse";
 import { TestimonialsCarousel } from "@/components/public/TestimonialsCarousel";
 import { ConeStripe } from "@/components/brand/BrandMark";
 import { getApprovedDoctorsServer } from "@/lib/public/doctors";
-import { MENTAL_SYMPTOMS } from "@/lib/public/catalog";
 import { BRAND } from "@/lib/brand/site";
 import { CONE_COLORS } from "@/lib/brand/colors";
 
@@ -367,19 +365,22 @@ export default async function HomePage() {
           </div>
         </section>
 
-        <section id="specialties" className="bg-white py-20 sm:py-24">
-          <div className="mx-auto max-w-6xl px-4 sm:px-6">
-            <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.22em] text-brand-600">
-              Specialties
-            </p>
-            <ConditionBrowse
-              title="What brings you in?"
-              items={MENTAL_SYMPTOMS}
-              type="symptom"
-              viewAllHref="/browse/symptoms"
-            />
-          </div>
-        </section>
+        {doctors.length > 0 && (
+          <section id="doctors" className="bg-white py-20 sm:py-24">
+            <div className="mx-auto max-w-6xl px-4 sm:px-6">
+              <Suspense fallback={null}>
+                <DoctorsBrowse
+                  initialDoctors={doctors}
+                  title="Doctors ready today"
+                  subtitle="Book video, chat, or an in-clinic visit with a verified specialist."
+                  limit={3}
+                  layout="grid"
+                  showFilters={false}
+                />
+              </Suspense>
+            </div>
+          </section>
+        )}
 
         <section id="visit" className="bg-[#f4f8f8] py-20 sm:py-24">
           <div className="mx-auto max-w-6xl px-4 sm:px-6">
@@ -543,23 +544,6 @@ export default async function HomePage() {
             </div>
           </div>
         </section>
-
-        {doctors.length > 0 && (
-          <section className="border-t border-brand-900/8 bg-[#f4f8f8] py-20 sm:py-24">
-            <div className="mx-auto max-w-6xl px-4 sm:px-6">
-              <Suspense fallback={null}>
-                <DoctorsBrowse
-                  initialDoctors={doctors}
-                  title="Doctors ready today"
-                  subtitle="Book video, chat, or an in-clinic visit with a verified specialist."
-                  limit={3}
-                  layout="grid"
-                  showFilters={false}
-                />
-              </Suspense>
-            </div>
-          </section>
-        )}
 
         <section className="relative overflow-hidden bg-white py-20 sm:py-24">
           <div className="mx-auto grid max-w-6xl items-center gap-10 px-4 sm:px-6 lg:grid-cols-2">

@@ -42,6 +42,76 @@ interface ConditionBrowseProps {
   viewAllHref?: string;
 }
 
+export function CatalogTiles({
+  items,
+  className,
+}: {
+  items: CatalogItem[];
+  className?: string;
+}) {
+  const cols =
+    items.length <= 4
+      ? "grid-cols-2 sm:grid-cols-4"
+      : items.length <= 6
+        ? "grid-cols-3 lg:grid-cols-6"
+        : "grid-cols-3 sm:grid-cols-4 lg:grid-cols-6";
+
+  return (
+    <div className={cn("grid gap-3 sm:gap-4", cols, className)}>
+      {items.map((item, index) => (
+        <CatalogTile key={`${item.id}-${index}`} item={item} />
+      ))}
+    </div>
+  );
+}
+
+export function CatalogTile({ item }: { item: CatalogItem }) {
+  const Icon = CATALOG_ICONS[item.icon];
+  const ring = item.ring ?? "from-brand-200 to-brand-100";
+
+  return (
+    <div className="group flex flex-col items-center gap-2.5 rounded-2xl p-2">
+      <span
+        className={cn(
+          "relative rounded-full bg-gradient-to-br p-[2px] shadow-sm transition-all duration-300",
+          "group-hover:-translate-y-1 group-hover:shadow-lg group-hover:shadow-brand-50",
+          ring,
+        )}
+      >
+        <span
+          className={cn(
+            "relative flex h-[72px] w-[72px] items-center justify-center overflow-hidden rounded-full bg-white sm:h-20 sm:w-20",
+            "transition-transform duration-300 group-hover:scale-[1.04]",
+          )}
+        >
+          {item.image ? (
+            <Image
+              src={item.image}
+              alt={item.label}
+              width={80}
+              height={80}
+              className="h-full w-full object-contain p-1.5 transition-transform duration-500 ease-out group-hover:scale-110 group-hover:rotate-3"
+            />
+          ) : (
+            <span
+              className={cn(
+                "flex h-full w-full items-center justify-center transition-transform duration-500 group-hover:scale-110",
+                item.bg,
+              )}
+            >
+              <Icon className={cn("h-8 w-8 sm:h-9 sm:w-9", item.color)} />
+            </span>
+          )}
+          <span className="pointer-events-none absolute inset-0 rounded-full bg-gradient-to-tr from-transparent via-white/0 to-white/40 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+        </span>
+      </span>
+      <span className="text-center text-[11px] font-semibold leading-tight text-slate-700 transition-colors group-hover:text-brand-600 sm:text-xs">
+        {item.label}
+      </span>
+    </div>
+  );
+}
+
 export function ConditionBrowse({ title, items, type, viewAllHref }: ConditionBrowseProps) {
   return (
     <section>
@@ -75,57 +145,13 @@ export function ConditionBrowse({ title, items, type, viewAllHref }: ConditionBr
 }
 
 function ConditionCard({ item, type }: { item: CatalogItem; type: "symptom" | "condition" }) {
-  const Icon = CATALOG_ICONS[item.icon];
   const href = buildDoctorSearchUrl(
-    type === "symptom" ? { symptom: item.id } : { condition: item.id }
+    type === "symptom" ? { symptom: item.id } : { condition: item.id },
   );
-  const ring = item.ring ?? "from-brand-200 to-brand-100";
 
   return (
-    <Link
-      href={href}
-      className="group flex flex-col items-center gap-2.5 rounded-2xl p-2 transition-colors hover:bg-white"
-    >
-      {/* Smart gradient border ring */}
-      <span
-        className={cn(
-          "relative rounded-full bg-gradient-to-br p-[2px] shadow-sm transition-all duration-300",
-          "group-hover:-translate-y-1 group-hover:shadow-lg group-hover:shadow-brand-50",
-          ring
-        )}
-      >
-        <span
-          className={cn(
-            "relative flex h-[72px] w-[72px] items-center justify-center overflow-hidden rounded-full bg-white sm:h-20 sm:w-20",
-            "transition-transform duration-300 group-hover:scale-[1.04]"
-          )}
-        >
-          {item.image ? (
-            <Image
-              src={item.image}
-              alt={item.label}
-              width={80}
-              height={80}
-              className="h-full w-full object-contain p-1.5 transition-transform duration-500 ease-out group-hover:scale-110 group-hover:rotate-3"
-            />
-          ) : (
-            <span
-              className={cn(
-                "flex h-full w-full items-center justify-center transition-transform duration-500 group-hover:scale-110",
-                item.bg
-              )}
-            >
-              <Icon className={cn("h-8 w-8 sm:h-9 sm:w-9", item.color)} />
-            </span>
-          )}
-          {/* Glossy hover sheen */}
-          <span className="pointer-events-none absolute inset-0 rounded-full bg-gradient-to-tr from-transparent via-white/0 to-white/40 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
-        </span>
-      </span>
-
-      <span className="text-center text-[11px] font-semibold leading-tight text-slate-700 transition-colors group-hover:text-brand-600 sm:text-xs">
-        {item.label}
-      </span>
+    <Link href={href} className="rounded-2xl transition-colors hover:bg-white">
+      <CatalogTile item={item} />
     </Link>
   );
 }

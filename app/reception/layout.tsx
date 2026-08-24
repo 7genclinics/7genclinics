@@ -7,6 +7,8 @@ import { usePathname } from "next/navigation";
 import { AuthSessionListener } from "@/components/auth/AuthSessionListener";
 import { ReceptionProvider, useReception } from "@/contexts/ReceptionContext";
 import { NotificationProvider } from "@/contexts/NotificationContext";
+import { SubscriptionProvider } from "@/contexts/SubscriptionContext";
+import { SubscriptionReminder } from "@/components/subscription/SubscriptionReminder";
 
 function ReceptionLayoutShell({ children }: { children: React.ReactNode }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -19,6 +21,8 @@ function ReceptionLayoutShell({ children }: { children: React.ReactNode }) {
     if (path.includes("/walk-in")) return "Walk-In Registration";
     if (path.includes("/patients")) return "Patients";
     if (path.includes("/billing")) return "Desk Billing";
+    if (path.includes("/medicines")) return "Doctor Medicines";
+    if (path.includes("/subscription")) return "Subscription";
     return "Reception";
   };
 
@@ -44,6 +48,7 @@ function ReceptionLayoutShell({ children }: { children: React.ReactNode }) {
           />
           <main className="flex-1 p-4 md:p-6 container max-w-7xl mx-auto">{children}</main>
         </div>
+        <SubscriptionReminder portal="reception" />
       </div>
     </NotificationProvider>
   );
@@ -52,7 +57,9 @@ function ReceptionLayoutShell({ children }: { children: React.ReactNode }) {
 export default function ReceptionLayout({ children }: { children: React.ReactNode }) {
   return (
     <ReceptionProvider>
-      <ReceptionLayoutShell>{children}</ReceptionLayoutShell>
+      <SubscriptionProvider>
+        <ReceptionLayoutShell>{children}</ReceptionLayoutShell>
+      </SubscriptionProvider>
     </ReceptionProvider>
   );
 }

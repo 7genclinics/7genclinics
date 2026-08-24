@@ -39,6 +39,11 @@ export function useClinicQueueRealtime({ onChange, doctorId, enabled = true }: O
         { event: "*", schema: "public", table: "consultations" },
         () => callbackRef.current()
       )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "vitals" },
+        () => callbackRef.current()
+      )
       .subscribe();
 
     return () => {

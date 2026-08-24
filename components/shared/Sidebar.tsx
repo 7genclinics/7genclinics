@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { logout } from "@/lib/auth/session";
 import {
+  Globe,
   LayoutDashboard,
   Calendar,
   UserCheck,
@@ -20,13 +21,16 @@ import {
   LogOut,
   X,
   MessageSquare,
-  ClipboardList,
   Stethoscope,
   Ticket,
   Wallet,
+  Pill,
+  Megaphone,
+  Repeat,
 } from "lucide-react";
 import { useContext, useState } from "react";
 import { ChatContext } from "@/contexts/ChatContext";
+import { useSubscription } from "@/contexts/SubscriptionContext";
 import { BrandMark } from "@/components/brand/BrandMark";
 
 interface SidebarProps {
@@ -41,6 +45,8 @@ export function Sidebar({ role, isOpen = false, onClose }: SidebarProps) {
   // Safely read unread count — ChatContext may not be mounted in all portals
   const chatCtx = useContext(ChatContext as React.Context<{ totalUnread: number } | null>);
   const totalUnread = chatCtx?.totalUnread ?? 0;
+  const { snapshot } = useSubscription();
+  const frozen = Boolean(snapshot?.frozen);
 
   // Define navigation items based on role
   const navigationMap = {
@@ -49,8 +55,6 @@ export function Sidebar({ role, isOpen = false, onClose }: SidebarProps) {
       { name: "Appointments", href: "/patient/appointments", icon: Calendar },
       { name: "Browse Doctors", href: "/patient/doctors", icon: UserCheck },
       { name: "Messages", href: "/patient/chat", icon: MessageSquare, badge: totalUnread },
-      { name: "Take Assessment", href: "/patient/assessment", icon: ClipboardList },
-      { name: "Assessment History", href: "/patient/assessments", icon: FileText },
       { name: "Prescriptions", href: "/patient/prescriptions", icon: FileText },
       { name: "Payments", href: "/patient/payments", icon: CreditCard },
       { name: "My Profile", href: "/patient/profile", icon: User },
@@ -59,11 +63,15 @@ export function Sidebar({ role, isOpen = false, onClose }: SidebarProps) {
       { name: "Dashboard", href: "/doctor/dashboard", icon: LayoutDashboard },
       { name: "Queue", href: "/doctor/queue", icon: Ticket },
       { name: "Appointments", href: "/doctor/appointments", icon: Calendar },
-      { name: "Patient Assessments", href: "/doctor/assessments", icon: ClipboardList },
+      { name: "Medicines", href: "/doctor/medicines", icon: Pill },
       { name: "My Patients", href: "/doctor/patients", icon: Users },
       { name: "Messages", href: "/doctor/chat", icon: MessageSquare, badge: totalUnread },
       { name: "Schedule", href: "/doctor/schedule", icon: Clock },
+      { name: "Public Profile", href: "/doctor/landing", icon: Globe },
+      { name: "Marketing", href: "/doctor/marketing", icon: Megaphone },
+      { name: "Reception / Staff", href: "/doctor/staff", icon: UserCheck },
       { name: "Earnings", href: "/doctor/earnings", icon: DollarSign },
+      { name: "Subscription", href: "/doctor/subscription", icon: Repeat },
       { name: "Profile Settings", href: "/doctor/profile", icon: User },
     ],
     receptionist: [
@@ -72,22 +80,30 @@ export function Sidebar({ role, isOpen = false, onClose }: SidebarProps) {
       { name: "Walk-In", href: "/reception/walk-in", icon: Stethoscope },
       { name: "Patients", href: "/reception/patients", icon: Users },
       { name: "Billing", href: "/reception/billing", icon: Wallet },
+      { name: "Medicines", href: "/reception/medicines", icon: Pill },
+      { name: "Subscription", href: "/reception/subscription", icon: Repeat },
     ],
     admin: [
       { name: "Dashboard", href: "/admin/dashboard", icon: LayoutDashboard },
       { name: "Manage Doctors", href: "/admin/doctors", icon: UserCheck },
+      { name: "Doctor Pages", href: "/admin/doctor-pages", icon: Globe },
       { name: "Manage Patients", href: "/admin/patients", icon: Users },
       { name: "Appointments", href: "/admin/appointments", icon: Calendar },
       { name: "Services", href: "/admin/services", icon: Stethoscope },
+      { name: "Medicines", href: "/admin/medicines", icon: Pill },
       { name: "Messages", href: "/admin/chat", icon: MessageSquare, badge: totalUnread },
       { name: "Payments", href: "/admin/payments", icon: CreditCard },
+      { name: "Subscription", href: "/admin/subscription", icon: Repeat },
       { name: "Staff Management", href: "/admin/staff", icon: ShieldCheck },
       { name: "Reports & Analytics", href: "/admin/reports", icon: TrendingUp },
       { name: "Settings", href: "/admin/settings", icon: Settings },
     ],
   };
 
-  const navItems = navigationMap[role] || [];
+  const navItems = (navigationMap[role] || []).filter((item) => {
+    if (!frozen || (role !== "doctor" && role !== "receptionist")) return true;
+    return item.href.endsWith("/subscription");
+  });
 
   const handleLogout = async () => {
     if (isLoggingOut) return;
@@ -102,7 +118,7 @@ export function Sidebar({ role, isOpen = false, onClose }: SidebarProps) {
   const sidebarContent = (
     <div className="flex h-full flex-col overflow-y-auto border-r border-border bg-card px-4 py-6">
       {/* Brand */}
-      <div className="flex items-center justify-between px-2 mb-8">
+      <div className="mb-8 flex items-center justify-between px-2">
         <BrandMark size="sm" />
         {onClose && (
           <button

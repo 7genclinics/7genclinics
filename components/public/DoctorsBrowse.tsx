@@ -19,6 +19,7 @@ import {
 } from "@/lib/public/doctor-filters";
 import type { DoctorWithProfile } from "@/lib/patient/types";
 import type { UserRole } from "@/types";
+import { BRAND } from "@/lib/brand/site";
 
 interface DoctorsBrowseProps {
   initialDoctors?: DoctorWithProfile[];
@@ -93,7 +94,7 @@ export function DoctorsBrowse({
     if (!authChecked) return;
 
     if (!isPatient) {
-      const redirect = `/doctors/${doc.id}?book=true`;
+      const redirect = `${doc.publicHref}?book=true`;
       router.push(`/login?redirect=${encodeURIComponent(redirect)}&role=patient`);
       return;
     }
@@ -113,13 +114,11 @@ export function DoctorsBrowse({
     <div className="space-y-6">
       <div>
         {!title && (
-          <p className="text-xs font-medium text-slate-400">
-            Wasl Clinic › Find Doctors
-            {filters.city ? ` › ${filters.city}` : ""}
-            {filters.specialty ? ` › ${filters.specialty}` : ""}
+          <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-brand-600">
+            {BRAND.name} · Find a doctor
           </p>
         )}
-        <h1 className="mt-2 font-heading text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl lg:text-4xl">
+        <h1 className="mt-2 font-heading text-2xl font-bold tracking-tight text-brand-900 sm:text-3xl lg:text-4xl">
           {filteredDoctors.length > 0 ? filteredDoctors.length : ""}{" "}
           {pageTitle}
         </h1>
@@ -185,8 +184,8 @@ export function DoctorsBrowse({
       {limit && doctors.length > limit && (
         <div className="text-center">
           <Link href="/doctors">
-            <Button className="gap-2 bg-[#102c7b] font-semibold text-white hover:bg-[#152a45]">
-              View All Doctors
+            <Button className="h-12 rounded-full bg-brand-500 px-7 font-semibold text-white hover:bg-brand-600">
+              View all doctors
             </Button>
           </Link>
         </div>

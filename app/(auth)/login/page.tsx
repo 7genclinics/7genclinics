@@ -173,6 +173,11 @@ function LoginForm() {
       }
 
       if (actualRole === "receptionist") {
+        if (!access.canAccessDashboard) {
+          await supabase.auth.signOut();
+          setError(access.message);
+          return;
+        }
         router.refresh();
         router.push(
           resolvePostLoginPath(actualRole, redirectTo, "/reception/dashboard")

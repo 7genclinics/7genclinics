@@ -1,44 +1,82 @@
-import { notFound } from "next/navigation";
-import { Suspense } from "react";
-import { LandingHeader } from "@/components/public/LandingHeader";
-import { LandingFooter } from "@/components/public/LandingFooter";
-import { DoctorProfileClient } from "@/components/public/DoctorProfileClient";
-import { getDoctorAvailabilityServer, getDoctorByIdServer } from "@/lib/public/doctors";
+import type { Metadata } from "next";
+import { notFound, permanentRedirect } from "next/navigation";
+import { DoctorLandingView } from "@/components/landing/DoctorLandingView";
+import { getPublicLandingPage } from "@/lib/landing/public";
+import { doctorJsonLd } from "@/lib/landing/schema";
+import { doctorPublicPath } from "@/lib/landing/slug";
+import { BRAND } from "@/lib/brand/site";
+
+export const revalidate = 60;
 
 interface DoctorPageProps {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ book?: string; preview?: string; type?: string }>;
 }
 
-export async function generateMetadata({ params }: DoctorPageProps) {
+export async function generateMetadata({ params, searchParams }: DoctorPageProps): Promise<Metadata> {
   const { id } = await params;
-  const doctor = await getDoctorByIdServer(id);
-  if (!doctor) return { title: "Doctor Not Found | Wasl Clinic" };
+  const query = await searchParams;
+  const result = await getPublicLandingPage(id, { preview: query.preview === "1" });
+  if (result.kind !== "ok") {
+    return { title: `Doctor | ${BRAND.name}` };
+  }
 
-  const name = doctor.profile?.full_name ?? "Doctor";
+  const { doctor, content } = result.data;
+  const title = content.seoTitle || `${doctor.fullName} | ${doctor.specialization} | ${BRAND.name}`;
+  const description =
+    content.seoDescription ||
+    content.shortIntro ||
+    `Book a physical or online consultation with ${doctor.fullName}.`;
+  const image = content.ogImageUrl || content.heroImageUrl || doctor.avatarUrl || undefined;
+
   return {
-    title: `${name} — ${doctor.specialization} | Wasl Clinic`,
-    description: doctor.bio ?? `Book a consultation with ${name}, ${doctor.specialization}.`,
+    title,
+    description,
+    alternates: { canonical: doctorPublicPath(doctor.slug) },
+    openGraph: {
+      title,
+      description,
+      url: doctorPublicPath(doctor.slug),
+      type: "profile",
+      images: image ? [{ url: image }] : undefined,
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      images: image ? [image] : undefined,
+    },
   };
 }
 
-export default async function DoctorDetailPage({ params }: DoctorPageProps) {
+export default async function DoctorPublicPage({ params, searchParams }: DoctorPageProps) {
   const { id } = await params;
-  const [doctor, availabilitySlots] = await Promise.all([
-    getDoctorByIdServer(id),
-    getDoctorAvailabilityServer(id),
-  ]);
+  const query = await searchParams;
+  const result = await getPublicLandingPage(id, { preview: query.preview === "1" });
 
-  if (!doctor) notFound();
+  if (result.kind === "redirect") {
+    const qs = new URLSearchParams();
+    if (query.preview === "1") qs.set("preview", "1");
+    if (query.book === "true") qs.set("book", "true");
+    if (query.type) qs.set("type", query.type);
+    const suffix = qs.toString() ? `?${qs.toString()}` : "";
+    permanentRedirect(`${doctorPublicPath(result.slug)}${suffix}`);
+  }
+
+  if (result.kind !== "ok") notFound();
+
+  const jsonLd = doctorJsonLd(
+    result.data,
+    doctorPublicPath(result.data.slug),
+  );
 
   return (
-    <div className="min-h-screen bg-[#f8fafb]">
-      <LandingHeader />
-      <main className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
-        <Suspense fallback={null}>
-          <DoctorProfileClient doctor={doctor} availabilitySlots={availabilitySlots} />
-        </Suspense>
-      </main>
-      <LandingFooter />
+    <div className="min-h-screen bg-white pb-20 md:pb-0">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
+      <DoctorLandingView data={result.data} />
     </div>
   );
 }

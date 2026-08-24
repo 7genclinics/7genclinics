@@ -5,15 +5,8 @@ import { useEffect, useState } from "react";
 import { Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { BrandMark } from "@/components/brand/BrandMark";
+import { MAIN_LANDING_NAV } from "@/lib/brand/main-nav";
 import { cn } from "@/lib/utils";
-
-const navLinks = [
-  { href: "/doctors", label: "Doctors" },
-  { href: "/#services", label: "Services" },
-  { href: "/#visit", label: "How it works" },
-  { href: "/#reviews", label: "Reviews" },
-  { href: "/#faq", label: "FAQ" },
-];
 
 type LandingHeaderProps = {
   overlay?: boolean;
@@ -56,7 +49,7 @@ export function LandingHeader({ overlay = false }: LandingHeaderProps) {
         <BrandMark size="md" inverted={inverted} />
 
         <nav className="hidden items-center gap-9 md:flex">
-          {navLinks.map((link) => (
+          {MAIN_LANDING_NAV.map((link) => (
             <Link
               key={link.href}
               href={link.href}
@@ -137,7 +130,7 @@ export function LandingHeader({ overlay = false }: LandingHeaderProps) {
           )}
         >
           <nav className="flex flex-col px-4 py-4">
-            {navLinks.map((link) => (
+            {MAIN_LANDING_NAV.map((link) => (
               <Link
                 key={link.href}
                 href={link.href}

@@ -326,6 +326,7 @@ export async function bookAppointment(params: {
   consultationFee: number;
   durationMinutes?: number;
   paymentMethod: PaymentMethod;
+  serviceId?: string | null;
 }) {
   const supabase = createClient();
   const {
@@ -344,6 +345,7 @@ export async function bookAppointment(params: {
       patient_notes: params.patientNotes?.trim() || null,
       consultation_fee: params.consultationFee,
       booking_source: "online",
+      service_id: params.serviceId ?? null,
     } as Database["public"]["Tables"]["appointments"]["Insert"])
     .select("id")
     .single();

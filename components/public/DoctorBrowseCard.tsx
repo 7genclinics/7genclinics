@@ -66,7 +66,7 @@ export function DoctorBrowseCard({ doctor, showBookButton = true, onBook }: Doct
           <p className="text-sm font-bold text-slate-900">{doctor.consultationFee}</p>
         </div>
         <div className="flex gap-2">
-          <Link href={`/doctors/${doctor.id}`}>
+          <Link href={doctor.publicHref}>
             <Button size="sm" variant="outline" className="gap-1 font-medium">
               View Profile
               <ArrowRight className="h-3.5 w-3.5" />

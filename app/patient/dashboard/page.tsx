@@ -6,11 +6,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/Button";
 import {
   FileText, CreditCard, Video, ArrowRight, Plus, Activity, Heart, Search, Calendar,
-  Brain, Clock, Star, TrendingUp, Shield, CheckCircle, DollarSign, Loader2,
+  Clock, Star, TrendingUp, Shield, CheckCircle, DollarSign, Loader2,
 } from "lucide-react";
 import { usePatient } from "@/contexts/PatientContext";
 import { UserAvatar } from "@/components/shared/UserAvatar";
 import { DashboardWelcomeBanner } from "@/components/shared/DashboardWelcomeBanner";
+import { DashboardBrandDecoration } from "@/components/shared/DashboardBrandDecoration";
 import { AppointmentSessionAlert } from "@/components/shared/AppointmentSessionAlert";
 import { useAppointmentSessionSync } from "@/lib/hooks/useAppointmentSessionSync";
 import {
@@ -212,7 +213,7 @@ export default function PatientDashboardPage() {
             ? `Welcome back. You have an upcoming ${nextApt.type.toLowerCase()} consultation with ${nextApt.doctorName}.`
             : "Welcome back to your Stress Saviors portal. Book a consultation when you're ready."
         }
-        decoration={<Brain className="h-28 w-28 text-white sm:h-36 sm:w-36 lg:h-44 lg:w-44" />}
+        decoration={<DashboardBrandDecoration />}
       />
 
       <div className="grid gap-3 sm:gap-4 grid-cols-2 lg:grid-cols-4">

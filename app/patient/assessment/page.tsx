@@ -7,12 +7,12 @@ export default function PatientAssessmentRedirectPage() {
   const router = useRouter();
 
   useLayoutEffect(() => {
-    router.replace("/assessment");
+    router.replace("/patient/dashboard");
   }, [router]);
 
   return (
-    <div className="flex items-center justify-center py-20 text-slate-500 text-sm">
-      Redirecting to Behavioral Health Assessment...
+    <div className="flex items-center justify-center py-20 text-sm text-muted-foreground">
+      Redirecting…
     </div>
   );
 }

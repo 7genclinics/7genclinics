@@ -221,7 +221,7 @@ export function DoctorSearchHero({
                 {visibleResults.map((doc) => (
                   <li key={doc.id}>
                     <Link
-                      href={`/doctors/${doc.id}`}
+                      href={doc.publicHref}
                       onClick={() => setShowResults(false)}
                       className="flex items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-brand-50/70"
                     >

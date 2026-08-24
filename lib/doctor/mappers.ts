@@ -1,4 +1,5 @@
 import type { AppointmentStatus, AppointmentType, Gender } from "@/types";
+import type { ClinicAppointment } from "@/lib/clinic/types";
 import type { AppointmentWithPatient } from "./types";
 import { parseClinicalNotes } from "./notes";
 import {
@@ -9,6 +10,7 @@ import {
 
 export interface UIPatient {
   id: string;
+  code: string;
   name: string;
   age: string;
   gender: string;
@@ -75,8 +77,15 @@ export function mapPatientsFromAppointments(
         size: "—",
       }));
 
+    const parsedLatest = parseClinicalNotes(latest.doctor_notes);
+    const condition =
+      parsedLatest.clinicalNote.split("\n").find((line) => line.trim())?.trim() ||
+      latest.patient_notes?.trim() ||
+      "—";
+
     return {
       id: patientId,
+      code: patient.patient_code ?? patientId.slice(0, 8),
       name: patient.full_name,
       age: calcAge(patient.date_of_birth) ? `${calcAge(patient.date_of_birth)} years` : "—",
       gender: formatGender(patient.gender),
@@ -85,9 +94,9 @@ export function mapPatientsFromAppointments(
       email: patient.email,
       lastConsultation: completed[0]
         ? formatDate(completed[0].completed_at ?? completed[0].scheduled_at)
-        : "No consultations yet",
+        : formatDate(latest.scheduled_at),
       sessionsCompleted: completed.length,
-      condition: latest.patient_notes?.trim() || "General mental health",
+      condition,
       prescriptions,
       sessionHistory,
       documents,
@@ -95,6 +104,41 @@ export function mapPatientsFromAppointments(
   });
 }
 
+/** Walk-in / queue patients who may not yet have a mapped appointment history card. */
+export function mapUiPatientFromClinicAppointment(apt: ClinicAppointment): UIPatient | null {
+  const patient = apt.patient;
+  if (!patient || !apt.patient_id) return null;
+  const inQueue = ["waiting", "with_doctor", "checked_in"].includes(apt.status);
+  return {
+    id: apt.patient_id,
+    code: patient.patient_code ?? apt.patient_id.slice(0, 8),
+    name: patient.full_name,
+    age: calcAge(patient.date_of_birth) ? `${calcAge(patient.date_of_birth)} years` : "—",
+    gender: formatGender(patient.gender),
+    city: patient.city ?? "—",
+    phone: patient.phone ?? "—",
+    email: patient.email,
+    lastConsultation: formatDate(apt.scheduled_at),
+    sessionsCompleted: 0,
+    condition: inQueue ? "In clinic today — reception sent to your queue" : "—",
+    prescriptions: [],
+    sessionHistory: [],
+    documents: [],
+  };
+}
+
+export function mergeClinicPatientsIntoRegistry(
+  mapped: UIPatient[],
+  todayClinic: ClinicAppointment[]
+): UIPatient[] {
+  const byId = new Map(mapped.map((p) => [p.id, p]));
+  for (const apt of todayClinic) {
+    if (!apt.patient_id || byId.has(apt.patient_id)) continue;
+    const extra = mapUiPatientFromClinicAppointment(apt);
+    if (extra) byId.set(extra.id, extra);
+  }
+  return Array.from(byId.values());
+}
 
 const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 

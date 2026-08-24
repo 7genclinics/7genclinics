@@ -153,6 +153,8 @@ export interface ClinicVitals {
   weight: number | null;
   height: number | null;
   spo2: number | null;
+  recorded_at?: string;
+  recorded_by?: string | null;
 }
 
 export interface ClinicPrescriptionItem {
@@ -183,6 +185,152 @@ export interface ClinicConsultation {
     instructions: string | null;
     items: ClinicPrescriptionItem[];
   } | null;
+}
+
+export const MEDICINE_CATEGORIES = [
+  "tablet",
+  "capsule",
+  "syrup",
+  "injection",
+  "drops",
+  "ointment",
+  "inhaler",
+  "sachet",
+  "other",
+] as const;
+
+export type MedicineCategory = (typeof MEDICINE_CATEGORIES)[number];
+
+export interface MasterMedicine {
+  id: string;
+  name: string;
+  category: string;
+  dosage_options: string[];
+  is_active: boolean;
+}
+
+export interface DoctorMedicine {
+  id: string;
+  doctor_id: string;
+  master_medicine_id: string | null;
+  name: string;
+  category: string;
+  dosage_options: string[];
+  notes: string | null;
+  is_active: boolean;
+}
+
+export interface ClinicEmrVisit {
+  id: string;
+  appointment_id: string;
+  patient_id: string;
+  doctor_id: string;
+  doctor_name: string;
+  specialization: string | null;
+  scheduled_at: string;
+  token_number: string | null;
+  appointment_type: string;
+  status: string;
+  chief_complaint: string | null;
+  symptoms: string | null;
+  diagnosis: string | null;
+  treatment_notes: string | null;
+  follow_up_date: string | null;
+  completed_at: string | null;
+  created_at: string;
+  vitals: ClinicVitals | null;
+  prescription: {
+    id: string;
+    instructions: string | null;
+    items: ClinicPrescriptionItem[];
+  } | null;
+}
+
+export function emptyVitals(): Omit<ClinicVitals, "id" | "consultation_id"> {
+  return {
+    blood_pressure: "",
+    temperature: null,
+    pulse: null,
+    weight: null,
+    height: null,
+    spo2: null,
+  };
+}
+
+export function vitalsHaveValues(vitals: Omit<ClinicVitals, "id" | "consultation_id"> | null | undefined) {
+  if (!vitals) return false;
+  return Boolean(
+    vitals.blood_pressure?.trim() ||
+      vitals.temperature != null ||
+      vitals.pulse != null ||
+      vitals.weight != null ||
+      vitals.height != null ||
+      vitals.spo2 != null
+  );
+}
+
+export function calcBmi(weightKg: number | null | undefined, heightCm: number | null | undefined) {
+  if (
+    weightKg == null ||
+    heightCm == null ||
+    heightCm < 50 ||
+    heightCm > 250 ||
+    weightKg < 2 ||
+    weightKg > 400
+  ) {
+    return null;
+  }
+  const meters = heightCm / 100;
+  return Math.round((weightKg / (meters * meters)) * 10) / 10;
+}
+
+export function bmiLabel(bmi: number | null) {
+  if (bmi == null) return null;
+  if (bmi < 18.5) return "Underweight";
+  if (bmi < 25) return "Normal";
+  if (bmi < 30) return "Overweight";
+  return "Obese";
+}
+
+export function cmToFeetInches(cm: number) {
+  const totalInches = cm / 2.54;
+  const feet = Math.floor(totalInches / 12);
+  let inches = Math.round(totalInches - feet * 12);
+  if (inches === 12) return { feet: feet + 1, inches: 0 };
+  return { feet, inches };
+}
+
+export function feetInchesToCm(feet: number, inches: number) {
+  return Math.round((feet * 12 + inches) * 2.54 * 10) / 10;
+}
+
+export function validateVitals(vitals: Omit<ClinicVitals, "id" | "consultation_id">) {
+  const errors: string[] = [];
+  const warnings: string[] = [];
+  const bp = vitals.blood_pressure?.trim() ?? "";
+  if (bp && !/^\d{2,3}\s*\/\s*\d{2,3}$/.test(bp)) {
+    errors.push("Blood pressure must look like 120/80.");
+  }
+  if (vitals.temperature != null && (vitals.temperature < 34 || vitals.temperature > 43)) {
+    errors.push("Temperature must be between 34°C and 43°C.");
+  } else if (vitals.temperature != null && (vitals.temperature < 35.5 || vitals.temperature > 38.5)) {
+    warnings.push("Temperature is outside the usual range.");
+  }
+  if (vitals.pulse != null && (vitals.pulse < 30 || vitals.pulse > 220)) {
+    errors.push("Pulse must be between 30 and 220.");
+  }
+  if (vitals.weight != null && (vitals.weight < 2 || vitals.weight > 400)) {
+    errors.push("Weight must be between 2 kg and 400 kg.");
+  }
+  if (vitals.height != null && vitals.height < 50) {
+    errors.push("Height looks too small for centimetres. Use cm, or switch to feet + inches (e.g. 5 ft 8 in).");
+  } else if (vitals.height != null && vitals.height > 250) {
+    errors.push("Height must be 250 cm or less.");
+  }
+  if (vitals.spo2 != null && (vitals.spo2 < 50 || vitals.spo2 > 100)) {
+    errors.push("SpO2 must be between 50% and 100%.");
+  }
+  return { errors, warnings };
 }
 
 export interface WalkInInput {

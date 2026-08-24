@@ -637,6 +637,155 @@ export type Database = {
           },
         ]
       }
+      doctor_landing_pages: {
+        Row: {
+          created_at: string
+          doctor_id: string
+          draft_content: Json
+          id: string
+          is_featured: boolean
+          published_at: string | null
+          published_content: Json | null
+          slug: string
+          status: Database["public"]["Enums"]["landing_page_status"]
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          doctor_id: string
+          draft_content?: Json
+          id?: string
+          is_featured?: boolean
+          published_at?: string | null
+          published_content?: Json | null
+          slug: string
+          status?: Database["public"]["Enums"]["landing_page_status"]
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          doctor_id?: string
+          draft_content?: Json
+          id?: string
+          is_featured?: boolean
+          published_at?: string | null
+          published_content?: Json | null
+          slug?: string
+          status?: Database["public"]["Enums"]["landing_page_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "doctor_landing_pages_doctor_id_fkey"
+            columns: ["doctor_id"]
+            isOneToOne: true
+            referencedRelation: "doctor_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      doctor_public_services: {
+        Row: {
+          consultation_types: string[]
+          created_at: string
+          doctor_id: string
+          fee_override: number | null
+          id: string
+          is_visible: boolean
+          service_id: string
+          sort_order: number
+        }
+        Insert: {
+          consultation_types?: string[]
+          created_at?: string
+          doctor_id: string
+          fee_override?: number | null
+          id?: string
+          is_visible?: boolean
+          service_id: string
+          sort_order?: number
+        }
+        Update: {
+          consultation_types?: string[]
+          created_at?: string
+          doctor_id?: string
+          fee_override?: number | null
+          id?: string
+          is_visible?: boolean
+          service_id?: string
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "doctor_public_services_doctor_id_fkey"
+            columns: ["doctor_id"]
+            isOneToOne: false
+            referencedRelation: "doctor_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "doctor_public_services_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      doctor_medicines: {
+        Row: {
+          category: string
+          created_at: string
+          doctor_id: string
+          dosage_options: string[]
+          id: string
+          is_active: boolean
+          master_medicine_id: string | null
+          name: string
+          notes: string | null
+          updated_at: string
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          doctor_id: string
+          dosage_options?: string[]
+          id?: string
+          is_active?: boolean
+          master_medicine_id?: string | null
+          name: string
+          notes?: string | null
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          doctor_id?: string
+          dosage_options?: string[]
+          id?: string
+          is_active?: boolean
+          master_medicine_id?: string | null
+          name?: string
+          notes?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "doctor_medicines_doctor_id_fkey"
+            columns: ["doctor_id"]
+            isOneToOne: false
+            referencedRelation: "doctor_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "doctor_medicines_master_medicine_id_fkey"
+            columns: ["master_medicine_id"]
+            isOneToOne: false
+            referencedRelation: "master_medicines"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       invoice_items: {
         Row: {
           description: string
@@ -758,6 +907,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      master_medicines: {
+        Row: {
+          category: string
+          created_at: string
+          dosage_options: string[]
+          id: string
+          is_active: boolean
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          dosage_options?: string[]
+          id?: string
+          is_active?: boolean
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          dosage_options?: string[]
+          id?: string
+          is_active?: boolean
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       message_reactions: {
         Row: {
@@ -1527,9 +1706,13 @@ export type Database = {
           appointment_id: string | null
           comment: string | null
           created_at: string | null
+          display_name: string | null
           doctor_id: string | null
           id: string
           is_visible: boolean | null
+          moderated_at: string | null
+          moderated_by: string | null
+          moderation_status: Database["public"]["Enums"]["review_moderation_status"]
           patient_id: string | null
           rating: number | null
         }
@@ -1537,9 +1720,13 @@ export type Database = {
           appointment_id?: string | null
           comment?: string | null
           created_at?: string | null
+          display_name?: string | null
           doctor_id?: string | null
           id?: string
           is_visible?: boolean | null
+          moderated_at?: string | null
+          moderated_by?: string | null
+          moderation_status?: Database["public"]["Enums"]["review_moderation_status"]
           patient_id?: string | null
           rating?: number | null
         }
@@ -1547,9 +1734,13 @@ export type Database = {
           appointment_id?: string | null
           comment?: string | null
           created_at?: string | null
+          display_name?: string | null
           doctor_id?: string | null
           id?: string
           is_visible?: boolean | null
+          moderated_at?: string | null
+          moderated_by?: string | null
+          moderation_status?: Database["public"]["Enums"]["review_moderation_status"]
           patient_id?: string | null
           rating?: number | null
         }
@@ -1687,7 +1878,25 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      doctor_public_reviews: {
+        Row: {
+          comment: string | null
+          created_at: string | null
+          display_name: string | null
+          doctor_id: string | null
+          id: string | null
+          rating: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reviews_doctor_id_fkey"
+            columns: ["doctor_id"]
+            isOneToOne: false
+            referencedRelation: "doctor_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       apply_cancellation_refund: {
@@ -1729,9 +1938,21 @@ export type Database = {
         }
         Returns: string
       }
+      clinic_ensure_consultation: {
+        Args: { p_appointment_id: string }
+        Returns: string
+      }
       clinic_ensure_invoice: {
         Args: { p_appointment_id: string; p_discount?: number }
         Returns: string
+      }
+      clinic_import_master_medicines: {
+        Args: { p_medicine_ids: string[] }
+        Returns: number
+      }
+      clinic_desk_import_master_medicines: {
+        Args: { p_doctor_id: string; p_medicine_ids: string[] }
+        Returns: number
       }
       clinic_is_prepaid: {
         Args: { p_appointment_id: string }
@@ -1740,6 +1961,18 @@ export type Database = {
       clinic_next_token: { Args: { p_doctor_id: string }; Returns: string }
       clinic_open_consultation: {
         Args: { p_appointment_id: string }
+        Returns: string
+      }
+      clinic_record_vitals: {
+        Args: {
+          p_appointment_id: string
+          p_blood_pressure?: string | null
+          p_height?: number | null
+          p_pulse?: number | null
+          p_spo2?: number | null
+          p_temperature?: number | null
+          p_weight?: number | null
+        }
         Returns: string
       }
       clinic_reassign_doctor: {
@@ -1786,6 +2019,34 @@ export type Database = {
         Args: { doctor_profile_id: string }
         Returns: boolean
       }
+      doctor_set_review_visibility: {
+        Args: { p_review_id: string; p_visible: boolean }
+        Returns: undefined
+      }
+      doctor_moderate_own_review: {
+        Args: {
+          p_review_id: string
+          p_status: Database["public"]["Enums"]["review_moderation_status"]
+        }
+        Returns: undefined
+      }
+      doctor_add_landing_review: {
+        Args: {
+          p_doctor_id: string
+          p_display_name: string
+          p_rating: number
+          p_comment?: string | null
+        }
+        Returns: string
+      }
+      doctor_delete_landing_review: {
+        Args: { p_review_id: string }
+        Returns: undefined
+      }
+      ensure_doctor_landing_page: {
+        Args: { p_doctor_id: string }
+        Returns: string
+      }
       expire_unstarted_appointment: {
         Args: {
           p_appointment_id: string
@@ -1815,6 +2076,7 @@ export type Database = {
         Args: { p_appointment_id: string }
         Returns: boolean
       }
+      is_approved_doctor: { Args: never; Returns: boolean }
       is_clinic_staff: { Args: never; Returns: boolean }
       is_conversation_participant: {
         Args: { conv_id: string }
@@ -1843,6 +2105,28 @@ export type Database = {
         Args: { p_name: string; p_role: string; p_user_id: string }
         Returns: undefined
       }
+      list_doctor_clinic_staff: {
+        Args: never
+        Returns: {
+          created_at: string | null
+          email: string
+          full_name: string
+          id: string
+          is_active: boolean
+          phone: string | null
+        }[]
+      }
+      provision_clinic_staff: {
+        Args: {
+          p_email: string
+          p_full_name: string
+          p_password: string
+          p_permissions: Json
+          p_phone: string
+          p_role: Database["public"]["Enums"]["user_role"]
+        }
+        Returns: string
+      }
       provision_staff_member: {
         Args: {
           p_email: string
@@ -1864,6 +2148,10 @@ export type Database = {
           p_phone: string
         }
         Returns: string
+      }
+      set_doctor_clinic_staff_active: {
+        Args: { p_is_active: boolean; p_user_id: string }
+        Returns: undefined
       }
       set_doctor_taxonomy: {
         Args: { p_doctor_id: string; p_tag_ids: string[] }
@@ -1894,7 +2182,9 @@ export type Database = {
       doctor_status: "pending" | "approved" | "rejected" | "suspended"
       gender: "male" | "female" | "other"
       invoice_status: "draft" | "issued" | "paid" | "void"
+      landing_page_status: "draft" | "published" | "unpublished"
       payment_method: "jazzcash" | "easypaisa" | "stripe" | "bank_transfer"
+      review_moderation_status: "pending" | "approved" | "rejected"
       payment_status: "pending" | "completed" | "failed" | "refunded"
       user_role: "patient" | "doctor" | "admin" | "super_admin" | "receptionist"
     }
@@ -2044,7 +2334,9 @@ export const Constants = {
       doctor_status: ["pending", "approved", "rejected", "suspended"],
       gender: ["male", "female", "other"],
       invoice_status: ["draft", "issued", "paid", "void"],
+      landing_page_status: ["draft", "published", "unpublished"],
       payment_method: ["jazzcash", "easypaisa", "stripe", "bank_transfer"],
+      review_moderation_status: ["pending", "approved", "rejected"],
       payment_status: ["pending", "completed", "failed", "refunded"],
       user_role: ["patient", "doctor", "admin", "super_admin", "receptionist"],
     },

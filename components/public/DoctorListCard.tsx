@@ -1,13 +1,12 @@
 import Link from "next/link";
 import {
-  Award,
-  CheckCircle,
+  ArrowRight,
+  BadgeCheck,
   MapPin,
-  MessageSquare,
   Star,
+  Stethoscope,
   Video,
 } from "lucide-react";
-import { Button } from "@/components/ui/Button";
 import { UserAvatar } from "@/components/shared/UserAvatar";
 import { mapToDoctorCard } from "@/lib/patient/mappers";
 
@@ -20,165 +19,115 @@ interface DoctorListCardProps {
   onBookAppointment?: () => void;
 }
 
-const CONDITION_TAGS = [
-  "Anxiety",
-  "Depression",
-  "Stress",
-  "Sleep Issues",
-  "PTSD",
-  "Burnout",
-];
-
 export function DoctorListCard({
   doctor,
-  rank,
   onBookVideo,
   onBookAppointment,
 }: DoctorListCardProps) {
-  const satisfaction =
-    doctor.rating > 0 ? Math.round((doctor.rating / 5) * 100) : null;
-  const tags =
-    doctor.taxonomyTags.length > 0
-      ? doctor.taxonomyTags.slice(0, 4)
-      : CONDITION_TAGS.slice(0, 4);
+  const tags = doctor.taxonomyTags.slice(0, 4);
 
   return (
-    <article className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition-all hover:border-brand-100 hover:shadow-md">
-      <div className="flex flex-col gap-5 p-5 lg:flex-row lg:items-start lg:justify-between">
-        {/* Left: profile */}
+    <article className="overflow-hidden rounded-2xl border border-brand-900/8 bg-white shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-lg">
+      <div className="flex flex-col gap-5 p-5 sm:p-6 lg:flex-row lg:items-start lg:justify-between">
         <div className="flex min-w-0 flex-1 gap-4">
-          <div className="relative shrink-0">
-            <UserAvatar
-              name={doctor.name}
-              avatarUrl={doctor.avatarUrl}
-              size="lg"
-              className="h-20 w-20 text-xl"
-            />
-            {rank && rank <= 3 && (
-              <span className="absolute -left-1 -top-1 flex h-6 w-6 items-center justify-center rounded-full bg-amber-400 text-[10px] font-bold text-white shadow">
-                {rank}
+          <UserAvatar
+            name={doctor.name}
+            avatarUrl={doctor.avatarUrl}
+            size="lg"
+            className="h-20 w-20 text-xl"
+          />
+
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <Link
+                href={doctor.publicHref}
+                className="font-heading text-lg font-semibold tracking-tight text-brand-900 hover:text-brand-600"
+              >
+                {doctor.name}
+              </Link>
+              <span className="inline-flex items-center gap-1 rounded-full border border-brand-900/8 bg-[#f7fbfb] px-2 py-0.5 text-[11px] font-semibold text-brand-800">
+                <BadgeCheck className="h-3 w-3 text-brand-500" />
+                PMDC verified
               </span>
-            )}
-          </div>
-
-          <div className="min-w-0 flex-1 space-y-2">
-            <div>
-              <div className="flex flex-wrap items-center gap-2">
-                <Link
-                  href={`/doctors/${doctor.id}`}
-                  className="text-lg font-bold text-slate-900 hover:text-brand-600 hover:underline"
-                >
-                  {doctor.name}
-                </Link>
-                <span className="inline-flex items-center gap-1 rounded-md bg-emerald-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-emerald-700">
-                  <CheckCircle className="h-3 w-3" />
-                  PMDC Verified
-                </span>
-              </div>
-              <p className="mt-0.5 text-sm font-semibold text-brand-600">
-                {doctor.specialization}
-              </p>
-              <p className="line-clamp-2 text-xs text-slate-500">{doctor.qualification}</p>
             </div>
+            <p className="mt-1 text-sm font-medium text-brand-600">{doctor.specialization}</p>
+            <p className="mt-0.5 line-clamp-2 text-xs text-slate-500">{doctor.qualification}</p>
 
-            {doctor.rating >= 4 && doctor.reviewsCount >= 3 && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-brand-50 px-2.5 py-1 text-[10px] font-bold text-brand-700">
-                <Award className="h-3 w-3" />
-                Top Booked Doctor
+            <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-500">
+              {doctor.rating > 0 && (
+                <span className="inline-flex items-center gap-1 font-semibold text-amber-600">
+                  <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
+                  {doctor.rating.toFixed(1)}
+                  <span className="font-medium text-slate-400">({doctor.reviewsCount})</span>
+                </span>
+              )}
+              <span>{doctor.experience}</span>
+              <span className="inline-flex items-center gap-1">
+                <MapPin className="h-3.5 w-3.5 text-brand-500" />
+                {doctor.city}
               </span>
+            </div>
+
+            {tags.length > 0 && (
+              <p className="mt-3 text-xs leading-relaxed text-slate-500">{tags.join(" · ")}</p>
             )}
-
-            {/* Stats row */}
-            <div className="grid grid-cols-3 gap-3 rounded-xl bg-slate-50 p-3 sm:max-w-sm">
-              <Stat label="Reviews" value={String(doctor.reviewsCount)} />
-              <Stat
-                label="Experience"
-                value={`${doctor.experience.replace(" years experience", "")} Yrs`}
-              />
-              <Stat
-                label="Satisfaction"
-                value={satisfaction ? `${satisfaction}%` : "—"}
-              />
-            </div>
-
-            {/* Condition tags */}
-            <div className="flex flex-wrap gap-1.5">
-              {tags.map((tag) => (
-                <span
-                  key={tag}
-                  className="rounded-md bg-sky-50 px-2 py-0.5 text-[10px] font-semibold text-sky-700"
-                >
-                  {tag}
-                </span>
-              ))}
-            </div>
           </div>
         </div>
 
-        {/* Right: CTAs */}
-        <div className="flex shrink-0 flex-col gap-2 sm:flex-row lg:flex-col lg:min-w-[180px]">
-          <Button
-            className="h-11 gap-2 rounded-xl bg-emerald-600 font-semibold text-white hover:bg-emerald-700"
+        <div className="flex shrink-0 flex-col gap-2 sm:flex-row lg:w-[200px] lg:flex-col">
+          <button
+            type="button"
+            onClick={onBookAppointment}
+            className="inline-flex h-11 items-center justify-center gap-2 rounded-full bg-brand-500 px-4 text-sm font-semibold text-white transition-colors hover:bg-brand-600"
+          >
+            <Stethoscope className="h-4 w-4" />
+            Book visit
+          </button>
+          <button
+            type="button"
             onClick={onBookVideo}
+            className="inline-flex h-11 items-center justify-center gap-2 rounded-full border border-brand-900/10 bg-white px-4 text-sm font-semibold text-brand-900 transition-colors hover:bg-[#f7fbfb]"
           >
             <Video className="h-4 w-4" />
-            Book Video Call
-          </Button>
-          <Button
-            className="h-11 gap-2 rounded-xl bg-[#102c7b] font-semibold text-white hover:bg-[#152a45]"
-            onClick={onBookAppointment}
+            Book video
+          </button>
+          <Link
+            href={doctor.publicHref}
+            className="inline-flex h-11 items-center justify-center gap-1.5 text-sm font-semibold text-brand-600 hover:text-brand-700"
           >
-            <MessageSquare className="h-4 w-4" />
-            Book Appointment
-          </Button>
-        </div>
-      </div>
-
-      {/* Fee cards row */}
-      <div className="grid gap-3 border-t border-slate-100 bg-slate-50/50 p-4 sm:grid-cols-2">
-        <div className="flex items-center justify-between rounded-xl border border-brand-100 bg-white p-3">
-          <div>
-            <p className="text-[10px] font-bold uppercase tracking-wide text-brand-600">
-              Video Consultation
-            </p>
-            <p className="text-lg font-bold text-slate-900">{doctor.consultationFee}</p>
-            <p className="text-[11px] text-emerald-600 font-medium">
-              {doctor.isAvailableToday ? "Available for booking" : "Check schedule"}
-            </p>
-          </div>
-          <span className="rounded-lg bg-brand-50 px-2 py-1 text-[10px] font-bold text-brand-700">
-            Online
-          </span>
-        </div>
-
-        <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-white p-3">
-          <div>
-            <p className="text-[10px] font-bold uppercase tracking-wide text-slate-500">
-              In-Clinic Visit
-            </p>
-            <p className="text-lg font-bold text-slate-900">{doctor.consultationFee}</p>
-            <p className="flex items-center gap-1 text-[11px] text-slate-500">
-              <MapPin className="h-3 w-3" />
-              {doctor.city}, Pakistan
-            </p>
-          </div>
-          <Link href={`/doctors/${doctor.id}`}>
-            <Button size="sm" variant="outline" className="text-xs font-semibold">
-              View Profile
-            </Button>
+            View profile
+            <ArrowRight className="h-4 w-4" />
           </Link>
         </div>
       </div>
-    </article>
-  );
-}
 
-function Stat({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="text-center">
-      <p className="text-[10px] font-medium uppercase tracking-wide text-slate-400">{label}</p>
-      <p className="mt-0.5 text-sm font-bold text-slate-900">{value}</p>
-    </div>
+      <div className="grid gap-px border-t border-brand-900/8 bg-brand-900/8 sm:grid-cols-2">
+        <div className="flex items-center justify-between bg-[#f7fbfb] px-5 py-4">
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-brand-600">
+              Physical visit
+            </p>
+            <p className="mt-1 font-heading text-lg font-bold tracking-tight text-brand-900">
+              {doctor.consultationFee}
+            </p>
+          </div>
+          <span className="text-xs text-slate-500">{doctor.city}</span>
+        </div>
+        <div className="flex items-center justify-between bg-[#f7fbfb] px-5 py-4">
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-brand-600">
+              Video consult
+            </p>
+            <p className="mt-1 font-heading text-lg font-bold tracking-tight text-brand-900">
+              {doctor.consultationFee}
+            </p>
+          </div>
+          <span className="text-xs font-medium text-brand-700">
+            {doctor.isAvailableToday ? "Open today" : "Check hours"}
+          </span>
+        </div>
+      </div>
+    </article>
   );
 }
 
@@ -190,19 +139,27 @@ export function DoctorGridCard({
   onBook?: () => void;
 }) {
   return (
-    <article className="flex flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition-all hover:border-brand-100 hover:shadow-lg">
-      <div className="p-5">
+    <article className="flex flex-col overflow-hidden rounded-2xl border border-brand-900/8 bg-white shadow-sm transition-all hover:-translate-y-1 hover:shadow-lg">
+      <div className="p-6">
         <div className="flex items-start gap-3">
-          <UserAvatar name={doctor.name} avatarUrl={doctor.avatarUrl} size="md" className="h-14 w-14" />
+          <UserAvatar
+            name={doctor.name}
+            avatarUrl={doctor.avatarUrl}
+            size="md"
+            className="h-14 w-14"
+          />
           <div className="min-w-0">
-            <Link href={`/doctors/${doctor.id}`} className="font-bold text-slate-900 hover:text-brand-600">
+            <Link
+              href={doctor.publicHref}
+              className="font-heading text-lg font-semibold tracking-tight text-brand-900 hover:text-brand-600"
+            >
               {doctor.name}
             </Link>
-            <p className="text-xs font-semibold text-brand-600">{doctor.specialization}</p>
+            <p className="text-xs font-medium text-brand-600">{doctor.specialization}</p>
             <div className="mt-1 flex items-center gap-2 text-xs text-slate-500">
               {doctor.rating > 0 && (
-                <span className="flex items-center gap-0.5 font-semibold text-amber-500">
-                  <Star className="h-3 w-3 fill-amber-500" />
+                <span className="inline-flex items-center gap-0.5 font-semibold text-amber-600">
+                  <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
                   {doctor.rating.toFixed(1)}
                 </span>
               )}
@@ -210,23 +167,26 @@ export function DoctorGridCard({
             </div>
           </div>
         </div>
-        <p className="mt-3 text-sm font-bold text-slate-900">{doctor.consultationFee}</p>
-        <p className="text-xs text-slate-500">{doctor.city}</p>
+        <p className="mt-5 font-heading text-lg font-bold tracking-tight text-brand-900">
+          {doctor.consultationFee}
+        </p>
+        <p className="mt-0.5 text-xs text-slate-500">{doctor.city}</p>
       </div>
-      <div className="mt-auto flex gap-2 border-t border-slate-100 bg-slate-50/50 p-3">
-        <Link href={`/doctors/${doctor.id}`} className="flex-1">
-          <Button variant="outline" size="sm" className="w-full text-xs">
-            View Profile
-          </Button>
+      <div className="mt-auto flex gap-2 border-t border-brand-900/8 bg-[#f7fbfb] p-4">
+        <Link
+          href={doctor.publicHref}
+          className="inline-flex h-10 flex-1 items-center justify-center rounded-full border border-brand-900/10 bg-white text-xs font-semibold text-brand-900 hover:bg-white"
+        >
+          View profile
         </Link>
         {onBook && (
-          <Button
-            size="sm"
-            className="flex-1 bg-brand-500 text-xs text-white hover:bg-brand-600"
+          <button
+            type="button"
             onClick={onBook}
+            className="inline-flex h-10 flex-1 items-center justify-center rounded-full bg-brand-500 text-xs font-semibold text-white hover:bg-brand-600"
           >
-            Book Slot
-          </Button>
+            Book slot
+          </button>
         )}
       </div>
     </article>

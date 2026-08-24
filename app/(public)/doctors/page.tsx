@@ -19,9 +19,9 @@ export default async function DoctorsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#f8fafb]">
+    <div className="min-h-screen bg-white">
       <LandingHeader />
-      <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-10">
+      <main className="mx-auto max-w-6xl px-4 py-12 sm:px-6 sm:py-16">
         <Suspense fallback={null}>
           <DoctorsBrowse initialDoctors={doctors} layout="list" showFilters />
         </Suspense>

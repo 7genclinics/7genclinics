@@ -10,6 +10,8 @@ import { ChatProvider } from "@/contexts/ChatContext";
 import { AuthSessionListener } from "@/components/auth/AuthSessionListener";
 import { ProfileOptimizationModal } from "@/components/doctor/ProfileOptimizationModal";
 import { checkProfileCompleteness } from "@/lib/doctor/profileCompleteness";
+import { SubscriptionProvider } from "@/contexts/SubscriptionContext";
+import { SubscriptionReminder } from "@/components/subscription/SubscriptionReminder";
 
 function DoctorLayoutShell({ children }: { children: React.ReactNode }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -19,11 +21,16 @@ function DoctorLayoutShell({ children }: { children: React.ReactNode }) {
   const getPageTitle = (path: string) => {
     if (path.includes("/dashboard")) return "Dashboard Overview";
     if (path.includes("/queue")) return "Clinic Queue";
+    if (path.includes("/medicines")) return "Medicines";
     if (path.includes("/consultations")) return "Consultation";
     if (path.includes("/appointments")) return "Manage Appointments";
     if (path.includes("/patients")) return "Patient Registry";
     if (path.includes("/assessments")) return "Patient Assessments";
     if (path.includes("/schedule")) return "Availability Schedule";
+    if (path.includes("/landing")) return "Public Profile";
+    if (path.includes("/marketing")) return "Marketing";
+    if (path.includes("/staff")) return "Reception & Staff";
+    if (path.includes("/subscription")) return "Subscription";
     if (path.includes("/earnings")) return "Earnings & Reports";
     if (path.includes("/profile")) return "Professional Profile";
     if (path.includes("/chat")) return "Messages";
@@ -89,6 +96,7 @@ function DoctorLayoutShell({ children }: { children: React.ReactNode }) {
             completeness={completeness}
             doctorName={profile.full_name}
           />
+          <SubscriptionReminder portal="doctor" />
         </div>
       </ChatProvider>
     </NotificationProvider>
@@ -98,7 +106,9 @@ function DoctorLayoutShell({ children }: { children: React.ReactNode }) {
 export default function DoctorLayout({ children }: { children: React.ReactNode }) {
   return (
     <DoctorProvider>
-      <DoctorLayoutShell>{children}</DoctorLayoutShell>
+      <SubscriptionProvider>
+        <DoctorLayoutShell>{children}</DoctorLayoutShell>
+      </SubscriptionProvider>
     </DoctorProvider>
   );
 }
