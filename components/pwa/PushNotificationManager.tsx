@@ -13,7 +13,7 @@ import {
 /** Persists across logins / new tabs (unlike sessionStorage). */
 const PROMPT_HANDLED_KEY = "push-notification-prompt-handled";
 const STANDALONE_PROMPTED_KEY = "push-notification-standalone-prompted";
-export const ENABLE_PUSH_EVENT = "stress-saviors:enable-push";
+export const ENABLE_PUSH_EVENT = "apna-clinic:enable-push";
 
 function wasPromptHandled(): boolean {
   try {
@@ -386,7 +386,7 @@ export function PushNotificationManager() {
 
       if (isIosDevice() && !isStandalonePwa()) {
         setError(
-          "On iPhone/iPad: tap Share → Add to Home Screen, open Stress Saviors from your home screen, then tap Enable notifications."
+          "On iPhone/iPad: tap Share → Add to Home Screen, open Apna Clinic from your home screen, then tap Enable notifications."
         );
         setShowPrompt(true);
         return;
@@ -624,7 +624,7 @@ export function PushNotificationManager() {
               <p className="font-semibold">Install the app for alerts</p>
               <p className="text-muted-foreground mt-1 text-sm">
                 On iPhone/iPad, notifications only work after Add to Home Screen.
-                Open Share → Add to Home Screen, launch Stress Saviors from there, then allow notifications.
+                Open Share → Add to Home Screen, launch Apna Clinic from there, then allow notifications.
               </p>
             </div>
           </div>
@@ -681,7 +681,7 @@ export function PushNotificationManager() {
           <div>
             <p className="font-semibold">Notifications are blocked</p>
             <p className="text-muted-foreground mt-1 text-sm">
-              On your phone: open system Settings → Apps → Stress Saviors (or Chrome) →
+              On your phone: open system Settings → Apps → Apna Clinic (or Chrome) →
               Notifications → Allow, then reopen this app and tap the bell-ring icon in the header
               to Enable again.
             </p>

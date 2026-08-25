@@ -8,8 +8,8 @@ import { cn } from "@/lib/utils";
 import { BookButton } from "./LandingBooking";
 
 const FALLBACK_IMAGES = [
-  "/wellness_concept.png",
-  "/online_consultation.png",
+  "/wellness_concept.jpg",
+  "/online_consultation.jpg",
   "/patient-login-page.jpg",
 ];
 

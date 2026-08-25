@@ -293,7 +293,7 @@ export default function AdminDashboardPage() {
           </span>
         }
         title={`Welcome back, ${profile.full_name.split(" ")[0] || profile.full_name}`}
-        description="Live overview of platform performance, reviews, and activity across Stress Saviors."
+        description="Live overview of platform performance, reviews, and activity across Apna Clinic."
         decoration={<DashboardBrandDecoration />}
         meta={
           <button

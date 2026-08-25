@@ -4,8 +4,8 @@ import { ConditionBrowse } from "@/components/public/ConditionBrowse";
 import { MENTAL_SYMPTOMS } from "@/lib/public/catalog";
 
 export const metadata = {
-  title: "Symptoms | Wasl Clinic",
-  description: "Browse common symptoms and find a PMDC-verified specialist at Wasl Clinic.",
+  title: "Symptoms | Apna Clinic",
+  description: "Browse common symptoms and find a PMDC-verified specialist at Apna Clinic.",
 };
 
 export default function BrowseSymptomsPage() {

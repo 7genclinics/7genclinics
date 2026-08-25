@@ -803,7 +803,7 @@ function PaymentAccountsTab({ showToast }: { showToast: (t: "success" | "error",
               <div className="space-y-2">
                 <Label>Account title / holder name</Label>
                 <Input
-                  placeholder="e.g. Stress Saviors Platform"
+                  placeholder="e.g. Apna Clinic Platform"
                   value={form.account_title}
                   onChange={(e) => setForm((p) => ({ ...p, account_title: e.target.value }))}
                 />

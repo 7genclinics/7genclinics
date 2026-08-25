@@ -41,7 +41,7 @@ export function evaluateAccountAccess(
       rejected: true,
       message:
         profile.rejection_reason ??
-        "Your account application was not approved. Please contact support@stresssaviors.pk for help.",
+        "Your account application was not approved. Please contact support@apnaclinic.pk for help.",
     };
   }
 
@@ -55,7 +55,7 @@ export function evaluateAccountAccess(
       message:
         profile.role === "doctor"
           ? "Your doctor application is pending review. An administrator will verify your credentials before you can access the dashboard."
-          : "Your account is not active yet. If this continues, contact support@stresssaviors.pk.",
+          : "Your account is not active yet. If this continues, contact support@apnaclinic.pk.",
     };
   }
 
@@ -66,7 +66,7 @@ export function evaluateAccountAccess(
       canAccessDashboard: false,
       pendingReview: false,
       rejected: true,
-      message: "Your account has been deactivated. Please contact support@stresssaviors.pk.",
+      message: "Your account has been deactivated. Please contact support@apnaclinic.pk.",
     };
   }
 
@@ -79,7 +79,7 @@ export function evaluateAccountAccess(
         pendingReview: false,
         rejected: true,
         message:
-          "Your doctor application was not approved. Please contact support@stresssaviors.pk for more information.",
+          "Your doctor application was not approved. Please contact support@apnaclinic.pk for more information.",
       };
     }
 

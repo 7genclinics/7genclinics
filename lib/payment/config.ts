@@ -18,7 +18,7 @@ export const FALLBACK_PAYMENT_ACCOUNTS: Record<BookablePaymentMethod, PaymentAcc
   jazzcash: {
     label: "JazzCash",
     method: "jazzcash",
-    accountTitle: "Stress Saviors (Admin)",
+    accountTitle: "Apna Clinic (Admin)",
     accountNumber: "0300-1234567",
     instructions:
       "Open JazzCash app → Send Money → Mobile Account → enter the number above → enter exact consultation fee → screenshot the confirmation.",
@@ -26,7 +26,7 @@ export const FALLBACK_PAYMENT_ACCOUNTS: Record<BookablePaymentMethod, PaymentAcc
   easypaisa: {
     label: "EasyPaisa",
     method: "easypaisa",
-    accountTitle: "Stress Saviors (Admin)",
+    accountTitle: "Apna Clinic (Admin)",
     accountNumber: "0345-7654321",
     instructions:
       "Open EasyPaisa app → Send Money → Mobile Account → enter the number above → enter exact consultation fee → screenshot the confirmation.",
@@ -34,7 +34,7 @@ export const FALLBACK_PAYMENT_ACCOUNTS: Record<BookablePaymentMethod, PaymentAcc
   bank_transfer: {
     label: "Bank Transfer",
     method: "bank_transfer",
-    accountTitle: "Stress Saviors Pvt Ltd",
+    accountTitle: "Apna Clinic Pvt Ltd",
     accountNumber: "PK12 HABB 0000 1234 5678 9012",
     instructions:
       "Transfer the exact consultation fee to the account above via your bank app or branch. Upload a screenshot or PDF of the transfer receipt.",

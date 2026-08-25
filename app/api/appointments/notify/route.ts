@@ -32,7 +32,7 @@ async function sendEmail(to: string, subject: string, html: string, resendKey: s
     method: "POST",
     headers: { "Authorization": `Bearer ${resendKey}`, "Content-Type": "application/json" },
     body: JSON.stringify({
-      from: "Stress Saviors <noreply@stresssaviors.pk>",
+      from: "Apna Clinic <noreply@apnaclinic.pk>",
       to: [to],
       subject,
       html,
@@ -48,12 +48,12 @@ function baseLayout(content: string) {
   return `
     <div style="font-family:Inter,sans-serif;max-width:600px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden;border:1px solid #e2e8f0">
       <div style="background:linear-gradient(135deg,#0d9488,#0284c7);padding:28px 32px">
-        <h1 style="color:#fff;margin:0;font-size:20px;font-weight:700">Stress Saviors</h1>
+        <h1 style="color:#fff;margin:0;font-size:20px;font-weight:700">Apna Clinic</h1>
         <p style="color:rgba(255,255,255,0.85);margin:4px 0 0;font-size:13px">Pakistan's Mental Wellness Platform</p>
       </div>
       <div style="padding:32px">${content}</div>
       <div style="padding:20px 32px;background:#f8fafc;border-top:1px solid #e2e8f0;text-align:center">
-        <p style="color:#94a3b8;font-size:12px;margin:0">© 2026 Stress Saviors · <a href="${SITE_URL}" style="color:#0d9488;text-decoration:none">stresssaviors.pk</a></p>
+        <p style="color:#94a3b8;font-size:12px;margin:0">© 2026 Apna Clinic · <a href="${SITE_URL}" style="color:#0d9488;text-decoration:none">apnaclinic.pk</a></p>
       </div>
     </div>`;
 }
@@ -157,7 +157,7 @@ export async function POST(request: Request) {
         sends.push(
           sendEmail(
             patient.email,
-            `Appointment cancelled — Stress Saviors`,
+            `Appointment cancelled — Apna Clinic`,
             patientHtml,
             resendKey
           )
@@ -180,7 +180,7 @@ export async function POST(request: Request) {
         sends.push(
           sendEmail(
             doctorProfile.email,
-            `Appointment cancelled — Stress Saviors`,
+            `Appointment cancelled — Apna Clinic`,
             doctorHtml,
             resendKey
           )
@@ -273,8 +273,8 @@ export async function POST(request: Request) {
 
     // Send both emails concurrently — individual failures are logged but don't block
     const results = await Promise.allSettled([
-      sendEmail(patient.email, `✅ Appointment booked with Dr. ${doctor.profile.full_name} — Stress Saviors`, patientHtml, resendKey),
-      sendEmail(doctor.profile.email, `📅 New appointment request from ${patient.full_name} — Stress Saviors`, doctorHtml, resendKey),
+      sendEmail(patient.email, `✅ Appointment booked with Dr. ${doctor.profile.full_name} — Apna Clinic`, patientHtml, resendKey),
+      sendEmail(doctor.profile.email, `📅 New appointment request from ${patient.full_name} — Apna Clinic`, doctorHtml, resendKey),
     ]);
 
     const errors = results

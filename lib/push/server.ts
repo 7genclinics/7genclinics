@@ -35,7 +35,7 @@ function configureVapid() {
 
   const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY?.trim().replace(/^["']|["']$/g, "");
   const privateKey = process.env.VAPID_PRIVATE_KEY?.trim().replace(/^["']|["']$/g, "");
-  const subject = process.env.VAPID_SUBJECT?.trim() || "mailto:support@stresssaviors.pk";
+  const subject = process.env.VAPID_SUBJECT?.trim() || "mailto:support@apnaclinic.pk";
 
   if (!publicKey || !privateKey) return false;
 

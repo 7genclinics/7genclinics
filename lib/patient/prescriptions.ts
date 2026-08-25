@@ -149,7 +149,7 @@ export function printPrescription(prc: PatientPrescription, patientName?: string
         </style>
       </head>
       <body>
-        <h1>Stress Saviors — Prescription Summary</h1>
+        <h1>Apna Clinic — Prescription Summary</h1>
         <p class="meta">Issued: ${issuedDate}${patientName ? ` · Patient: ${patientName}` : ""}</p>
         <hr />
         <div class="section">
@@ -173,7 +173,7 @@ export function printPrescription(prc: PatientPrescription, patientName?: string
         </div>`
             : ""
         }
-        <p class="footer">Reference: ${prc.appointmentId.slice(0, 8).toUpperCase()} · Generated from Stress Saviors patient portal</p>
+        <p class="footer">Reference: ${prc.appointmentId.slice(0, 8).toUpperCase()} · Generated from Apna Clinic patient portal</p>
       </body>
     </html>
   `;

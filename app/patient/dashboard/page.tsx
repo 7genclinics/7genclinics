@@ -211,7 +211,7 @@ export default function PatientDashboardPage() {
         description={
           nextApt
             ? `Welcome back. You have an upcoming ${nextApt.type.toLowerCase()} consultation with ${nextApt.doctorName}.`
-            : "Welcome back to your Stress Saviors portal. Book a consultation when you're ready."
+            : "Welcome back to your Apna Clinic portal. Book a consultation when you're ready."
         }
         decoration={<DashboardBrandDecoration />}
       />

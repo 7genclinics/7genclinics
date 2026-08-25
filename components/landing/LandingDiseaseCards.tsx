@@ -11,8 +11,8 @@ const FALLBACK_IMAGES = [
   "/stress_burnout_3d.png",
   "/sleep_issues_3d.png",
   "/panic_attacks_3d.png",
-  "/wellness_concept.png",
-  "/online_consultation.png",
+  "/wellness_concept.jpg",
+  "/online_consultation.jpg",
 ];
 
 function resolveDiseaseImage(item: LandingExpertiseItem, index: number): string {

@@ -96,10 +96,10 @@ export async function sendClinicStaffInviteEmail(input: {
     return { sent: false, reason: "RESEND_API_KEY not configured" };
   }
 
-  const siteUrl = (process.env.NEXT_PUBLIC_APP_URL ?? "https://waslclinic.pk").replace(/\/$/, "");
+  const siteUrl = (process.env.NEXT_PUBLIC_APP_URL ?? "https://apnaclinic.pk").replace(/\/$/, "");
   const loginUrl = `${siteUrl}/login?role=receptionist&redirect=/reception/dashboard`;
   const from =
-    process.env.RESEND_FROM ?? "Wasl Clinic <noreply@stresssaviors.pk>";
+    process.env.RESEND_FROM ?? "Apna Clinic <noreply@stresssaviors.pk>";
 
   const html = `
     <div style="font-family:Inter,sans-serif;max-width:600px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden;border:1px solid #e2e8f0">

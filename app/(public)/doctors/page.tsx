@@ -5,7 +5,7 @@ import { DoctorsBrowse } from "@/components/public/DoctorsBrowse";
 import { getApprovedDoctorsServer } from "@/lib/public/doctors";
 
 export const metadata = {
-  title: "Find a Doctor | Wasl Clinic",
+  title: "Find a Doctor | Apna Clinic",
   description:
     "Browse PMDC-verified doctors across Pakistan. Book video, chat, or in-clinic visits.",
 };

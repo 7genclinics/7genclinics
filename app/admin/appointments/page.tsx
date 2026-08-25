@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
+import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/Input";
 import {
   Video, Clock, Search, Calendar, User, ChevronLeft, ChevronRight,
@@ -47,17 +48,17 @@ const STATUS_LABEL: Record<AppointmentStatus, string> = {
 
 function statusBadgeClass(status: AppointmentStatus) {
   const map: Record<AppointmentStatus, string> = {
-    scheduled: "bg-amber-100 text-amber-800",
-    ongoing: "bg-emerald-100 text-emerald-800",
-    completed: "bg-blue-100 text-blue-800",
-    cancelled: "bg-red-100 text-red-800",
-    no_show: "bg-gray-100 text-gray-800",
-    expired_no_show: "bg-rose-100 text-rose-800",
-    pending_payment: "bg-orange-100 text-orange-800",
-    checked_in: "bg-indigo-100 text-indigo-800",
-    waiting: "bg-amber-100 text-amber-800",
-    with_doctor: "bg-violet-100 text-violet-800",
-    payment_pending: "bg-orange-100 text-orange-800",
+    scheduled: "border-transparent bg-amber-100 text-amber-800",
+    ongoing: "border-transparent bg-emerald-100 text-emerald-800",
+    completed: "border-transparent bg-blue-100 text-blue-800",
+    cancelled: "border-transparent bg-red-100 text-red-800",
+    no_show: "border-transparent bg-gray-100 text-gray-800",
+    expired_no_show: "border-transparent bg-rose-100 text-rose-800",
+    pending_payment: "border-transparent bg-orange-100 text-orange-800",
+    checked_in: "border-transparent bg-indigo-100 text-indigo-800",
+    waiting: "border-transparent bg-amber-100 text-amber-800",
+    with_doctor: "border-transparent bg-violet-100 text-violet-800",
+    payment_pending: "border-transparent bg-orange-100 text-orange-800",
   };
   return map[status];
 }
@@ -412,9 +413,9 @@ export default function AdminAppointmentsPage() {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className="text-xs font-mono text-slate-500">#{apt.id.slice(0, 8)}</span>
-                          <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${statusBadgeClass(apt.status)}`}>
+                          <Badge variant="outline" className={statusBadgeClass(apt.status)}>
                             {STATUS_LABEL[apt.status]}
-                          </span>
+                          </Badge>
                         </div>
                         <div className="mt-1">
                           <p className="font-medium text-slate-900 text-sm">{apt.doctor?.profile?.full_name ?? "Doctor"}</p>
@@ -527,9 +528,9 @@ export default function AdminAppointmentsPage() {
                 <div>
                   <CardTitle className="text-xl">Appointment Details</CardTitle>
                   <CardDescription className="mt-1">ID: {selected.id.slice(0, 8)}</CardDescription>
-                  <span className={`inline-block mt-2 px-3 py-1 rounded-full text-xs font-semibold ${statusBadgeClass(selected.status)}`}>
+                  <Badge variant="outline" className={`mt-2 h-auto px-3 py-1 font-semibold ${statusBadgeClass(selected.status)}`}>
                     {STATUS_LABEL[selected.status]}
-                  </span>
+                  </Badge>
                 </div>
                 <Button variant="ghost" size="sm" onClick={() => setSelected(null)}>
                   <XCircle className="h-5 w-5" />

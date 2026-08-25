@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { BRAND } from "@/lib/brand/site";
@@ -7,16 +8,20 @@ type BrandMarkProps = {
   href?: string | null;
   className?: string;
   markClassName?: string;
+  /** @deprecated Logo includes wordmark — ignored. */
   wordmarkClassName?: string;
+  /** @deprecated Logo includes wordmark — ignored. */
   showWordmark?: boolean;
   inverted?: boolean;
+  /** Light logo for dark backgrounds (footer). */
+  variant?: "default" | "reverse";
   size?: "sm" | "md" | "lg";
 };
 
 const sizeMap = {
-  sm: { mark: "h-8 w-8", word: "text-lg", gap: "gap-2" },
-  md: { mark: "h-10 w-10", word: "text-xl", gap: "gap-2.5" },
-  lg: { mark: "h-12 w-12", word: "text-2xl sm:text-3xl", gap: "gap-3" },
+  sm: { height: 32, className: "h-8 w-auto" },
+  md: { height: 40, className: "h-9 w-auto sm:h-10" },
+  lg: { height: 48, className: "h-11 w-auto sm:h-12" },
 } as const;
 
 const FACETS: { points: string; fill: string }[] = [
@@ -38,6 +43,7 @@ export function ConeStripe({ className }: { className?: string }) {
     </div>
   );
 }
+
 export function BrandCone({ className }: { className?: string }) {
   return (
     <svg viewBox="0 0 70 72" className={className} aria-hidden>
@@ -52,41 +58,23 @@ export function BrandMark({
   href = "/",
   className,
   markClassName,
-  wordmarkClassName,
-  showWordmark = true,
   inverted = false,
+  variant = "default",
   size = "md",
 }: BrandMarkProps) {
   const s = sizeMap[size];
+  const useReverse = variant === "reverse" || inverted;
   const content = (
-    <span className={cn("inline-flex items-center", s.gap, className)}>
-      <span
-        className={cn(
-          "relative inline-flex shrink-0 items-center justify-center overflow-hidden rounded-xl",
-          inverted ? "bg-white/10 ring-1 ring-white/20" : "bg-white shadow-sm ring-1 ring-black/5",
-          s.mark,
-          markClassName
-        )}
-        aria-hidden
-      >
-        <BrandCone className="h-[78%] w-[78%]" />
-      </span>
-      {showWordmark && (
-        <span
-          className={cn(
-            "font-display font-semibold tracking-tight",
-            inverted ? "text-white" : "text-brand-900",
-            s.word,
-            wordmarkClassName
-          )}
-        >
-          {BRAND.shortName}
-          <span className={cn("font-medium", inverted ? "text-white/75" : "text-brand-500")}>
-            {" "}
-            Clinic
-          </span>
-        </span>
-      )}
+    <span className={cn("inline-flex items-center", className)}>
+      <Image
+        src={useReverse ? "/apna-clinic-logo-reverse.png" : "/apna-clinic-logo.png"}
+        alt={BRAND.name}
+        width={220}
+        height={s.height}
+        priority
+        unoptimized
+        className={cn(s.className, markClassName)}
+      />
     </span>
   );
 

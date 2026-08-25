@@ -1,5 +1,5 @@
 /**
- * Wasl Clinic palette — sampled from the seven triangles in the brand cone.
+ * Apna Clinic palette — sampled from the seven triangles in the brand cone.
  */
 export const CONE_COLORS = {
   teal: "#47AFA0",

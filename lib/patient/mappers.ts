@@ -157,6 +157,7 @@ export function mapToDoctorCard(doc: DoctorWithProfile) {
     specialization: doc.specialization,
     qualification: doc.qualification?.join(", ") ?? "",
     experience: `${doc.experience_years} years experience`,
+    experienceYears: doc.experience_years,
     pmdcNumber: doc.pmdc_number,
     rating: Number(doc.rating) || 0,
     reviewsCount: doc.total_reviews ?? 0,

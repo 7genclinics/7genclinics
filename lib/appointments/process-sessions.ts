@@ -47,7 +47,7 @@ async function sendEmail(to: string, subject: string, html: string) {
     method: "POST",
     headers: { Authorization: `Bearer ${resendKey}`, "Content-Type": "application/json" },
     body: JSON.stringify({
-      from: "Stress Saviors <noreply@stresssaviors.pk>",
+      from: "Apna Clinic <noreply@apnaclinic.pk>",
       to: [to],
       subject,
       html,
@@ -217,7 +217,7 @@ export async function processAppointmentSessions(): Promise<ProcessSessionsResul
         ]);
 
         const emailHtml = (name: string, body: string) =>
-          `<div style="font-family:sans-serif;max-width:560px"><p>Hi ${name},</p><p>${body}</p><p><a href="${SITE_URL}">Open Stress Saviors</a></p></div>`;
+          `<div style="font-family:sans-serif;max-width:560px"><p>Hi ${name},</p><p>${body}</p><p><a href="${SITE_URL}">Open Apna Clinic</a></p></div>`;
 
         await Promise.allSettled([
           apt.patient?.email
@@ -307,14 +307,14 @@ export async function processAppointmentSessions(): Promise<ProcessSessionsResul
         apt.patient?.email
           ? sendEmail(
               apt.patient.email,
-              "Consultation expired — Stress Saviors",
+              "Consultation expired — Apna Clinic",
               `<p>Hi ${patientName},</p><p>${patientMsg}</p>`
             )
           : Promise.resolve(false),
         apt.doctor?.profile?.email
           ? sendEmail(
               apt.doctor.profile.email,
-              "Consultation expired — Stress Saviors",
+              "Consultation expired — Apna Clinic",
               `<p>Hi Dr. ${doctorName},</p><p>${expiryMsg}</p>`
             )
           : Promise.resolve(false),

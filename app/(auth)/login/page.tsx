@@ -244,7 +244,7 @@ function LoginForm() {
             Sign in
           </h1>
           <p className="text-sm text-slate-500">
-            Choose how you use Wasl
+            Choose how you use Apna Clinic
           </p>
         </div>
 

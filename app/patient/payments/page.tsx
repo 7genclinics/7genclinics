@@ -93,7 +93,7 @@ function downloadReceipt(tx: PatientPaymentRow, patientName: string) {
     ["Payment Method", tx.method],
     ["Amount (PKR)", String(tx.amountRaw)],
     ["Status", tx.status],
-    ["Platform", "Stress Saviors Telehealth"],
+    ["Platform", "Apna Clinic Telehealth"],
   ];
   const csv = lines
     .map((row) => row.map((c) => (/[",\n]/.test(c) ? `"${c.replace(/"/g, '""')}"` : c)).join(","))
@@ -121,7 +121,7 @@ function printReceipt(tx: PatientPaymentRow, patientName: string) {
   .footer { margin-top: 32px; font-size: 0.75rem; color: #888; text-align: center; }
 </style></head><body>
   <h1>Payment Receipt</h1>
-  <p class="muted">Stress Saviors · ${tx.id}</p>
+  <p class="muted">Apna Clinic · ${tx.id}</p>
   <table>
     <tr><td>Patient</td><td>${patientName}</td></tr>
     <tr><td>Consultant</td><td>${tx.doctorName}</td></tr>
@@ -132,7 +132,7 @@ function printReceipt(tx: PatientPaymentRow, patientName: string) {
     <tr><td>Status</td><td>${tx.status}</td></tr>
     <tr><td class="total">Amount</td><td class="total">${tx.amount}</td></tr>
   </table>
-  <p class="footer">Secured with 128-bit SSL encryption · stresssaviors.pk</p>
+  <p class="footer">Secured with 128-bit SSL encryption · apnaclinic.pk</p>
   <script>window.onload = () => window.print();</script>
 </body></html>`;
   const win = window.open("", "_blank", "width=720,height=800");
@@ -260,7 +260,7 @@ export default function PatientPaymentsPage() {
   const handleExportAll = () => {
     if (sorted.length === 0) return;
     downloadCsv(
-      `stress-saviors-payments-${Date.now()}.csv`,
+      `apna-clinic-payments-${Date.now()}.csv`,
       sorted.map((tx) => ({
         "Transaction ID": tx.id,
         Consultant: tx.doctorName,

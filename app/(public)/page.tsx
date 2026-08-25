@@ -1,30 +1,18 @@
 import Link from "next/link";
 import Image from "next/image";
-import { Suspense } from "react";
 import {
   ArrowRight,
   BadgeCheck,
-  Building2,
-  CalendarCheck,
-  ClipboardList,
   Clock,
-  FileText,
-  HeartPulse,
   MapPin,
-  MessageSquare,
   Phone,
-  Receipt,
-  ShieldCheck,
-  Stethoscope,
-  Ticket,
-  Video,
-  Wallet,
 } from "lucide-react";
 import { LandingHeader } from "@/components/public/LandingHeader";
 import { LandingFooter } from "@/components/public/LandingFooter";
-import { DoctorsBrowse } from "@/components/public/DoctorsBrowse";
 import { DoctorSearchHero } from "@/components/public/DoctorSearchHero";
+import { LandingDoctorsSection } from "@/components/public/LandingDoctorsSection";
 import { TestimonialsCarousel } from "@/components/public/TestimonialsCarousel";
+import { TopSpecialitiesSection } from "@/components/public/TopSpecialitiesSection";
 import { ConeStripe } from "@/components/brand/BrandMark";
 import { getApprovedDoctorsServer } from "@/lib/public/doctors";
 import { BRAND } from "@/lib/brand/site";
@@ -42,29 +30,25 @@ const services = [
     title: "Video consultation",
     copy: "Join a private room from your phone or laptop. Pay ahead, evenings included.",
     href: "/doctors",
-    icon: Video,
-    accent: CONE_COLORS.teal,
+    image: "/card_video_consultation.png",
   },
   {
     title: "Chat with a doctor",
     copy: "Message-based care when you need advice without a live video call.",
     href: "/doctors",
-    icon: MessageSquare,
-    accent: CONE_COLORS.tealMuted,
+    image: "/card_chat_doctor.png",
   },
   {
     title: "Clinic appointment",
     copy: "Reserve an in-person slot. Reception checks you in and issues a queue token.",
     href: "/doctors",
-    icon: Building2,
-    accent: CONE_COLORS.blue,
+    image: "/card_clinic_appointment.png",
   },
   {
     title: "Walk-in visit",
     copy: "No booking needed. Register at the desk, wait your turn, settle after the consult.",
     href: "/register",
-    icon: Ticket,
-    accent: CONE_COLORS.blueDeep,
+    image: "/card_walk_in_visit.png",
   },
 ];
 
@@ -93,57 +77,57 @@ const steps = [
 
 const reasons = [
   {
-    icon: ShieldCheck,
     title: "Verified clinicians",
     copy: "Every listed doctor is reviewed before they can take patients.",
+    image: "/feature_verified_clinicians.png",
   },
   {
-    icon: HeartPulse,
     title: "One record, both doors",
     copy: "Online booking and clinic floor share the same appointment — no duplicate files.",
+    image: "/feature_shared_records.png",
   },
   {
-    icon: Ticket,
     title: "Live queue tokens",
     copy: "Reception issues a number. Doctors call the next patient from their queue.",
+    image: "/feature_live_queue_tokens.png",
   },
   {
-    icon: FileText,
     title: "Prescriptions that travel",
     copy: "Print or download your Rx after video, chat, or an in-person consult.",
+    image: "/feature_prescriptions_travel.png",
   },
   {
-    icon: Wallet,
     title: "Clear payments",
     copy: "Prepaid online visits. Walk-ins settle at reception. No double charge.",
+    image: "/feature_clear_payments.png",
   },
   {
-    icon: ClipboardList,
     title: "Self-assessment first",
     copy: "Not sure who to see? Start with a short screening, then book the right specialty.",
+    image: "/feature_self_assessment.png",
   },
 ];
 
 const clinicFloor = [
   {
-    icon: CalendarCheck,
     title: "Check in",
     copy: "Show your booking or register as a walk-in. Reception confirms your details.",
+    image: "/workflow_check_in.png",
   },
   {
-    icon: Ticket,
     title: "Get a token",
     copy: "You join today’s waiting list. The screen and desk both know your place.",
+    image: "/workflow_get_token.png",
   },
   {
-    icon: Stethoscope,
     title: "See the doctor",
     copy: "When your number is called, you go in. Notes, diagnosis, and Rx are recorded.",
+    image: "/workflow_see_doctor.png",
   },
   {
-    icon: Receipt,
     title: "Pay at the desk",
     copy: "If you did not prepay online, reception collects the fee and can print a receipt.",
+    image: "/workflow_pay_at_desk.png",
   },
 ];
 
@@ -200,8 +184,8 @@ const testimonials = [
 
 const faqs = [
   {
-    q: "Is Wasl only online?",
-    a: "No. Wasl is a hybrid clinic: video and chat from home, or in-person care with reception check-in, queue tokens, and desk billing.",
+    q: "Is Apna Clinic only online?",
+    a: "No. Apna Clinic is a hybrid clinic: video and chat from home, or in-person care with reception check-in, queue tokens, and desk billing.",
   },
   {
     q: "Do I need an account to browse?",
@@ -254,15 +238,15 @@ export default async function HomePage() {
       <main>
         <section className="relative isolate min-h-[100svh] overflow-hidden text-white">
           <Image
-            src="/wellness_concept.png"
+            src="/landing-hero%20bg.jpg"
             alt=""
             fill
             priority
             sizes="100vw"
-            className="animate-wasl-soft-pan object-cover object-[58%_center]"
+            className="object-cover object-center"
           />
-          <div className="absolute inset-0 bg-gradient-to-r from-brand-950/92 via-brand-950/55 to-brand-950/20" />
-          <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-brand-950 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-r from-brand-950/55 via-brand-950/20 to-transparent" />
+          <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-brand-950/50 to-transparent" />
 
           <div className="relative mx-auto flex min-h-[100svh] max-w-6xl flex-col justify-end px-4 pb-10 pt-28 sm:px-6 sm:pb-14 lg:justify-center lg:pb-20 lg:pt-32">
             <p className="animate-wasl-fade-up text-[11px] font-semibold uppercase tracking-[0.28em] text-brand-300">
@@ -334,21 +318,23 @@ export default async function HomePage() {
             </p>
 
             <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-              {services.map((service) => {
-                const Icon = service.icon;
-                return (
-                  <Link
-                    key={service.title}
-                    href={service.href}
-                    className="group flex flex-col rounded-2xl border border-brand-900/8 bg-white p-6 shadow-sm transition-all hover:-translate-y-1 hover:shadow-lg"
-                  >
-                    <span
-                      className="flex h-11 w-11 items-center justify-center rounded-xl text-white"
-                      style={{ backgroundColor: service.accent }}
-                    >
-                      <Icon className="h-5 w-5" />
-                    </span>
-                    <h3 className="mt-5 font-heading text-lg font-semibold tracking-tight">
+              {services.map((service) => (
+                <Link
+                  key={service.title}
+                  href={service.href}
+                  className="group flex flex-col overflow-hidden rounded-2xl border border-brand-900/8 bg-white shadow-sm transition-all hover:-translate-y-1 hover:shadow-lg"
+                >
+                  <div className="relative aspect-square w-full overflow-hidden bg-[#eef6f6]">
+                    <Image
+                      src={service.image}
+                      alt=""
+                      fill
+                      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+                      className="object-cover transition-transform duration-500 group-hover:scale-[1.03]"
+                    />
+                  </div>
+                  <div className="flex flex-1 flex-col p-6">
+                    <h3 className="font-heading text-lg font-semibold tracking-tight">
                       {service.title}
                     </h3>
                     <p className="mt-2 flex-1 text-sm leading-relaxed text-slate-600">
@@ -358,29 +344,16 @@ export default async function HomePage() {
                       Continue
                       <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
                     </span>
-                  </Link>
-                );
-              })}
+                  </div>
+                </Link>
+              ))}
             </div>
           </div>
         </section>
 
-        {doctors.length > 0 && (
-          <section id="doctors" className="bg-white py-20 sm:py-24">
-            <div className="mx-auto max-w-6xl px-4 sm:px-6">
-              <Suspense fallback={null}>
-                <DoctorsBrowse
-                  initialDoctors={doctors}
-                  title="Doctors ready today"
-                  subtitle="Book video, chat, or an in-clinic visit with a verified specialist."
-                  limit={3}
-                  layout="grid"
-                  showFilters={false}
-                />
-              </Suspense>
-            </div>
-          </section>
-        )}
+        <TopSpecialitiesSection />
+
+        <LandingDoctorsSection doctors={doctors} />
 
         <section id="visit" className="bg-[#f4f8f8] py-20 sm:py-24">
           <div className="mx-auto max-w-6xl px-4 sm:px-6">
@@ -423,92 +396,101 @@ export default async function HomePage() {
           </div>
         </section>
 
-        <section id="care" className="grid lg:grid-cols-2">
-          <Link
-            href="/doctors"
-            className="group relative isolate min-h-[460px] overflow-hidden text-white"
-          >
-            <Image
-              src="/doc_female_portrait.png"
-              alt="Doctor available for online consultation"
-              fill
-              sizes="(max-width: 1024px) 100vw, 50vw"
-              className="object-cover transition-transform duration-[1200ms] ease-out group-hover:scale-[1.04]"
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-brand-950/92 via-brand-950/40 to-transparent" />
-            <div className="absolute inset-x-0 bottom-0 p-8 sm:p-10">
-              <p className="text-[11px] font-medium uppercase tracking-[0.22em] text-white/60">
-                Online
-              </p>
-              <h2 className="mt-2 font-heading text-3xl font-bold tracking-tight sm:text-4xl">
-                Consult from anywhere
-              </h2>
-              <p className="mt-3 max-w-sm text-sm leading-relaxed text-white/75 sm:text-base">
-                Book video or chat, pay ahead, join a private room — evenings included. Notes and
-                prescriptions land in your account.
-              </p>
-              <span className="mt-6 inline-flex items-center gap-2 text-sm font-medium">
-                Book a video visit
-                <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-              </span>
-            </div>
-          </Link>
+        <section id="care" className="bg-[#F4F8F8] py-10 sm:py-14">
+          <div className="mx-auto grid max-w-6xl gap-4 px-4 sm:px-6 lg:grid-cols-2">
+            <Link
+              href="/doctors"
+              className="group relative isolate min-h-[460px] overflow-hidden rounded-2xl text-white"
+            >
+              <Image
+                src="/bg_online_consultation.jpg"
+                alt="Doctor available for online consultation"
+                fill
+                sizes="(max-width: 1024px) 100vw, 50vw"
+                className="object-cover transition-transform duration-[1200ms] ease-out group-hover:scale-[1.04]"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-brand-950/92 via-brand-950/40 to-transparent" />
+              <div className="absolute inset-x-0 bottom-0 p-8 sm:p-10">
+                <p className="text-[11px] font-medium uppercase tracking-[0.22em] text-white/60">
+                  Online
+                </p>
+                <h2 className="mt-2 font-heading text-3xl font-bold tracking-tight sm:text-4xl">
+                  Consult from anywhere
+                </h2>
+                <p className="mt-3 max-w-sm text-sm leading-relaxed text-white/75 sm:text-base">
+                  Book video or chat, pay ahead, join a private room — evenings included. Notes and
+                  prescriptions land in your account.
+                </p>
+                <span className="mt-6 inline-flex items-center gap-2 text-sm font-medium">
+                  Book a video visit
+                  <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+                </span>
+              </div>
+            </Link>
 
-          <Link
-            href="/doctors"
-            className="group relative isolate min-h-[460px] overflow-hidden text-white"
-          >
-            <Image
-              src="/patient-login-page.jpg"
-              alt="Patient receiving care in clinic"
-              fill
-              sizes="(max-width: 1024px) 100vw, 50vw"
-              className="object-cover transition-transform duration-[1200ms] ease-out group-hover:scale-[1.04]"
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-brand-950/92 via-brand-950/45 to-transparent" />
-            <div className="absolute inset-x-0 bottom-0 p-8 sm:p-10">
-              <p className="text-[11px] font-medium uppercase tracking-[0.22em] text-white/60">
-                In clinic
-              </p>
-              <h2 className="mt-2 font-heading text-3xl font-bold tracking-tight sm:text-4xl">
-                Walk in. Get a token.
-              </h2>
-              <p className="mt-3 max-w-sm text-sm leading-relaxed text-white/75 sm:text-base">
-                Reception checks you in. Doctors call the next patient. Settle at the desk if you
-                have not already paid online.
-              </p>
-              <span className="mt-6 inline-flex items-center gap-2 text-sm font-medium">
-                Reserve a clinic slot
-                <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-              </span>
-            </div>
-          </Link>
+            <Link
+              href="/doctors"
+              className="group relative isolate min-h-[460px] overflow-hidden rounded-2xl text-white"
+            >
+              <Image
+                src="/bg_clinic_reception_desk.jpg"
+                alt="Patient receiving care in clinic"
+                fill
+                sizes="(max-width: 1024px) 100vw, 50vw"
+                className="object-cover transition-transform duration-[1200ms] ease-out group-hover:scale-[1.04]"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-brand-950/92 via-brand-950/45 to-transparent" />
+              <div className="absolute inset-x-0 bottom-0 p-8 sm:p-10">
+                <p className="text-[11px] font-medium uppercase tracking-[0.22em] text-white/60">
+                  In clinic
+                </p>
+                <h2 className="mt-2 font-heading text-3xl font-bold tracking-tight sm:text-4xl">
+                  Walk in. Get a token.
+                </h2>
+                <p className="mt-3 max-w-sm text-sm leading-relaxed text-white/75 sm:text-base">
+                  Reception checks you in. Doctors call the next patient. Settle at the desk if you
+                  have not already paid online.
+                </p>
+                <span className="mt-6 inline-flex items-center gap-2 text-sm font-medium">
+                  Reserve a clinic slot
+                  <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+                </span>
+              </div>
+            </Link>
+          </div>
         </section>
 
-        <section className="bg-white py-20 sm:py-24">
+        <section className="bg-[#F4F8F8] py-20 sm:py-24">
           <div className="mx-auto max-w-6xl px-4 sm:px-6">
             <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-brand-600">
-              Why Wasl
+              Why Apna Clinic
             </p>
             <h2 className="mt-3 max-w-xl font-heading text-3xl font-bold tracking-tight sm:text-4xl">
               Built for Pakistan’s hybrid clinic — not just another booking site.
             </h2>
             <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              {reasons.map((reason) => {
-                const Icon = reason.icon;
-                return (
-                  <div
-                    key={reason.title}
-                    className="rounded-2xl border border-brand-900/8 bg-[#f7fbfb] p-6"
-                  >
-                    <Icon className="h-6 w-6 text-brand-500" strokeWidth={1.75} />
-                    <h3 className="mt-4 font-heading text-lg font-semibold tracking-tight">
+              {reasons.map((reason) => (
+                <div
+                  key={reason.title}
+                  className="overflow-hidden rounded-2xl border border-brand-900/8 bg-white shadow-sm"
+                >
+                  <div className="relative aspect-[16/10] w-full overflow-hidden bg-white">
+                    <Image
+                      src={reason.image}
+                      alt=""
+                      fill
+                      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                      className="object-cover object-top"
+                    />
+                  </div>
+                  <div className="bg-white px-5 py-4">
+                    <h3 className="font-heading text-lg font-semibold tracking-tight">
                       {reason.title}
                     </h3>
-                    <p className="mt-2 text-sm leading-relaxed text-slate-600">{reason.copy}</p>
+                    <p className="mt-1.5 text-sm leading-relaxed text-slate-600">{reason.copy}</p>
                   </div>
-                );
-              })}
+                </div>
+              ))}
             </div>
           </div>
         </section>
@@ -526,21 +508,31 @@ export default async function HomePage() {
               Doctors never work from a separate list.
             </p>
             <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-              {clinicFloor.map((item, i) => {
-                const Icon = item.icon;
-                return (
-                  <div key={item.title} className="rounded-2xl bg-white/5 p-6 ring-1 ring-white/10">
+              {clinicFloor.map((item, i) => (
+                <div
+                  key={item.title}
+                  className="overflow-hidden rounded-2xl bg-white/5 ring-1 ring-white/10"
+                >
+                  <div className="relative aspect-square w-full overflow-hidden bg-[#F4F8F8]">
+                    <Image
+                      src={item.image}
+                      alt=""
+                      fill
+                      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+                      className="object-cover"
+                    />
+                  </div>
+                  <div className="p-6">
                     <div className="flex items-center justify-between">
-                      <Icon className="h-6 w-6 text-brand-300" />
                       <span className="font-heading text-sm font-semibold text-white/35">
                         0{i + 1}
                       </span>
                     </div>
-                    <h3 className="mt-5 font-heading text-lg font-semibold">{item.title}</h3>
+                    <h3 className="mt-3 font-heading text-lg font-semibold">{item.title}</h3>
                     <p className="mt-2 text-sm leading-relaxed text-white/60">{item.copy}</p>
                   </div>
-                );
-              })}
+                </div>
+              ))}
             </div>
           </div>
         </section>
@@ -549,7 +541,7 @@ export default async function HomePage() {
           <div className="mx-auto grid max-w-6xl items-center gap-10 px-4 sm:px-6 lg:grid-cols-2">
             <div className="relative min-h-[320px] overflow-hidden rounded-3xl">
               <Image
-                src="/online_consultation.png"
+                src="/online_consultation.jpg"
                 alt="Patient preparing a short self-assessment"
                 fill
                 sizes="(max-width: 1024px) 100vw, 50vw"
@@ -595,17 +587,19 @@ export default async function HomePage() {
 
         <section id="faq" className="bg-white py-20 sm:py-24">
           <div className="mx-auto max-w-6xl px-4 sm:px-6">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-brand-600">
-              Questions
-            </p>
-            <h2 className="mt-3 font-heading text-3xl font-bold tracking-tight sm:text-4xl">
-              Before you book
-            </h2>
-            <p className="mt-3 max-w-lg text-slate-600">
-              Hybrid care through {BRAND.name} — online and in the clinic.
-            </p>
+            <div className="mx-auto max-w-3xl text-center">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-brand-600">
+                Questions
+              </p>
+              <h2 className="mt-3 font-heading text-3xl font-bold tracking-tight sm:text-4xl">
+                Before you book
+              </h2>
+              <p className="mx-auto mt-3 max-w-lg text-slate-600">
+                Hybrid care through {BRAND.name} — online and in the clinic.
+              </p>
+            </div>
 
-            <div className="mt-12 max-w-3xl divide-y divide-brand-900/10">
+            <div className="mx-auto mt-12 max-w-3xl divide-y divide-brand-900/10">
               {faqs.map((faq, i) => (
                 <details key={faq.q} className="group py-1">
                   <summary className="flex cursor-pointer list-none items-baseline gap-6 py-5 marker:content-none [&::-webkit-details-marker]:hidden">
@@ -668,17 +662,27 @@ export default async function HomePage() {
           </div>
         </section>
 
-        <section className="border-t border-brand-200/70 bg-brand-50 py-16 sm:py-20">
-          <div className="mx-auto flex max-w-6xl flex-col items-start justify-between gap-8 px-4 sm:flex-row sm:items-center sm:px-6">
+        <section className="relative isolate min-h-[360px] overflow-hidden sm:min-h-[420px] lg:min-h-[480px]">
+          <Image
+            src="/online_consultation.jpg"
+            alt=""
+            fill
+            sizes="100vw"
+            className="object-cover object-center"
+          />
+          <div className="absolute inset-0 bg-brand-950/55" />
+          <div className="absolute inset-0 bg-gradient-to-t from-brand-950/70 via-brand-950/35 to-brand-950/40" />
+
+          <div className="relative mx-auto flex h-full max-w-6xl flex-col items-center justify-center px-4 py-24 text-center sm:px-6 sm:py-28 lg:py-32">
             <div>
-              <p className="font-heading text-3xl font-bold tracking-tight text-brand-900 sm:text-4xl">
+              <p className="font-heading text-3xl font-bold tracking-tight text-white sm:text-4xl lg:text-[2.75rem]">
                 Ready when you are
               </p>
-              <p className="mt-3 max-w-md text-sm leading-relaxed text-slate-600 sm:text-base">
+              <p className="mx-auto mt-4 max-w-md text-sm leading-relaxed text-white/80 sm:text-base">
                 Book a secure consult, walk in for same-day care, or start with a short assessment.
               </p>
             </div>
-            <div className="flex flex-wrap gap-3">
+            <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
               <Link
                 href="/doctors"
                 className="inline-flex items-center gap-2 rounded-full bg-brand-500 px-6 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-brand-600"
@@ -688,7 +692,7 @@ export default async function HomePage() {
               </Link>
               <Link
                 href="/register"
-                className="inline-flex items-center gap-2 rounded-full border border-brand-900/12 bg-white px-6 py-3 text-sm font-semibold text-brand-900 transition-colors hover:border-brand-300 hover:bg-white"
+                className="inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/90 px-6 py-3 text-sm font-semibold text-brand-900 backdrop-blur-sm transition-colors hover:border-white/40 hover:bg-white"
               >
                 Create account
               </Link>

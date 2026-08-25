@@ -136,7 +136,7 @@ export function DoctorLandingView({
                 />
               ) : (
                 <Image
-                  src={doctor.gender === "male" ? "/doc_male_portrait.png" : "/doc_female_portrait.png"}
+                  src={doctor.gender === "male" ? "/doc_male_portrait.jpg" : "/doc_female_portrait.jpg"}
                   alt=""
                   fill
                   priority

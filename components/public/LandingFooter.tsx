@@ -44,7 +44,7 @@ export function LandingFooter() {
       <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
         <div className="grid gap-12 sm:grid-cols-2 lg:grid-cols-12 lg:gap-8">
           <div className="lg:col-span-5">
-            <BrandMark size="md" inverted />
+            <BrandMark size="md" variant="reverse" />
             <p className="mt-5 max-w-xs text-sm leading-relaxed text-white/55">
               {BRAND.description}
             </p>

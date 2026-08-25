@@ -154,7 +154,7 @@ export function Header({ title, user, onMenuClick }: HeaderProps) {
 
   const displayUser = user || {
     name: "User Account",
-    email: "user@waslclinic.pk",
+    email: "user@apnaclinic.pk",
     role: "patient" as const,
   };
 

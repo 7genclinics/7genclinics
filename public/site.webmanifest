@@ -1,6 +1,6 @@
 {
-  "name": "Wasl Clinic",
-  "short_name": "Wasl",
+  "name": "Apna Clinic",
+  "short_name": "Apna",
   "description": "Hybrid clinic care in Pakistan — online consultations and in-clinic visits.",
   "id": "/",
   "scope": "/",
@@ -13,25 +13,25 @@
   "dir": "ltr",
   "icons": [
     {
-      "src": "/logo-192.png",
+      "src": "/apna-clinic-favicon.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/logo-512.png",
+      "src": "/apna-clinic-favicon.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/logo-192.png",
+      "src": "/apna-clinic-favicon.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "maskable"
     },
     {
-      "src": "/logo-512.png",
+      "src": "/apna-clinic-favicon.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"

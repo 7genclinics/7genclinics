@@ -336,7 +336,7 @@ export default function AdminPaymentsPage() {
       "Paid At": formatDate(p.paid_at),
       Reference: p.payout_reference ?? "",
     }));
-    downloadCsv(`stress-saviors-transactions-${Date.now()}.csv`, rows);
+    downloadCsv(`apna-clinic-transactions-${Date.now()}.csv`, rows);
     showToast(rows.length ? `Exported ${rows.length} transactions.` : "No transactions to export.");
   };
 
