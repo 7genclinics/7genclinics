@@ -1,9 +1,19 @@
+"use client";
+
+import { useState } from "react";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { SpecialtyIcon } from "@/components/public/SpecialtyIcon";
 import { specialtySearchHref, TOP_SPECIALTIES } from "@/lib/public/specialties";
 
+/** 4 rows × 4 columns on large screens */
+const INITIAL_VISIBLE = 16;
+
 export function TopSpecialitiesSection() {
+  const [showAll, setShowAll] = useState(false);
+  const hasMore = TOP_SPECIALTIES.length > INITIAL_VISIBLE;
+  const visible = showAll ? TOP_SPECIALTIES : TOP_SPECIALTIES.slice(0, INITIAL_VISIBLE);
+
   return (
     <section id="specialities" className="bg-white py-20 sm:py-24">
       <div className="mx-auto max-w-6xl px-4 sm:px-6">
@@ -24,7 +34,7 @@ export function TopSpecialitiesSection() {
         </div>
 
         <div className="mt-14 grid grid-cols-2 gap-4 sm:grid-cols-3 sm:gap-5 lg:grid-cols-4">
-          {TOP_SPECIALTIES.map((item) => (
+          {visible.map((item) => (
             <Link
               key={item.id}
               href={specialtySearchHref(item)}
@@ -41,15 +51,18 @@ export function TopSpecialitiesSection() {
           ))}
         </div>
 
-        <div className="mt-12 text-center">
-          <Link
-            href="/doctors"
-            className="group inline-flex items-center gap-2 text-sm font-semibold text-brand-600 transition-colors hover:text-brand-700"
-          >
-            Browse every specialist
-            <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
-          </Link>
-        </div>
+        {hasMore && !showAll && (
+          <div className="mt-12 text-center">
+            <button
+              type="button"
+              onClick={() => setShowAll(true)}
+              className="inline-flex items-center gap-2 rounded-full border border-brand-500 bg-transparent px-6 py-2.5 text-sm font-semibold text-brand-600 transition-colors hover:bg-brand-50 hover:text-brand-700"
+            >
+              View all specialities
+              <ArrowRight className="h-4 w-4" />
+            </button>
+          </div>
+        )}
       </div>
     </section>
   );
