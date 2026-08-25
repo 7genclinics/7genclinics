@@ -28,7 +28,7 @@ export function TopSpecialitiesSection() {
             <Link
               key={item.id}
               href={specialtySearchHref(item)}
-              className="group flex min-h-[9.5rem] flex-col items-center justify-center gap-4 rounded-2xl border border-slate-200/80 bg-white px-4 py-6 text-center transition-all duration-300 hover:-translate-y-1 hover:border-brand-200 hover:bg-[#f9fdfd] hover:shadow-[0_14px_30px_-18px_rgba(15,20,42,0.35)] sm:min-h-[10.5rem]"
+              className="group flex min-h-[9.5rem] flex-col items-center justify-center gap-4 rounded-2xl border border-brand-200/60 bg-[#f9fdfd] px-4 py-6 text-center transition-all duration-300 hover:-translate-y-1 hover:border-brand-300 hover:bg-[#f0fafa] hover:shadow-[0_14px_30px_-18px_rgba(15,20,42,0.35)] sm:min-h-[10.5rem]"
             >
               <SpecialtyIcon
                 id={item.icon}
