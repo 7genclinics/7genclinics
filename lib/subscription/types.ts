@@ -39,6 +39,7 @@ export interface SubscriptionSnapshot {
   unfreeze_until: string | null;
   override_active: boolean;
   billing_cycle: string;
+  organization_id?: string;
   plan: SubscriptionPlan;
   plans: SubscriptionPlan[];
   pending: SubscriptionPayment | null;

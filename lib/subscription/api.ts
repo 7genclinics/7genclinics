@@ -47,6 +47,7 @@ function asSnapshot(raw: unknown): SubscriptionSnapshot {
     unfreeze_until: row.unfreeze_until ? String(row.unfreeze_until) : null,
     override_active: Boolean(row.override_active),
     billing_cycle: String(row.billing_cycle ?? ""),
+    organization_id: row.organization_id ? String(row.organization_id) : undefined,
     plan: {
       id: String(plan.id ?? "standard"),
       name: String(plan.name ?? "Clinic Standard"),

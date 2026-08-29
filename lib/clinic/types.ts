@@ -76,6 +76,7 @@ export interface ClinicService {
   description: string | null;
   default_fee: number;
   is_active: boolean;
+  organization_id?: string;
 }
 
 export interface ClinicDoctorOption {

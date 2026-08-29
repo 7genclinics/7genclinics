@@ -44,7 +44,7 @@ export async function updateSession(request: NextRequest) {
   const path = request.nextUrl.pathname;
 
   // Public routes that don't require authentication
-  const publicRoutes = ["/", "/doctors", "/about", "/contact"];
+  const publicRoutes = ["/", "/doctors", "/clinics", "/about", "/contact"];
   const authRoutes = ["/login", "/register", "/forgot-password", "/pending-review"];
 
   async function loadProfile(userId: string) {
@@ -162,7 +162,7 @@ export async function updateSession(request: NextRequest) {
       const clinicPortal =
         (role === "doctor" && path.startsWith("/doctor")) ||
         (role === "receptionist" && path.startsWith("/reception"));
-      if (clinicPortal && !path.includes("/subscription")) {
+      if (clinicPortal && !path.includes("/subscription") && !path.includes("/clinic")) {
         const { data, error } = await supabase.rpc("clinic_subscription_is_frozen");
         if (!error && data === true) {
           const dest =

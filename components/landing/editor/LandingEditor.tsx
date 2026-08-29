@@ -272,6 +272,7 @@ export function LandingEditor() {
           createdAt: row.createdAt,
         })),
       availability,
+      organization: null,
     }),
     [
       availability,

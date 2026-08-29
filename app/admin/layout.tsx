@@ -17,6 +17,7 @@ function AdminLayoutShell({ children }: { children: React.ReactNode }) {
 
   const getPageTitle = (path: string) => {
     if (path.includes("/dashboard")) return "Dashboard Overview";
+    if (path.includes("/organizations")) return "Clinics & Hospitals";
     if (path.includes("/doctors")) return "Manage Doctors";
     if (path.includes("/doctor-pages")) return "Doctor Public Pages";
     if (path.includes("/patients")) return "Manage Patients";

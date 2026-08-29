@@ -57,6 +57,14 @@ export function DoctorSiteHeader({
             </span>
             <span className="block truncate text-[11px] text-slate-500">
               {content.professionalTitle || doctor.specialization}
+              {data.organization ? (
+                <>
+                  {" · "}
+                  <Link href={`/clinics/${data.organization.slug}`} className="hover:text-brand-600">
+                    {data.organization.name}
+                  </Link>
+                </>
+              ) : null}
             </span>
           </span>
         </a>

@@ -29,7 +29,7 @@ type LandingRow = {
 const DOCTOR_PUBLIC_SELECT = `
   id, user_id, specialization, sub_specialization, qualification, experience_years,
   pmdc_number, bio, consultation_fee, follow_up_fee, rating, total_reviews, total_consultations,
-  is_available, cities, languages, hospital_affiliations,
+  is_available, cities, languages, hospital_affiliations, organization_id,
   profile:profiles!doctor_profiles_user_id_fkey ( full_name, avatar_url, city, gender ),
   doctor_taxonomy ( taxonomy_items ( id, label, kind ) )
 `;
@@ -107,6 +107,32 @@ async function loadDoctor(
   }
 
   return mapDoctor(data as Record<string, unknown>);
+}
+
+async function loadListedOrganization(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  doctorId: string,
+): Promise<PublicLandingPageData["organization"]> {
+  const { data: doctorRow } = await supabase
+    .from("doctor_profiles")
+    .select("organization_id")
+    .eq("id", doctorId)
+    .maybeSingle();
+  const orgId = (doctorRow as { organization_id?: string } | null)?.organization_id;
+  if (!orgId) return null;
+
+  const { data: org } = await supabase
+    .from("organizations")
+    .select("id, slug, name, kind, status, is_publicly_listed")
+    .eq("id", orgId)
+    .maybeSingle();
+  if (!org || org.status !== "active" || !org.is_publicly_listed) return null;
+  return {
+    id: org.id,
+    slug: org.slug,
+    name: org.name,
+    kind: org.kind,
+  };
 }
 
 async function canPreview(
@@ -339,9 +365,10 @@ export async function getPublicLandingPage(
 
   const availability = await loadAvailability(supabase, doctor.id);
   const duration = availability[0]?.slot_duration_minutes ?? 30;
-  const [services, reviews] = await Promise.all([
+  const [services, reviews, organization] = await Promise.all([
     loadServices(supabase, doctor, content, duration),
     loadReviews(supabase, doctor.id),
+    loadListedOrganization(supabase, doctor.id),
   ]);
 
   return {
@@ -355,6 +382,7 @@ export async function getPublicLandingPage(
       services,
       reviews,
       availability,
+      organization,
     },
   };
 }

@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { logout } from "@/lib/auth/session";
 import {
+  Building2,
   Globe,
   LayoutDashboard,
   Calendar,
@@ -70,6 +71,7 @@ export function Sidebar({ role, isOpen = false, onClose }: SidebarProps) {
       { name: "Public Profile", href: "/doctor/landing", icon: Globe },
       { name: "Marketing", href: "/doctor/marketing", icon: Megaphone },
       { name: "Reception / Staff", href: "/doctor/staff", icon: UserCheck },
+      { name: "My clinic", href: "/doctor/clinic", icon: Building2 },
       { name: "Earnings", href: "/doctor/earnings", icon: DollarSign },
       { name: "Subscription", href: "/doctor/subscription", icon: Repeat },
       { name: "Profile Settings", href: "/doctor/profile", icon: User },
@@ -86,6 +88,7 @@ export function Sidebar({ role, isOpen = false, onClose }: SidebarProps) {
     admin: [
       { name: "Dashboard", href: "/admin/dashboard", icon: LayoutDashboard },
       { name: "Manage Doctors", href: "/admin/doctors", icon: UserCheck },
+      { name: "Clinics & hospitals", href: "/admin/organizations", icon: Building2 },
       { name: "Doctor Pages", href: "/admin/doctor-pages", icon: Globe },
       { name: "Manage Patients", href: "/admin/patients", icon: Users },
       { name: "Appointments", href: "/admin/appointments", icon: Calendar },

@@ -48,6 +48,7 @@ export interface Profile {
 export interface DoctorProfile {
   id: string;
   user_id: string;
+  organization_id?: string;
   status: DoctorStatus;
   specialization: string;
   sub_specialization: string | null;
@@ -89,6 +90,7 @@ export interface Appointment {
   cancelled_by: string | null;
   completed_at: string | null;
   booking_source: BookingSource;
+  organization_id?: string;
   token_number: string | null;
   checked_in_at: string | null;
   checked_in_by: string | null;

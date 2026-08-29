@@ -11,10 +11,12 @@ import { LandingHeader } from "@/components/public/LandingHeader";
 import { LandingFooter } from "@/components/public/LandingFooter";
 import { DoctorSearchHero } from "@/components/public/DoctorSearchHero";
 import { LandingDoctorsSection } from "@/components/public/LandingDoctorsSection";
+import { LandingClinicsSection } from "@/components/public/LandingClinicsSection";
 import { TestimonialsCarousel } from "@/components/public/TestimonialsCarousel";
 import { TopSpecialitiesSection } from "@/components/public/TopSpecialitiesSection";
 import { ConeStripe } from "@/components/brand/BrandMark";
 import { getApprovedDoctorsServer } from "@/lib/public/doctors";
+import { getListedOrganizationsServer } from "@/lib/public/organizations";
 import { BRAND } from "@/lib/brand/site";
 import { CONE_COLORS } from "@/lib/brand/colors";
 
@@ -224,12 +226,10 @@ const hours = [
 ];
 
 export default async function HomePage() {
-  let doctors: Awaited<ReturnType<typeof getApprovedDoctorsServer>> = [];
-  try {
-    doctors = await getApprovedDoctorsServer();
-  } catch {
-    doctors = [];
-  }
+  const [doctors, clinics] = await Promise.all([
+    getApprovedDoctorsServer().catch(() => []),
+    getListedOrganizationsServer().catch(() => []),
+  ]);
 
   return (
     <div className="landing-page min-h-screen bg-white text-brand-900">
@@ -352,6 +352,8 @@ export default async function HomePage() {
         </section>
 
         <TopSpecialitiesSection />
+
+        <LandingClinicsSection clinics={clinics} />
 
         <LandingDoctorsSection doctors={doctors} />
 

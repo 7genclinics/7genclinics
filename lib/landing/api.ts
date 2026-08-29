@@ -236,7 +236,7 @@ export async function addDoctorLandingReview(input: {
     p_doctor_id: input.doctorId,
     p_display_name: input.displayName,
     p_rating: input.rating,
-    p_comment: input.comment ?? null,
+    ...(input.comment ? { p_comment: input.comment } : {}),
   });
   if (error) throw error;
   return data as string;

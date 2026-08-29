@@ -7,6 +7,7 @@ import { Loader2, X } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { getApprovedDoctors } from "@/lib/patient/api";
 import { mapToDoctorCard } from "@/lib/patient/mappers";
+import { clinicDoctorPublicPath } from "@/lib/org/paths";
 import { BookingModal } from "@/components/public/BookingModal";
 import { DoctorSearchFilters } from "@/components/public/DoctorSearchFilters";
 import { DoctorGridCard, DoctorListCard } from "@/components/public/DoctorListCard";
@@ -21,6 +22,17 @@ import type { DoctorWithProfile } from "@/lib/patient/types";
 import type { UserRole } from "@/types";
 import { BRAND } from "@/lib/brand/site";
 
+function withClinicDirectoryHref(
+  card: ReturnType<typeof mapToDoctorCard>,
+  clinicSlug?: string,
+) {
+  if (!clinicSlug) return card;
+  return {
+    ...card,
+    publicHref: clinicDoctorPublicPath(clinicSlug, card.landingSlug || card.id),
+  };
+}
+
 interface DoctorsBrowseProps {
   initialDoctors?: DoctorWithProfile[];
   title?: string;
@@ -28,6 +40,7 @@ interface DoctorsBrowseProps {
   limit?: number;
   layout?: "grid" | "list";
   showFilters?: boolean;
+  clinicSlug?: string;
 }
 
 export function DoctorsBrowse({
@@ -37,6 +50,7 @@ export function DoctorsBrowse({
   limit,
   layout = "list",
   showFilters = true,
+  clinicSlug,
 }: DoctorsBrowseProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -90,17 +104,32 @@ export function DoctorsBrowse({
       ? `Showing verified mental health professionals in ${filters.city}. Book online instantly.`
       : "Consult online with PMDC-verified mental health professionals across Pakistan.");
 
-  const handleBook = (doc: ReturnType<typeof mapToDoctorCard>) => {
+  const handleBook = (card: ReturnType<typeof mapToDoctorCard>) => {
     if (!authChecked) return;
 
     if (!isPatient) {
-      const redirect = `${doc.publicHref}?book=true`;
+      const redirect = `${card.publicHref}?book=true`;
       router.push(`/login?redirect=${encodeURIComponent(redirect)}&role=patient`);
       return;
     }
 
-    setBookingDoctor(doc);
+    setBookingDoctor(card);
   };
+
+  const doctorTiles = filteredDoctors.map((card, index) => {
+    const linked = withClinicDirectoryHref(card, clinicSlug);
+    return layout === "grid" ? (
+      <DoctorGridCard key={linked.id} doctor={linked} onBook={() => handleBook(linked)} />
+    ) : (
+      <DoctorListCard
+        key={linked.id}
+        doctor={linked}
+        rank={index + 1}
+        onBookVideo={() => handleBook(linked)}
+        onBookAppointment={() => handleBook(linked)}
+      />
+    );
+  });
 
   if (loading) {
     return (
@@ -149,19 +178,7 @@ export function DoctorsBrowse({
         }
       >
         {filteredDoctors.length > 0 ? (
-          filteredDoctors.map((doc, index) =>
-            layout === "grid" ? (
-              <DoctorGridCard key={doc.id} doctor={doc} onBook={() => handleBook(doc)} />
-            ) : (
-              <DoctorListCard
-                key={doc.id}
-                doctor={doc}
-                rank={index + 1}
-                onBookVideo={() => handleBook(doc)}
-                onBookAppointment={() => handleBook(doc)}
-              />
-            )
-          )
+          doctorTiles
         ) : (
           <div className="col-span-full rounded-2xl border border-dashed border-slate-200 bg-white py-20 text-center">
             <h4 className="text-lg font-semibold text-slate-900">No doctors found</h4>

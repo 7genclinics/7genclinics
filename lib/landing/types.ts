@@ -209,6 +209,12 @@ export interface PublicLandingPageData {
   services: PublicLandingService[];
   reviews: PublicLandingReview[];
   availability: PublicAvailabilitySlot[];
+  organization: {
+    id: string;
+    slug: string;
+    name: string;
+    kind: string;
+  } | null;
 }
 
 export interface ModeratedReview {

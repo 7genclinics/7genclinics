@@ -29,6 +29,7 @@ function DoctorLayoutShell({ children }: { children: React.ReactNode }) {
     if (path.includes("/schedule")) return "Availability Schedule";
     if (path.includes("/landing")) return "Public Profile";
     if (path.includes("/marketing")) return "Marketing";
+    if (path.includes("/clinic")) return "My Clinic";
     if (path.includes("/staff")) return "Reception & Staff";
     if (path.includes("/subscription")) return "Subscription";
     if (path.includes("/earnings")) return "Earnings & Reports";
