@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { Loader2, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Loader2, X } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { getApprovedDoctors } from "@/lib/patient/api";
 import { mapToDoctorCard } from "@/lib/patient/mappers";
@@ -21,6 +21,9 @@ import {
 import type { DoctorWithProfile } from "@/lib/patient/types";
 import type { UserRole } from "@/types";
 import { BRAND } from "@/lib/brand/site";
+import { cn } from "@/lib/utils";
+
+const DOCTORS_PER_PAGE = 8;
 
 function withClinicDirectoryHref(
   card: ReturnType<typeof mapToDoctorCard>,
@@ -31,6 +34,17 @@ function withClinicDirectoryHref(
     ...card,
     publicHref: clinicDoctorPublicPath(clinicSlug, card.landingSlug || card.id),
   };
+}
+
+function buildPageUrl(searchParams: URLSearchParams, page: number): string {
+  const params = new URLSearchParams(searchParams.toString());
+  if (page <= 1) {
+    params.delete("page");
+  } else {
+    params.set("page", String(page));
+  }
+  const query = params.toString();
+  return query ? `/doctors?${query}` : "/doctors";
 }
 
 interface DoctorsBrowseProps {
@@ -55,6 +69,7 @@ export function DoctorsBrowse({
   const router = useRouter();
   const searchParams = useSearchParams();
   const filters = parseDoctorSearchParams(searchParams);
+  const currentPage = Math.max(1, Number(searchParams.get("page") || 1));
 
   const [doctors, setDoctors] = useState<DoctorWithProfile[]>(initialDoctors ?? []);
   const [loading, setLoading] = useState(!initialDoctors);
@@ -91,18 +106,25 @@ export function DoctorsBrowse({
     });
   }, []);
 
+  const allFiltered = useMemo(() => filterDoctors(doctors, filters), [doctors, filters]);
+
+  const totalCount = allFiltered.length;
+  const totalPages = limit ? 1 : Math.max(1, Math.ceil(totalCount / DOCTORS_PER_PAGE));
+  const safePage = Math.min(currentPage, totalPages);
+
   const filteredDoctors = useMemo(() => {
-    const results = filterDoctors(doctors, filters);
-    return limit ? results.slice(0, limit) : results;
-  }, [doctors, filters, limit]);
+    if (limit) return allFiltered.slice(0, limit);
+    const start = (safePage - 1) * DOCTORS_PER_PAGE;
+    return allFiltered.slice(start, start + DOCTORS_PER_PAGE);
+  }, [allFiltered, limit, safePage]);
 
   const pageTitle = title ?? buildFilterTitle(filters);
   const activeTaxonomy = getActiveTaxonomyFilter(filters);
   const pageSubtitle =
     subtitle ??
     (filters.city
-      ? `Showing verified mental health professionals in ${filters.city}. Book online instantly.`
-      : "Consult online with PMDC-verified mental health professionals across Pakistan.");
+      ? `PMDC verified doctors in ${filters.city}. Book video, chat, or a clinic visit.`
+      : "Consult online or in clinic with PMDC verified doctors across Pakistan.");
 
   const handleBook = (card: ReturnType<typeof mapToDoctorCard>) => {
     if (!authChecked) return;
@@ -118,13 +140,14 @@ export function DoctorsBrowse({
 
   const doctorTiles = filteredDoctors.map((card, index) => {
     const linked = withClinicDirectoryHref(card, clinicSlug);
+    const rank = limit ? index + 1 : (safePage - 1) * DOCTORS_PER_PAGE + index + 1;
     return layout === "grid" ? (
       <DoctorGridCard key={linked.id} doctor={linked} onBook={() => handleBook(linked)} />
     ) : (
       <DoctorListCard
         key={linked.id}
         doctor={linked}
-        rank={index + 1}
+        rank={rank}
         onBookVideo={() => handleBook(linked)}
         onBookAppointment={() => handleBook(linked)}
       />
@@ -148,7 +171,7 @@ export function DoctorsBrowse({
           </p>
         )}
         <h1 className="mt-2 font-heading text-2xl font-bold tracking-tight text-brand-900 sm:text-3xl lg:text-4xl">
-          {filteredDoctors.length > 0 ? filteredDoctors.length : ""}{" "}
+          {totalCount > 0 ? `${totalCount} ` : ""}
           {pageTitle}
         </h1>
         <p className="mt-2 max-w-2xl text-slate-600">{pageSubtitle}</p>
@@ -168,7 +191,7 @@ export function DoctorsBrowse({
         )}
       </div>
 
-      {showFilters && !limit && <DoctorSearchFilters resultCount={filteredDoctors.length} />}
+      {showFilters && !limit && <DoctorSearchFilters resultCount={totalCount} />}
 
       <div
         className={
@@ -197,6 +220,63 @@ export function DoctorsBrowse({
           </div>
         )}
       </div>
+
+      {!limit && totalPages > 1 && (
+        <nav
+          className="flex flex-col items-center justify-between gap-4 border-t border-slate-200 pt-6 sm:flex-row"
+          aria-label="Doctor results pagination"
+        >
+          <p className="text-sm text-slate-500">
+            Showing {(safePage - 1) * DOCTORS_PER_PAGE + 1}–
+            {Math.min(safePage * DOCTORS_PER_PAGE, totalCount)} of {totalCount} doctors
+          </p>
+          <div className="flex items-center gap-2">
+            <Link
+              href={buildPageUrl(searchParams, safePage - 1)}
+              className={cn(
+                "inline-flex h-10 items-center gap-1 rounded-full border px-4 text-sm font-semibold transition-colors",
+                safePage <= 1
+                  ? "pointer-events-none border-slate-100 text-slate-300"
+                  : "border-slate-200 text-brand-900 hover:border-brand-300 hover:bg-[#f7fbfb]"
+              )}
+              aria-disabled={safePage <= 1}
+            >
+              <ChevronLeft className="h-4 w-4" />
+              Previous
+            </Link>
+            <div className="flex items-center gap-1">
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => (
+                <Link
+                  key={pageNum}
+                  href={buildPageUrl(searchParams, pageNum)}
+                  className={cn(
+                    "inline-flex h-9 min-w-9 items-center justify-center rounded-full text-sm font-semibold transition-colors",
+                    pageNum === safePage
+                      ? "bg-brand-500 text-white"
+                      : "text-slate-600 hover:bg-[#f7fbfb] hover:text-brand-700"
+                  )}
+                  aria-current={pageNum === safePage ? "page" : undefined}
+                >
+                  {pageNum}
+                </Link>
+              ))}
+            </div>
+            <Link
+              href={buildPageUrl(searchParams, safePage + 1)}
+              className={cn(
+                "inline-flex h-10 items-center gap-1 rounded-full border px-4 text-sm font-semibold transition-colors",
+                safePage >= totalPages
+                  ? "pointer-events-none border-slate-100 text-slate-300"
+                  : "border-slate-200 text-brand-900 hover:border-brand-300 hover:bg-[#f7fbfb]"
+              )}
+              aria-disabled={safePage >= totalPages}
+            >
+              Next
+              <ChevronRight className="h-4 w-4" />
+            </Link>
+          </div>
+        </nav>
+      )}
 
       {limit && doctors.length > limit && (
         <div className="text-center">

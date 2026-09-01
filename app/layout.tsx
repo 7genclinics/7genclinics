@@ -30,14 +30,14 @@ const playfair = Playfair_Display({
 });
 
 export const metadata: Metadata = {
-  title: `${BRAND.name} — Hybrid Clinic Care in Pakistan`,
+  title: `${BRAND.name}, Pakistan's best online and physical clinic platform`,
   description: BRAND.description,
   keywords: [
     "hybrid clinic",
     "pakistan",
     "online consultation",
     "in clinic appointment",
-    "walk-in clinic",
+    "walk in clinic",
     "video doctor",
     "PMDC doctors",
     BRAND.name,

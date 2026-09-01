@@ -12,19 +12,19 @@ const AUTH_PANELS = {
     alt: `Patient care at ${BRAND.name}`,
     title: "Care that meets you where you are",
     description:
-      "Book secure video visits or walk into the clinic — verified doctors across Pakistan.",
+      "Book secure video visits or walk into the clinic. Verified doctors across Pakistan.",
   },
   doctor: {
     src: "/login-page-bg.jpg",
     alt: `Healthcare professional at ${BRAND.name}`,
     title: "One queue for clinic and online",
     description:
-      "Manage patients, video sessions, and in-clinic visits from a single practice desk.",
+      "Manage patients, video sessions, and clinic visits from a single practice desk.",
   },
   default: {
     src: "/login-page-bg.jpg",
     alt: `${BRAND.name} hybrid clinic platform`,
-    title: "Online care. Clinic care. One place.",
+    title: "Pakistan's best platform for online and physical care",
     description: BRAND.description,
   },
 } as const;
@@ -67,7 +67,7 @@ function AuthAsideContent() {
             </p>
           </div>
           <p className="text-xs text-slate-300/90">
-            Secure · PMDC-verified doctors · Built for Pakistan
+            Secure · PMDC verified doctors · Built for Pakistan
           </p>
         </div>
       </div>

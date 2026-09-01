@@ -71,6 +71,21 @@ export function DoctorListCard({
             {tags.length > 0 && (
               <p className="mt-3 text-xs leading-relaxed text-slate-500">{tags.join(" · ")}</p>
             )}
+
+            <div className="mt-3 flex flex-wrap gap-2">
+              {doctor.offersOnline && (
+                <span className="inline-flex items-center gap-1 rounded-full border border-brand-200 bg-brand-50 px-2.5 py-1 text-[11px] font-semibold text-brand-700">
+                  <Video className="h-3 w-3" />
+                  Online
+                </span>
+              )}
+              {doctor.offersPhysical && (
+                <span className="inline-flex items-center gap-1 rounded-full border border-brand-200 bg-brand-50 px-2.5 py-1 text-[11px] font-semibold text-brand-700">
+                  <Stethoscope className="h-3 w-3" />
+                  Physical
+                </span>
+              )}
+            </div>
           </div>
         </div>
 
@@ -171,6 +186,18 @@ export function DoctorGridCard({
           {doctor.consultationFee}
         </p>
         <p className="mt-0.5 text-xs text-slate-500">{doctor.city}</p>
+        <div className="mt-3 flex flex-wrap gap-1.5">
+          {doctor.offersOnline && (
+            <span className="rounded-full bg-brand-50 px-2 py-0.5 text-[10px] font-semibold text-brand-700">
+              Online
+            </span>
+          )}
+          {doctor.offersPhysical && (
+            <span className="rounded-full bg-brand-50 px-2 py-0.5 text-[10px] font-semibold text-brand-700">
+              Physical
+            </span>
+          )}
+        </div>
       </div>
       <div className="mt-auto flex gap-2 border-t border-brand-900/8 bg-[#f7fbfb] p-4">
         <Link

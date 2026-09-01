@@ -4,12 +4,12 @@
 export const BRAND = {
   name: "Apna Clinic",
   shortName: "Apna",
-  tagline: "Online care. Clinic care. One place.",
+  tagline: "Pakistan's best platform for online and physical care",
   description:
-    "Pakistan’s hybrid clinic — book verified doctors online for video consults or walk into the clinic for same-day care, queue tokens, and desk billing.",
+    "Pakistan's best platform for online and physical clinic care. Book PMDC verified doctors for video from home, or walk into the clinic for same day tokens and desk billing.",
   supportEmail: "support@apnaclinic.pk",
   phone: "+92 300 1234567",
-  citiesLabel: "Lahore · Karachi · Islamabad · Nationwide",
+  citiesLabel: "Lahore, Karachi, Islamabad, Nationwide",
 } as const;
 
 export type BrandConfig = typeof BRAND;

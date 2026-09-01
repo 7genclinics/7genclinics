@@ -61,9 +61,30 @@ function normalizeSearchText(text: string | null | undefined): string {
     .toLowerCase()
     .normalize("NFKD")
     .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[.']/g, " ")
+    .replace(/[.'’`]/g, " ")
+    .replace(/[-_/\\,]+/g, " ")
     .replace(/\s+/g, " ")
     .trim();
+}
+
+function cleanToken(token: string): string {
+  return token.replace(/^[^a-z0-9]+|[^a-z0-9]+$/g, "");
+}
+
+/** Expand honorific abbreviations so "dr" matches Doctor names and vice versa. */
+function expandSearchWord(word: string): string[] {
+  const variants = new Set<string>([word]);
+  if (word === "dr" || word === "doc") {
+    variants.add("doctor");
+  }
+  if (word === "doctor") {
+    variants.add("dr");
+  }
+  return [...variants];
+}
+
+function compactNormalized(text: string): string {
+  return normalizeSearchText(text).replace(/\s+/g, "");
 }
 
 function doctorCities(doc: DoctorWithProfile): string[] {
@@ -83,19 +104,48 @@ function getTextTokens(...parts: (string | null | undefined)[]): string[] {
     .map((part) => normalizeSearchText(part))
     .filter(Boolean)
     .flatMap((text) => text.split(/\s+/))
+    .map(cleanToken)
     .filter((token) => token.length > 0);
 }
 
-/** Whole-token or prefix match while typing — never match inside another word (e.g. ali ≠ clinical). */
-function tokenMatchesWord(token: string, word: string): boolean {
-  if (!word) return false;
-  if (token === word) return true;
-  if (word.length >= 2 && token.startsWith(word)) return true;
+/** Token or prefix match; honorific-safe and not case sensitive. */
+function tokenMatchesWord(token: string, word: string, allowSingleCharPrefix = false): boolean {
+  if (!word || !token) return false;
+
+  const wordVariants = expandSearchWord(word);
+  const tokenVariants = expandSearchWord(token);
+
+  for (const w of wordVariants) {
+    for (const t of tokenVariants) {
+      if (t === w) return true;
+      if (w.length >= 2 && t.startsWith(w)) return true;
+      if (t.length >= 2 && w.startsWith(t)) return true;
+      if (allowSingleCharPrefix && w.length === 1 && t.length >= 2 && t.startsWith(w)) {
+        return true;
+      }
+    }
+  }
+
   return false;
 }
 
-function anyTokenMatchesWord(tokens: string[], word: string): boolean {
-  return tokens.some((token) => tokenMatchesWord(token, word));
+function anyTokenMatchesWord(
+  tokens: string[],
+  word: string,
+  allowSingleCharPrefix = false
+): boolean {
+  return tokens.some((token) => tokenMatchesWord(token, word, allowSingleCharPrefix));
+}
+
+function wordMatchesNormalizedBlob(blob: string, word: string): boolean {
+  if (!word) return false;
+  const compactBlob = blob.replace(/\s+/g, "");
+  const variants = expandSearchWord(word);
+
+  return variants.some((variant) => {
+    if (variant.length < 2) return false;
+    return blob.includes(variant) || compactBlob.includes(variant.replace(/\s+/g, ""));
+  });
 }
 
 function getNameTokens(doc: DoctorWithProfile): string[] {
@@ -108,9 +158,43 @@ function matchesDoctorName(doc: DoctorWithProfile, q: string): boolean {
   if (queryWords.length === 0) return false;
 
   const nameTokens = getNameTokens(doc);
-  if (nameTokens.length === 0) return false;
+  const fullNorm = normalizeSearchText(doc.profile?.full_name ?? "");
+  const compactName = compactNormalized(doc.profile?.full_name ?? "");
 
-  return queryWords.every((word) => anyTokenMatchesWord(nameTokens, word));
+  const nameWordMatches = (word: string) => {
+    if (
+      word.length >= 2 &&
+      (wordMatchesNormalizedBlob(fullNorm, word) ||
+        compactName.includes(word.replace(/\s+/g, "")))
+    ) {
+      return true;
+    }
+    return anyTokenMatchesWord(nameTokens, word, true);
+  };
+
+  if (nameTokens.length === 0) {
+    return queryWords.every((word) => nameWordMatches(word));
+  }
+
+  return queryWords.every((word) => nameWordMatches(word));
+}
+
+function getDoctorSearchBlob(doc: DoctorWithProfile): string {
+  return normalizeSearchText(
+    [
+      doc.profile?.full_name,
+      doc.specialization,
+      doc.sub_specialization,
+      doc.bio,
+      ...(doc.qualification ?? []),
+      ...doctorCities(doc),
+      ...(doc.languages ?? []),
+      ...(doc.hospital_affiliations ?? []),
+      ...(doc.taxonomy_tags ?? []).map((tag) => tag.label),
+    ]
+      .filter(Boolean)
+      .join(" ")
+  );
 }
 
 function getDoctorFieldTokens(doc: DoctorWithProfile): string[] {
@@ -152,8 +236,13 @@ function matchesFreeTextQuery(doc: DoctorWithProfile, q: string): boolean {
   if (matchesDoctorName(doc, q)) return true;
 
   const fieldTokens = getDoctorFieldTokens(doc);
+  const blob = getDoctorSearchBlob(doc);
+
   return words.every(
-    (word) => anyTokenMatchesWord(fieldTokens, word) || matchesCatalogWord(doc, word)
+    (word) =>
+      anyTokenMatchesWord(fieldTokens, word) ||
+      matchesCatalogWord(doc, word) ||
+      wordMatchesNormalizedBlob(blob, word)
   );
 }
 
@@ -289,7 +378,7 @@ export function buildFilterTitle(filters: DoctorSearchFilters): string {
   } else if (taxonomyLabel) {
     parts.push(`Doctors for ${taxonomyLabel}`);
   } else {
-    parts.push("Best Mental Health Doctors");
+    parts.push("Verified Doctors");
   }
 
   if (filters.city && filters.city !== ALL_CITIES_LABEL) {

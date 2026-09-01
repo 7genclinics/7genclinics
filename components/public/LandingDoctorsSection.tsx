@@ -43,8 +43,8 @@ export function LandingDoctorsSection({ doctors }: LandingDoctorsSectionProps) {
           Search Doctors
         </h2>
         <p className="mt-3 max-w-xl text-sm leading-relaxed text-slate-600 sm:text-base">
-          Every profile is PMDC-verified. Search by name, then book a video consult or an
-          in-clinic slot.
+          Every profile is PMDC verified. See specialty, fee, and online plus physical care options,
+          then book video or a clinic slot.
         </p>
 
         <form

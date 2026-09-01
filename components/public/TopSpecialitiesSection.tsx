@@ -29,7 +29,7 @@ export function TopSpecialitiesSection() {
             </span>
           </h2>
           <p className="mt-5 text-sm leading-relaxed text-slate-500 sm:text-base">
-            Connect with certified specialists for every health need.
+            Connect with certified specialists for online and physical visits.
           </p>
         </div>
 

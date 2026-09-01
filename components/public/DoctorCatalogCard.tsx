@@ -1,6 +1,6 @@
-import Image from "next/image";
 import Link from "next/link";
-import { BadgeCheck, MapPin, Star } from "lucide-react";
+import Image from "next/image";
+import { BadgeCheck, Building2, MapPin, MessageCircle, Star, Video } from "lucide-react";
 import { mapToDoctorCard } from "@/lib/patient/mappers";
 import { cn } from "@/lib/utils";
 import { getInitials } from "@/lib/doctor/mappers";
@@ -23,7 +23,7 @@ function StarRating({ rating, count }: { rating: number; count: number }) {
           />
         ))}
       </div>
-      <span className="text-xs text-slate-500">/ {count}</span>
+      {count > 0 && <span className="text-xs text-slate-500">({count})</span>}
     </div>
   );
 }
@@ -34,6 +34,7 @@ interface DoctorCatalogCardProps {
 
 export function DoctorCatalogCard({ doctor }: DoctorCatalogCardProps) {
   const isDataUrl = doctor.avatarUrl?.startsWith("data:");
+  const specialtyTags = doctor.taxonomyTags.slice(0, 3);
 
   return (
     <Link
@@ -86,13 +87,41 @@ export function DoctorCatalogCard({ doctor }: DoctorCatalogCardProps) {
           <p className="mt-1.5 text-sm font-medium leading-snug text-brand-600">
             {doctor.specialization}
           </p>
+          {doctor.subSpecialization ? (
+            <p className="mt-0.5 text-xs text-slate-500">{doctor.subSpecialization}</p>
+          ) : null}
           <p className="mt-1 text-xs text-slate-500">
             {doctor.experienceYears} years experience
           </p>
         </div>
       </div>
 
-      <div className="mt-5 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-slate-500">
+      {specialtyTags.length > 0 && (
+        <p className="mt-4 text-xs leading-relaxed text-slate-500 line-clamp-2">
+          {specialtyTags.join(" · ")}
+        </p>
+      )}
+
+      <div className="mt-4 flex flex-wrap gap-2">
+        {doctor.offersOnline && (
+          <span className="inline-flex items-center gap-1 rounded-full border border-brand-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-brand-700">
+            <Video className="h-3 w-3" />
+            Online
+          </span>
+        )}
+        {doctor.offersPhysical && (
+          <span className="inline-flex items-center gap-1 rounded-full border border-brand-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-brand-700">
+            <Building2 className="h-3 w-3" />
+            Physical
+          </span>
+        )}
+        <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-slate-600">
+          <MessageCircle className="h-3 w-3" />
+          Chat
+        </span>
+      </div>
+
+      <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-slate-500">
         <span className="inline-flex items-center gap-1.5">
           <MapPin className="h-3.5 w-3.5 text-brand-500" />
           {doctor.city}
@@ -111,7 +140,7 @@ export function DoctorCatalogCard({ doctor }: DoctorCatalogCardProps) {
         <StarRating rating={doctor.rating} count={doctor.reviewsCount} />
         <div className="shrink-0 text-right">
           <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400">
-            Consultation
+            Consultation fee
           </p>
           <p className="mt-0.5 font-heading text-lg font-bold text-brand-900">
             {doctor.consultationFee}

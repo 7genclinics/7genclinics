@@ -172,6 +172,9 @@ export function mapToDoctorCard(doc: DoctorWithProfile) {
     publicHref: `/doctors/${doc.landing_slug || doc.id}`,
     taxonomyTags: doc.taxonomy_tags?.map((tag) => tag.label) ?? [],
     taxonomyTagIds: doc.taxonomy_tags?.map((tag) => tag.id) ?? [],
+    offersOnline: true,
+    offersPhysical: true,
+    subSpecialization: doc.sub_specialization ?? null,
   };
 }
 

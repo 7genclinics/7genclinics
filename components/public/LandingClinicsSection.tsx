@@ -58,7 +58,7 @@ export function LandingClinicsSection({ clinics }: { clinics: Organization[] }) 
           </Link>
         </div>
         <p className="mt-3 max-w-2xl text-slate-600">
-          Find a listed clinic or hospital, then book one of its doctors for video or an in-person visit.
+          Find a listed clinic or hospital, then book one of its doctors for video or a physical visit.
         </p>
         <div className="mt-10">
           <ClinicDirectoryCards clinics={clinics.slice(0, 6)} />

@@ -145,8 +145,11 @@ export interface AdminPermissions {
   can_manage_staff: boolean;
 }
 
-// Pakistan Cities
+// Pakistan Cities (Layyah district featured first for local clinic network)
 export const PAKISTAN_CITIES = [
+  "Layyah",
+  "Karor Fatehpur",
+  "Chockazam",
   "Karachi",
   "Lahore",
   "Islamabad",

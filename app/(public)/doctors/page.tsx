@@ -7,7 +7,7 @@ import { getApprovedDoctorsServer } from "@/lib/public/doctors";
 export const metadata = {
   title: "Find a Doctor | Apna Clinic",
   description:
-    "Browse PMDC-verified doctors across Pakistan. Book video, chat, or in-clinic visits.",
+    "Browse PMDC verified doctors across Pakistan. Book video, chat, or clinic visits online and in person.",
 };
 
 export default async function DoctorsPage() {

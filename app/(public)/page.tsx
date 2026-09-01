@@ -23,8 +23,8 @@ import { CONE_COLORS } from "@/lib/brand/colors";
 const stats = [
   { value: "PMDC", label: "Verified doctors only" },
   { value: "2 ways", label: "Video from home or walk in" },
-  { value: "Same day", label: "Tokens & desk billing" },
-  { value: "Nationwide", label: BRAND.citiesLabel.split(" · ").slice(0, 3).join(" · ") },
+  { value: "Same day", label: "Tokens and desk billing" },
+  { value: "Nationwide", label: BRAND.citiesLabel.split(", ").slice(0, 3).join(", ") },
 ];
 
 const services = [
@@ -36,18 +36,18 @@ const services = [
   },
   {
     title: "Chat with a doctor",
-    copy: "Message-based care when you need advice without a live video call.",
+    copy: "Message based care when you need advice without a live video call.",
     href: "/doctors",
     image: "/card_chat_doctor.png",
   },
   {
     title: "Clinic appointment",
-    copy: "Reserve an in-person slot. Reception checks you in and issues a queue token.",
+    copy: "Reserve a physical slot. Reception checks you in and issues a queue token.",
     href: "/doctors",
     image: "/card_clinic_appointment.png",
   },
   {
-    title: "Walk-in visit",
+    title: "Walk in visit",
     copy: "No booking needed. Register at the desk, wait your turn, settle after the consult.",
     href: "/register",
     image: "/card_walk_in_visit.png",
@@ -58,7 +58,7 @@ const steps = [
   {
     n: "01",
     title: "Find a doctor",
-    copy: "Search by city, specialty, or name. Only PMDC-verified profiles are listed.",
+    copy: "Search by city, specialty, or name. Only PMDC verified profiles are listed.",
   },
   {
     n: "02",
@@ -72,8 +72,8 @@ const steps = [
   },
   {
     n: "04",
-    title: "Consult & settle",
-    copy: "Notes and prescriptions follow. Pay online ahead, or at the desk after — never twice.",
+    title: "Consult and settle",
+    copy: "Notes and prescriptions follow. Pay online ahead, or at the desk after. Never twice.",
   },
 ];
 
@@ -85,7 +85,7 @@ const reasons = [
   },
   {
     title: "One record, both doors",
-    copy: "Online booking and clinic floor share the same appointment — no duplicate files.",
+    copy: "Online booking and clinic floor share the same appointment. No duplicate files.",
     image: "/feature_shared_records.png",
   },
   {
@@ -95,16 +95,16 @@ const reasons = [
   },
   {
     title: "Prescriptions that travel",
-    copy: "Print or download your Rx after video, chat, or an in-person consult.",
+    copy: "Print or download your Rx after video, chat, or a physical consult.",
     image: "/feature_prescriptions_travel.png",
   },
   {
     title: "Clear payments",
-    copy: "Prepaid online visits. Walk-ins settle at reception. No double charge.",
+    copy: "Prepaid online visits. Walk ins settle at reception. No double charge.",
     image: "/feature_clear_payments.png",
   },
   {
-    title: "Self-assessment first",
+    title: "Self assessment first",
     copy: "Not sure who to see? Start with a short screening, then book the right specialty.",
     image: "/feature_self_assessment.png",
   },
@@ -113,7 +113,7 @@ const reasons = [
 const clinicFloor = [
   {
     title: "Check in",
-    copy: "Show your booking or register as a walk-in. Reception confirms your details.",
+    copy: "Show your booking or register as a walk in. Reception confirms your details.",
     image: "/workflow_check_in.png",
   },
   {
@@ -148,7 +148,7 @@ const testimonials = [
     name: "Hamza K.",
     city: "Karachi",
     rating: 5,
-    role: "Walk-in",
+    role: "Walk in",
   },
   {
     quote:
@@ -160,7 +160,7 @@ const testimonials = [
   },
   {
     quote:
-      "Chat consult for my sleep issues was straightforward. Later I reserved an in-clinic slot with the same psychiatrist.",
+      "Chat consult for my sleep issues was straightforward. Later I reserved a clinic slot with the same psychiatrist.",
     name: "Bilal T.",
     city: "Multan",
     rating: 5,
@@ -172,11 +172,11 @@ const testimonials = [
     name: "Nadia F.",
     city: "Faisalabad",
     rating: 5,
-    role: "In-clinic",
+    role: "In clinic",
   },
   {
     quote:
-      "Used the self-assessment, then booked a psychologist. The search filters by city saved me a lot of guesswork.",
+      "Used the self assessment, then booked a psychologist. The search filters by city saved me a lot of guesswork.",
     name: "Omar J.",
     city: "Peshawar",
     rating: 5,
@@ -187,23 +187,23 @@ const testimonials = [
 const faqs = [
   {
     q: "Is Apna Clinic only online?",
-    a: "No. Apna Clinic is a hybrid clinic: video and chat from home, or in-person care with reception check-in, queue tokens, and desk billing.",
+    a: "No. Apna Clinic is Pakistan's best platform for online and physical care: video and chat from home, or a clinic visit with reception check in, queue tokens, and desk billing.",
   },
   {
     q: "Do I need an account to browse?",
-    a: "No. Explore verified doctors without signing up. You will need an account when you book a slot or complete a walk-in registration.",
+    a: "No. Explore verified doctors without signing up. You will need an account when you book a slot or complete a walk in registration.",
   },
   {
     q: "Can I walk in without booking?",
-    a: "Yes. Reception can register walk-in patients, assign a doctor, and place you in today’s queue.",
+    a: "Yes. Reception can register walk in patients, assign a doctor, and place you in today’s queue.",
   },
   {
     q: "How do payments work?",
-    a: "Online bookings stay prepaid. Unpaid in-clinic visits settle at reception after the consult — never double-charged if you already paid online.",
+    a: "Online bookings stay prepaid. Unpaid clinic visits settle at reception after the consult. Never charged twice if you already paid online.",
   },
   {
     q: "Will the doctor see my past visits?",
-    a: "Yes. Online and clinic visits share one record — notes, prescriptions, and previous appointments stay with your profile.",
+    a: "Yes. Online and clinic visits share one record. Notes, prescriptions, and previous appointments stay with your profile.",
   },
   {
     q: "What if I miss my slot?",
@@ -215,14 +215,14 @@ const faqs = [
   },
   {
     q: "Which cities are covered?",
-    a: `${BRAND.citiesLabel}. Video and chat are available nationwide; in-clinic care depends on the doctor’s clinic location.`,
+    a: `${BRAND.citiesLabel}. Video and chat are available nationwide. Physical care depends on the doctor’s clinic location.`,
   },
 ];
 
 const hours = [
-  { day: "Monday – Saturday", time: "9:00 AM – 9:00 PM" },
-  { day: "Sunday", time: "10:00 AM – 6:00 PM" },
-  { day: "Video & chat", time: "Until 11:00 PM" },
+  { day: "Monday to Saturday", time: "9:00 AM to 9:00 PM" },
+  { day: "Sunday", time: "10:00 AM to 6:00 PM" },
+  { day: "Video and chat", time: "Until 11:00 PM" },
 ];
 
 export default async function HomePage() {
@@ -250,18 +250,18 @@ export default async function HomePage() {
 
           <div className="relative mx-auto flex min-h-[100svh] max-w-6xl flex-col justify-end px-4 pb-10 pt-28 sm:px-6 sm:pb-14 lg:justify-center lg:pb-20 lg:pt-32">
             <p className="animate-wasl-fade-up text-[11px] font-semibold uppercase tracking-[0.28em] text-brand-300">
-              {BRAND.name} · Hybrid clinic
+              Pakistan's best platform · Online plus physical
             </p>
             <h1 className="animate-wasl-fade-up-delay mt-4 max-w-2xl font-heading text-[2.35rem] font-bold leading-[1.12] tracking-tight sm:text-5xl lg:text-[3.35rem]">
-              See a doctor today — from home or at the clinic.
+              Pakistan's best platform for online and physical care.
             </h1>
             <p className="animate-wasl-fade-up-delay-2 mt-5 max-w-xl text-base leading-relaxed text-white/78 sm:text-lg">
-              Book a verified specialist for video or chat, reserve an in-person slot, or walk in
-              for a same-day token. One record, one prescription trail, clear billing either way.
+              Book a verified specialist for video or chat from home, reserve a clinic slot, or walk
+              in for a same day token. One record, one prescription trail, clear billing either way.
             </p>
 
             <div className="animate-wasl-fade-up-delay-2 mt-6 flex flex-wrap gap-2">
-              {["PMDC-verified doctors", "Video, chat & walk-in", "Desk receipts"].map((chip) => (
+              {["PMDC verified doctors", "Online plus physical", "Desk receipts"].map((chip) => (
                 <span
                   key={chip}
                   className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-xs font-medium text-white/90 backdrop-blur-sm"
@@ -277,10 +277,6 @@ export default async function HomePage() {
             </div>
 
             <div className="mt-8 flex flex-wrap gap-x-6 gap-y-2 text-sm text-white/75">
-              <Link href="/assessment" className="inline-flex items-center gap-1.5 hover:text-white">
-                Start a self-assessment
-                <ArrowRight className="h-3.5 w-3.5" />
-              </Link>
               <Link href="/#visit" className="inline-flex items-center gap-1.5 hover:text-white">
                 How a visit works
                 <ArrowRight className="h-3.5 w-3.5" />
@@ -310,7 +306,7 @@ export default async function HomePage() {
               Care options
             </p>
             <h2 className="mt-3 max-w-xl font-heading text-3xl font-bold tracking-tight sm:text-4xl">
-              Four ways to get seen — pick what fits today.
+              Four ways to get seen. Pick what fits today.
             </h2>
             <p className="mt-3 max-w-2xl text-slate-600">
               Online visits stay prepaid. Clinic visits can be booked ahead or registered at
@@ -366,7 +362,7 @@ export default async function HomePage() {
               How a visit works
             </h2>
             <p className="mt-3 max-w-lg text-slate-600">
-              From first search to completed consult — online or at the desk.
+              From first search to completed consult, online or at the desk.
             </p>
 
             <ol className="mt-14 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
@@ -420,7 +416,7 @@ export default async function HomePage() {
                   Consult from anywhere
                 </h2>
                 <p className="mt-3 max-w-sm text-sm leading-relaxed text-white/75 sm:text-base">
-                  Book video or chat, pay ahead, join a private room — evenings included. Notes and
+                  Book video or chat, pay ahead, join a private room, evenings included. Notes and
                   prescriptions land in your account.
                 </p>
                 <span className="mt-6 inline-flex items-center gap-2 text-sm font-medium">
@@ -468,7 +464,7 @@ export default async function HomePage() {
               Why Apna Clinic
             </p>
             <h2 className="mt-3 max-w-xl font-heading text-3xl font-bold tracking-tight sm:text-4xl">
-              Built for Pakistan’s hybrid clinic — not just another booking site.
+              Pakistan's best online plus physical clinic. Not just another booking site.
             </h2>
             <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
               {reasons.map((reason) => (
@@ -506,7 +502,7 @@ export default async function HomePage() {
               Arrived at the clinic? This is what happens next.
             </h2>
             <p className="mt-3 max-w-2xl text-white/65">
-              Online bookings appear on the reception board. Walk-ins are added to the same queue.
+              Online bookings appear on the reception board. Walk ins are added to the same queue.
               Doctors never work from a separate list.
             </p>
             <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
@@ -544,7 +540,7 @@ export default async function HomePage() {
             <div className="relative min-h-[320px] overflow-hidden rounded-3xl">
               <Image
                 src="/online_consultation.jpg"
-                alt="Patient preparing a short self-assessment"
+                alt="Patient preparing a short self assessment"
                 fill
                 sizes="(max-width: 1024px) 100vw, 50vw"
                 className="object-cover"
@@ -555,7 +551,7 @@ export default async function HomePage() {
                 Not sure who to see?
               </p>
               <h2 className="mt-3 font-heading text-3xl font-bold tracking-tight sm:text-4xl">
-                Start with a short self-assessment.
+                Start with a short self assessment.
               </h2>
               <p className="mt-4 text-base leading-relaxed text-slate-600">
                 Answer a few questions about sleep, mood, stress, or focus. We’ll point you toward
@@ -579,7 +575,7 @@ export default async function HomePage() {
               Patient stories
             </p>
             <h2 className="mt-3 font-heading text-3xl font-bold tracking-tight sm:text-4xl">
-              Care that felt simple — online and at the desk.
+              Care that felt simple, online and at the desk.
             </h2>
             <div className="mt-12">
               <TestimonialsCarousel testimonials={testimonials} />
@@ -597,7 +593,7 @@ export default async function HomePage() {
                 Before you book
               </h2>
               <p className="mx-auto mt-3 max-w-lg text-slate-600">
-                Hybrid care through {BRAND.name} — online and in the clinic.
+                Pakistan's best platform for online and physical care through {BRAND.name}.
               </p>
             </div>
 
@@ -626,13 +622,13 @@ export default async function HomePage() {
           <div className="mx-auto grid max-w-6xl gap-10 px-4 sm:px-6 lg:grid-cols-2">
             <div>
               <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-brand-600">
-                Visit & contact
+                Visit and contact
               </p>
               <h2 className="mt-3 font-heading text-3xl font-bold tracking-tight sm:text-4xl">
                 Hours, cities, and the desk.
               </h2>
               <p className="mt-4 max-w-md text-slate-600">
-                Video and chat run nationwide. Walk-ins and reserved clinic slots follow the
+                Video and chat run nationwide. Walk ins and reserved clinic slots follow the
                 doctor’s location and today’s queue.
               </p>
               <ul className="mt-8 space-y-3 text-sm text-slate-700">
@@ -681,7 +677,7 @@ export default async function HomePage() {
                 Ready when you are
               </p>
               <p className="mx-auto mt-4 max-w-md text-sm leading-relaxed text-white/80 sm:text-base">
-                Book a secure consult, walk in for same-day care, or start with a short assessment.
+                Book a secure consult, walk in for same day care, or start with a short assessment.
               </p>
             </div>
             <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
