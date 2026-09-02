@@ -1,3 +1,7 @@
+import {
+  getPersonSearchWords,
+  matchesPersonName,
+} from "@/lib/public/doctor-filters";
 import { createClient } from "@/lib/supabase/client";
 import type {
   ChatConversation,
@@ -351,12 +355,31 @@ export async function searchChatableUsers(
   query: string,
   roles: Array<"patient" | "doctor" | "admin" | "super_admin">
 ): Promise<ChatParticipant[]> {
+  const words = getPersonSearchWords(query);
+  if (words.length === 0) return [];
+
   const supabase = createClient();
+  const orFilter = words
+    .map((word) => `full_name.ilike.%${escapeIlikePattern(word)}%`)
+    .join(",");
+
   const { data, error } = await supabase
-    .from("profiles").select("id, full_name, avatar_url, role")
-    .in("role", roles).ilike("full_name", `%${query}%`).eq("is_active", true).limit(20);
+    .from("profiles")
+    .select("id, full_name, avatar_url, role")
+    .in("role", roles)
+    .eq("is_active", true)
+    .or(orFilter)
+    .limit(50);
+
   if (error) throw error;
-  return (data ?? []) as ChatParticipant[];
+
+  return ((data ?? []) as ChatParticipant[])
+    .filter((profile) => matchesPersonName(profile.full_name, query))
+    .slice(0, 20);
+}
+
+function escapeIlikePattern(value: string): string {
+  return value.replace(/[%_\\]/g, "\\$&");
 }
 
 export async function clearConversation(conversationId: string, myId: string): Promise<void> {

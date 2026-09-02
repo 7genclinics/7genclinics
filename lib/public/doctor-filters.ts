@@ -148,18 +148,18 @@ function wordMatchesNormalizedBlob(blob: string, word: string): boolean {
   });
 }
 
-function getNameTokens(doc: DoctorWithProfile): string[] {
-  return getTextTokens(doc.profile?.full_name ?? "");
+export function getPersonSearchWords(q: string): string[] {
+  return getQueryWords(q);
 }
 
-/** Case-insensitive name match; word order does not matter (first/last name). */
-function matchesDoctorName(doc: DoctorWithProfile, q: string): boolean {
+/** Case-insensitive person name search (Dr / dr, dots, partial words). */
+export function matchesPersonName(fullName: string, q: string): boolean {
   const queryWords = getQueryWords(q);
   if (queryWords.length === 0) return false;
 
-  const nameTokens = getNameTokens(doc);
-  const fullNorm = normalizeSearchText(doc.profile?.full_name ?? "");
-  const compactName = compactNormalized(doc.profile?.full_name ?? "");
+  const nameTokens = getTextTokens(fullName);
+  const fullNorm = normalizeSearchText(fullName);
+  const compactName = compactNormalized(fullName);
 
   const nameWordMatches = (word: string) => {
     if (
@@ -172,11 +172,12 @@ function matchesDoctorName(doc: DoctorWithProfile, q: string): boolean {
     return anyTokenMatchesWord(nameTokens, word, true);
   };
 
-  if (nameTokens.length === 0) {
-    return queryWords.every((word) => nameWordMatches(word));
-  }
-
   return queryWords.every((word) => nameWordMatches(word));
+}
+
+/** Case-insensitive name match; word order does not matter (first/last name). */
+function matchesDoctorName(doc: DoctorWithProfile, q: string): boolean {
+  return matchesPersonName(doc.profile?.full_name ?? "", q);
 }
 
 function getDoctorSearchBlob(doc: DoctorWithProfile): string {

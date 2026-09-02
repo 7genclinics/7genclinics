@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
+import { matchesPersonName } from "@/lib/public/doctor-filters";
 import { useChat } from "@/contexts/ChatContext";
 import { ConversationItem } from "./ConversationItem";
 import { NewChatDialog } from "./NewChatDialog";
@@ -16,8 +17,8 @@ export function ConversationList({ allowedRoles, onSelect }: ConversationListPro
   const [search, setSearch] = useState("");
   const [showNewChat, setShowNewChat] = useState(false);
 
-  const filtered = conversations.filter((c) =>
-    c.other_user.full_name.toLowerCase().includes(search.toLowerCase())
+  const filtered = conversations.filter(
+    (c) => !search.trim() || matchesPersonName(c.other_user.full_name, search),
   );
 
   const handleSelect = useCallback(
