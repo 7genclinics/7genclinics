@@ -26,9 +26,111 @@ export function getPkTodayDate(now: Date = new Date()): string {
   }).format(now);
 }
 
-/** Calendar date (YYYY-MM-DD) in the clinic timezone, offset by N days from now. */
+/** Calendar date (YYYY-MM-DD) in the clinic timezone, offset by N local days. */
 export function getPkDateWithOffset(days: number, now: Date = new Date()): string {
-  return getPkTodayDate(new Date(now.getTime() + days * 24 * 60 * 60 * 1000));
+  const base = getPkTodayDate(now);
+  if (days === 0) return base;
+  const [year, month, day] = base.split("-").map(Number);
+  const shifted = new Date(Date.UTC(year, month - 1, day + days));
+  return shifted.toISOString().slice(0, 10);
+}
+
+/** Normalize HH:MM or HH:MM:SS to HH:MM for slot comparisons. */
+export function normalizeSlotTime(time: string): string {
+  const parts = time.trim().split(":");
+  const hours = Number(parts[0]);
+  const minutes = Number(parts[1] ?? 0);
+  if (Number.isNaN(hours) || Number.isNaN(minutes)) return time.trim();
+  return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
+}
+
+/** Minutes from now until a clinic-local date + time (negative if already passed). */
+export function minutesUntilSlot(
+  date: string,
+  time: string,
+  now: Date = new Date(),
+): number {
+  if (!isValidBookingDate(date)) return -1;
+  const today = getPkTodayDate(now);
+  const [y, m, d] = date.split("-").map(Number);
+  const [h, min] = normalizeSlotTime(time).split(":").map(Number);
+  const slotUtcMs = Date.UTC(y, m - 1, d, h - 5, min, 0); // Asia/Karachi UTC+5
+  const nowUtcMs = now.getTime();
+  return Math.floor((slotUtcMs - nowUtcMs) / 60_000);
+}
+
+/** Drop slots that violate the doctor's minimum booking notice (hours). */
+export function filterSlotsByMinimumNotice(
+  times: string[],
+  date: string,
+  noticeHours: number,
+  now: Date = new Date(),
+): string[] {
+  if (noticeHours <= 0) return times;
+  const minMinutes = noticeHours * 60;
+  return times.filter((time) => minutesUntilSlot(date, time, now) >= minMinutes);
+}
+
+export type SlotAvailabilityReason =
+  | "no_schedule"
+  | "day_off"
+  | "all_past"
+  | "notice_period"
+  | "all_occupied"
+  | null;
+
+export function describeSlotAvailability({
+  date,
+  availabilitySlots,
+  timeOptions,
+  bookingNoticeHours = 0,
+  now = new Date(),
+}: {
+  date: string;
+  availabilitySlots: AvailabilitySlot[];
+  timeOptions: string[];
+  bookingNoticeHours?: number;
+  now?: Date;
+}): SlotAvailabilityReason {
+  if (!date || availabilitySlots.length === 0) return "no_schedule";
+
+  const dayOfWeek = getPkDayOfWeek(date);
+  const daySlots = availabilitySlots.filter((s) => s.day_of_week === dayOfWeek);
+  if (daySlots.length === 0) return "day_off";
+
+  const allGenerated = generateTimeSlotsForDate(
+    availabilitySlots,
+    date,
+    daySlots[0]?.slot_duration_minutes ?? 30,
+  );
+  if (allGenerated.length === 0) return "day_off";
+
+  const afterPast = filterPastSlotsForToday(allGenerated, date, now);
+  if (afterPast.length === 0 && date === getPkTodayDate(now)) return "all_past";
+
+  const afterNotice = filterSlotsByMinimumNotice(afterPast, date, bookingNoticeHours, now);
+  if (afterNotice.length === 0 && bookingNoticeHours > 0) return "notice_period";
+
+  if (timeOptions.length === 0) return "all_occupied";
+
+  return null;
+}
+
+export function slotAvailabilityMessage(reason: SlotAvailabilityReason, noticeHours = 0): string {
+  switch (reason) {
+    case "no_schedule":
+      return "This doctor has not published working hours yet.";
+    case "day_off":
+      return "No clinic hours on this day. Try Monday to Friday or another date.";
+    case "all_past":
+      return "All slots for today have passed. Pick tomorrow or another date.";
+    case "notice_period":
+      return `This doctor requires at least ${noticeHours} hour(s) notice. Choose a later date or time.`;
+    case "all_occupied":
+      return "All remaining slots are booked or marked unavailable for this date.";
+    default:
+      return "No bookable slots for this date.";
+  }
 }
 
 /** Minutes elapsed since midnight in the clinic timezone. */

@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Calendar, X } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { SlotTimePicker } from "@/components/booking/SlotTimePicker";
 import { bookAppointment } from "@/lib/patient/api";
 import { pkDateTimeToUtcIso } from "@/lib/booking/timezone";
-import { getPkDateWithOffset, getPkTodayDate, isSlotInPast } from "@/lib/booking/slots";
+import { getPkTodayDate, isSlotInPast } from "@/lib/booking/slots";
 import {
   isSlotSelectable,
   mapBookingErrorMessage,
@@ -45,10 +45,8 @@ export function BookingModal({
   allowedTypes,
   serviceId,
 }: BookingModalProps) {
-  const tomorrow = useMemo(() => getPkDateWithOffset(1), []);
   const types = allowedTypes?.length ? allowedTypes : TYPE_OPTIONS.map((opt) => opt.value);
-
-  const [bookDate, setBookDate] = useState(tomorrow);
+  const [bookDate, setBookDate] = useState(() => getPkTodayDate());
   const [bookTime, setBookTime] = useState("10:00");
   const [bookType, setBookType] = useState<AppointmentType>(
     initialType && types.includes(initialType) ? initialType : types[0],
@@ -68,6 +66,7 @@ export function BookingModal({
     refreshSlots,
     fetchSlotsNow,
     findFirstAvailable,
+    slotEmptyMessage,
   } = useDoctorSlotAvailability({
     doctorId: doctor.id,
     date: bookDate,
@@ -180,6 +179,7 @@ export function BookingModal({
               selectedTime={bookTime}
               onSelect={setBookTime}
               loading={slotsLoading}
+              emptyMessage={slotEmptyMessage}
             />
           </div>
 

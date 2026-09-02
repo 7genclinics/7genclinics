@@ -26,13 +26,18 @@ export function isSlotFreeingStatus(status: string): boolean {
   return (SLOT_FREEING_STATUSES as readonly string[]).includes(status);
 }
 
+import { normalizeSlotTime } from "./slots.ts";
+
 export function getSlotUiStatus(
   time: string,
   bookedSlots: string[],
   blockedSlots: string[],
 ): SlotUiStatus {
-  if (blockedSlots.includes(time)) return "blocked";
-  if (bookedSlots.includes(time)) return "booked";
+  const normalized = normalizeSlotTime(time);
+  const booked = bookedSlots.map(normalizeSlotTime);
+  const blocked = blockedSlots.map(normalizeSlotTime);
+  if (blocked.includes(normalized)) return "blocked";
+  if (booked.includes(normalized)) return "booked";
   return "available";
 }
 

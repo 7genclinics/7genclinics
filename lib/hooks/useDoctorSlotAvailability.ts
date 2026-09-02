@@ -1,11 +1,14 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { getBookedSlotsForDate, getDoctorAvailability } from "@/lib/patient/api";
+import { getBookedSlotsForDate, getDoctorAvailability, getDoctorScheduleConfig } from "@/lib/patient/api";
 import {
+  describeSlotAvailability,
   filterPastSlotsForToday,
+  filterSlotsByMinimumNotice,
   generateTimeSlotsForDate,
   getSessionDurationForDate,
+  slotAvailabilityMessage,
 } from "@/lib/booking/slots";
 import { findFirstAvailableSlot } from "@/lib/booking/slot-status";
 import { useAppointmentSlotsRealtime } from "@/lib/realtime/useAppointmentSlotsRealtime";
@@ -28,6 +31,7 @@ export function useDoctorSlotAvailability({
   const [blockedSlots, setBlockedSlots] = useState<string[]>([]);
   const [loadingAvailability, setLoadingAvailability] = useState(true);
   const [loadingSlots, setLoadingSlots] = useState(false);
+  const [bookingNoticeHours, setBookingNoticeHours] = useState(0);
   const [refreshKey, setRefreshKey] = useState(0);
 
   const sessionDuration = useMemo(
@@ -49,8 +53,23 @@ export function useDoctorSlotAvailability({
   const timeOptions = useMemo(() => {
     if (!date || availabilitySlots.length === 0) return [];
     const all = generateTimeSlotsForDate(availabilitySlots, date, sessionDuration);
-    return filterPastSlotsForToday(all, date, new Date(clockTick));
-  }, [availabilitySlots, date, sessionDuration, clockTick]);
+    const future = filterPastSlotsForToday(all, date, new Date(clockTick));
+    return filterSlotsByMinimumNotice(future, date, bookingNoticeHours, new Date(clockTick));
+  }, [availabilitySlots, date, sessionDuration, clockTick, bookingNoticeHours]);
+
+  const slotEmptyReason = useMemo(
+    () =>
+      describeSlotAvailability({
+        date,
+        availabilitySlots,
+        timeOptions,
+        bookingNoticeHours,
+        now: new Date(clockTick),
+      }),
+    [date, availabilitySlots, timeOptions, bookingNoticeHours, clockTick],
+  );
+
+  const slotEmptyMessage = slotAvailabilityMessage(slotEmptyReason, bookingNoticeHours);
 
   const refreshSlots = useCallback(() => {
     setRefreshKey((key) => key + 1);
@@ -69,9 +88,15 @@ export function useDoctorSlotAvailability({
   useEffect(() => {
     if (!enabled || !doctorId) return;
     setLoadingAvailability(true);
-    getDoctorAvailability(doctorId)
-      .then(setAvailabilitySlots)
-      .catch(() => setAvailabilitySlots([]))
+    Promise.all([getDoctorAvailability(doctorId), getDoctorScheduleConfig(doctorId)])
+      .then(([slots, scheduleConfig]) => {
+        setAvailabilitySlots(slots);
+        setBookingNoticeHours(scheduleConfig?.bookingNotice ?? 0);
+      })
+      .catch(() => {
+        setAvailabilitySlots([]);
+        setBookingNoticeHours(0);
+      })
       .finally(() => setLoadingAvailability(false));
   }, [doctorId, enabled]);
 
@@ -113,5 +138,7 @@ export function useDoctorSlotAvailability({
     refreshSlots,
     fetchSlotsNow,
     findFirstAvailable,
+    slotEmptyMessage,
+    bookingNoticeHours,
   };
 }

@@ -13,7 +13,7 @@ import { PaymentProofUpload } from "@/components/patient/PaymentProofUpload";
 import { SlotTimePicker } from "@/components/booking/SlotTimePicker";
 import { BOOKING_PAYMENT_METHODS, PLATFORM_PAYMENT_ACCOUNTS, type BookablePaymentMethod } from "@/lib/payment/config";
 import { pkDateTimeToUtcIso } from "@/lib/booking/timezone";
-import { getPkDateWithOffset, getPkTodayDate, isSlotInPast } from "@/lib/booking/slots";
+import { getPkTodayDate, isSlotInPast } from "@/lib/booking/slots";
 import {
   isSlotSelectable,
   mapBookingErrorMessage,
@@ -51,6 +51,7 @@ export default function PatientDoctorsPage() {
     refreshSlots,
     fetchSlotsNow,
     findFirstAvailable,
+    slotEmptyMessage,
   } = useDoctorSlotAvailability({
     doctorId: bookingDoctor?.id ?? "",
     date: bookDate,
@@ -104,7 +105,7 @@ export default function PatientDoctorsPage() {
   );
 
   const openBooking = (doc: ReturnType<typeof mapToDoctorCard>) => {
-    setBookDate(getPkDateWithOffset(1));
+    setBookDate(getPkTodayDate());
     setBookTime("10:00");
     setBookType("video");
     setBookNotes("");
@@ -348,6 +349,7 @@ export default function PatientDoctorsPage() {
                     selectedTime={bookTime}
                     onSelect={setBookTime}
                     loading={loadingAvailability || loadingSlots}
+                    emptyMessage={slotEmptyMessage}
                   />
                 </div>
                 <div>

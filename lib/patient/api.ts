@@ -21,6 +21,7 @@ import type {
 import {
   attachTaxonomyToDoctor,
 } from "@/lib/doctor/taxonomy";
+import type { DoctorDocuments } from "@/lib/doctor/types";
 import {
   BASE_DOCTOR_SELECT,
   DOCTOR_SELECT_WITH_TAXONOMY,
@@ -277,9 +278,36 @@ export async function getBookedSlotsForDate(
   }
   const rows = (data ?? []) as { slot_time: string; is_blocked: boolean }[];
   return {
-    booked: rows.filter((r) => !r.is_blocked).map((r) => r.slot_time),
-    blocked: rows.filter((r) => r.is_blocked).map((r) => r.slot_time),
+    booked: rows
+      .filter((r) => !r.is_blocked)
+      .map((r) => normalizeSlotTimeFromApi(r.slot_time)),
+    blocked: rows
+      .filter((r) => r.is_blocked)
+      .map((r) => normalizeSlotTimeFromApi(r.slot_time)),
   };
+}
+
+function normalizeSlotTimeFromApi(time: string): string {
+  const parts = time.trim().split(":");
+  const hours = Number(parts[0]);
+  const minutes = Number(parts[1] ?? 0);
+  if (Number.isNaN(hours) || Number.isNaN(minutes)) return time.trim();
+  return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
+}
+
+export async function getDoctorScheduleConfig(
+  doctorProfileId: string,
+): Promise<DoctorDocuments["schedule_config"] | null> {
+  const { data, error } = await table("doctor_profiles")
+    .select("documents")
+    .eq("id", doctorProfileId)
+    .eq("status", "approved")
+    .maybeSingle();
+
+  if (error || !data) return null;
+
+  const documents = (data.documents ?? {}) as DoctorDocuments;
+  return documents.schedule_config ?? null;
 }
 
 export async function getPatientPayments(): Promise<PaymentWithDoctor[]> {
