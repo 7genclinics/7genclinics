@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/Button";
 import { MapPin, Star, Sparkles, Filter, CheckCircle, Search, X, Calendar, Loader2, ShieldCheck, ArrowLeft, CreditCard } from "lucide-react";
 import { bookAppointment, getApprovedDoctors, submitPaymentProof } from "@/lib/patient/api";
 import { mapToDoctorCard } from "@/lib/patient/mappers";
+import { filterDoctors } from "@/lib/public/doctor-filters";
 import { UserAvatar } from "@/components/shared/UserAvatar";
 import { PaymentProofUpload } from "@/components/patient/PaymentProofUpload";
 import { SlotTimePicker } from "@/components/booking/SlotTimePicker";
@@ -93,17 +94,14 @@ export default function PatientDoctorsPage() {
     return ["All", ...Array.from(specs).sort()];
   }, [doctors]);
 
-  const doctorCards = useMemo(() => doctors.map(mapToDoctorCard), [doctors]);
-
-  const filteredDoctors = doctorCards.filter((doc) => {
-    const matchesSearch =
-      doc.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      doc.specialization.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesSpecialty =
-      selectedSpecialty === "All" ||
-      doc.specialization.toLowerCase().includes(selectedSpecialty.toLowerCase());
-    return matchesSearch && matchesSpecialty;
-  });
+  const filteredDoctors = useMemo(
+    () =>
+      filterDoctors(doctors, {
+        q: searchQuery.trim() || undefined,
+        specialty: selectedSpecialty === "All" ? undefined : selectedSpecialty,
+      }),
+    [doctors, searchQuery, selectedSpecialty]
+  );
 
   const openBooking = (doc: ReturnType<typeof mapToDoctorCard>) => {
     setBookDate(getPkDateWithOffset(1));
