@@ -18,7 +18,6 @@ import {
   toggleReaction as apiToggleReaction,
   markConversationRead,
   getOrCreateConversation,
-  searchChatableUsers,
   clearConversation as apiClear,
   deleteConversation as apiDeleteConv,
 } from "@/lib/chat/api";
@@ -528,7 +527,20 @@ export function ChatProvider({
         setReplyTo,
         refreshConversations,
         broadcastTyping,
-        searchUsers: searchChatableUsers,
+        searchUsers: async (query, roles) => {
+          const params = new URLSearchParams({
+            q: query,
+            roles: roles.join(","),
+          });
+          const response = await fetch(`/api/chat/search-users?${params.toString()}`);
+          if (!response.ok) {
+            const payload = (await response.json().catch(() => null)) as
+              | { error?: string }
+              | null;
+            throw new Error(payload?.error ?? "Search failed");
+          }
+          return (await response.json()) as ChatParticipant[];
+        },
         clearActiveChat,
         deleteActiveChat,
       }}
