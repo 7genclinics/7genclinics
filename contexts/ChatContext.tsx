@@ -51,7 +51,10 @@ interface ChatContextValue {
   openConversation: (conversationId: string) => void;
   /** Leave the open thread (mobile back / navigate away) so bell suppression clears. */
   closeConversation: () => void;
-  startConversation: (otherId: string) => Promise<string>;
+  startConversation: (
+    otherId: string,
+    otherUser?: ChatParticipant,
+  ) => Promise<string>;
   sendMessage: (body?: string, file?: File) => Promise<void>;
   editMessage: (msgId: string, newBody: string) => Promise<void>;
   deleteMessage: (msgId: string, mode: MessageDeleteMode) => Promise<void>;
@@ -182,10 +185,35 @@ export function ChatProvider({
 
   // ── Start new conversation ───────────────────────────────
   const startConversation = useCallback(
-    async (otherId: string) => {
+    async (otherId: string, otherUser?: ChatParticipant) => {
       const convId = await getOrCreateConversation(myId, otherId);
-      await refreshConversations();
+
+      // Ensure ChatWindow can render immediately (it needs the conversation in list).
+      setConversations((prev) => {
+        if (prev.some((c) => c.id === convId)) return prev;
+        const [participant_a, participant_b] =
+          myId < otherId ? [myId, otherId] : [otherId, myId];
+        const optimistic: ChatConversation = {
+          id: convId,
+          participant_a,
+          participant_b,
+          other_user: otherUser ?? {
+            id: otherId,
+            full_name: "User",
+            avatar_url: null,
+            role: "patient",
+          },
+          last_message: null,
+          last_message_at: new Date().toISOString(),
+          unread_count: 0,
+          created_at: new Date().toISOString(),
+        };
+        return [optimistic, ...prev];
+      });
+
       await openConversation(convId);
+      // Refresh in background so list previews/unread stay accurate.
+      void refreshConversations();
       return convId;
     },
     [myId, openConversation, refreshConversations]

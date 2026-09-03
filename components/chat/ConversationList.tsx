@@ -84,6 +84,7 @@ export function ConversationList({ allowedRoles, onSelect }: ConversationListPro
       <NewChatDialog
         open={showNewChat}
         onClose={() => setShowNewChat(false)}
+        onStarted={onSelect}
         allowedRoles={allowedRoles}
       />
     </>

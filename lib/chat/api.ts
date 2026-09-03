@@ -38,7 +38,7 @@ export async function getConversations(myId: string): Promise<ChatConversation[]
 
   const { data: rows, error } = await db()
     .from("conversations")
-    .select("id, participant_a, participant_b, last_message_at, created_at, deleted_by_a, deleted_by_b")
+    .select("id, participant_a, participant_b, last_message_at, created_at, deleted_by_a, deleted_by_b, cleared_at_a, cleared_at_b")
     .or(`participant_a.eq.${myId},participant_b.eq.${myId}`)
     .order("last_message_at", { ascending: false });
 

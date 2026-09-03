@@ -10,10 +10,16 @@ import { getErrorMessage } from "@/lib/errors";
 interface NewChatDialogProps {
   open: boolean;
   onClose: () => void;
+  onStarted?: () => void;
   allowedRoles: Array<"patient" | "doctor" | "admin" | "super_admin">;
 }
 
-export function NewChatDialog({ open, onClose, allowedRoles }: NewChatDialogProps) {
+export function NewChatDialog({
+  open,
+  onClose,
+  onStarted,
+  allowedRoles,
+}: NewChatDialogProps) {
   const { startConversation, searchUsers } = useChat();
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<ChatParticipant[]>([]);
@@ -42,8 +48,9 @@ export function NewChatDialog({ open, onClose, allowedRoles }: NewChatDialogProp
     setStarting(user.id);
     setError(null);
     try {
-      await startConversation(user.id);
+      await startConversation(user.id, user);
       handleClose();
+      onStarted?.();
     } catch (err) {
       const msg = getErrorMessage(err, "Failed to open conversation. Please try again.");
       setError(msg);

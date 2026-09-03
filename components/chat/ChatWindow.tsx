@@ -88,7 +88,29 @@ export function ChatWindow({ onBack }: ChatWindowProps) {
       )
     : messages;
 
-  if (!activeConv || !otherUser) return null;
+  if (!activeConversationId) return null;
+
+  if (!activeConv || !otherUser) {
+    return (
+      <div className="flex h-full min-h-0 flex-col">
+        <div className="flex items-center gap-3 px-4 py-3 border-b border-border bg-card flex-shrink-0">
+          <button
+            onClick={onBack}
+            className="md:hidden p-1.5 rounded-lg hover:bg-muted text-muted-foreground"
+          >
+            <ArrowLeft className="w-5 h-5" />
+          </button>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-foreground">Opening chat…</p>
+            <p className="text-xs text-muted-foreground">Loading conversation</p>
+          </div>
+        </div>
+        <div className="flex flex-1 items-center justify-center">
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-full min-h-0 flex-col">
