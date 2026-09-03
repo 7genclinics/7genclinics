@@ -33,6 +33,7 @@ import {
   updateAppointment,
 } from "@/lib/doctor/api";
 import { mapStatusToDb, mapToUIAppointment, formatSlotRange } from "@/lib/doctor/mappers";
+import { matchesAnyFlexibleText } from "@/lib/search/flexible-match";
 
 interface Appointment {
   id: string;
@@ -124,11 +125,11 @@ export default function DoctorAppointmentsPage() {
     }
 
     if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(apt => 
-        apt.patientName.toLowerCase().includes(query) ||
-        apt.id.toLowerCase().includes(query) ||
-        apt.reason.toLowerCase().includes(query)
+      filtered = filtered.filter((apt) =>
+        matchesAnyFlexibleText(
+          [apt.patientName, apt.id, apt.reason],
+          searchQuery,
+        ),
       );
     }
     

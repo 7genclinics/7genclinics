@@ -1,9 +1,9 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/types/database";
 import {
-  getPersonSearchWords,
+  getFlexibleSearchWords,
   matchesPersonName,
-} from "@/lib/public/doctor-filters";
+} from "@/lib/search/flexible-match";
 import type { ChatParticipant } from "@/types/chat";
 
 type ChatableRole = ChatParticipant["role"];
@@ -12,7 +12,9 @@ function escapeIlikePattern(value: string): string {
   return value.replace(/[%_\\]/g, "\\$&");
 }
 
-function pickProfileSearchWords(words: string[]): string[] {
+function pickSearchWords(query: string): string[] {
+  const words = getFlexibleSearchWords(query);
+  // Prefer meaningful tokens, but keep short ones if that is all we have.
   const meaningful = words.filter((word) => word.length >= 2);
   return meaningful.length > 0 ? meaningful : words;
 }
@@ -42,6 +44,23 @@ function normalizeJoinedProfile(
   };
 }
 
+async function getApprovedDoctorUserIds(
+  supabase: SupabaseClient<Database>,
+): Promise<Set<string>> {
+  const { data, error } = await supabase
+    .from("doctor_profiles")
+    .select("user_id")
+    .eq("status", "approved")
+    .limit(500);
+
+  if (error) throw error;
+  return new Set(
+    (data ?? [])
+      .map((row) => row.user_id)
+      .filter((id): id is string => typeof id === "string" && id.length > 0),
+  );
+}
+
 async function searchApprovedDoctors(
   supabase: SupabaseClient<Database>,
   query: string,
@@ -52,7 +71,7 @@ async function searchApprovedDoctors(
       "profile:profiles!doctor_profiles_user_id_fkey(id, full_name, avatar_url, role, is_active)",
     )
     .eq("status", "approved")
-    .limit(200);
+    .limit(500);
 
   if (error) throw error;
 
@@ -63,7 +82,7 @@ async function searchApprovedDoctors(
     if (!matchesPersonName(profile.full_name, query)) continue;
     matches.push({
       id: profile.id,
-      full_name: profile.full_name,
+      full_name: profile.full_name.trim(),
       avatar_url: profile.avatar_url,
       role: "doctor",
     });
@@ -77,30 +96,26 @@ async function searchProfilesByRole(
   query: string,
   roles: ChatableRole[],
 ): Promise<ChatParticipant[]> {
-  const words = pickProfileSearchWords(getPersonSearchWords(query));
-  const merged = new Map<string, ChatParticipant>();
+  const words = pickSearchWords(query);
+  if (words.length === 0 || roles.length === 0) return [];
 
-  await Promise.all(
-    words.map(async (word) => {
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("id, full_name, avatar_url, role")
-        .in("role", roles)
-        .eq("is_active", true)
-        .ilike("full_name", `%${escapeIlikePattern(word)}%`)
-        .limit(50);
+  const orFilter = words
+    .map((word) => `full_name.ilike.%${escapeIlikePattern(word)}%`)
+    .join(",");
 
-      if (error) throw error;
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("id, full_name, avatar_url, role")
+    .in("role", roles)
+    .eq("is_active", true)
+    .or(orFilter)
+    .limit(100);
 
-      for (const row of data ?? []) {
-        const participant = row as ChatParticipant;
-        if (!matchesPersonName(participant.full_name, query)) continue;
-        merged.set(participant.id, participant);
-      }
-    }),
+  if (error) throw error;
+
+  return ((data ?? []) as ChatParticipant[]).filter((profile) =>
+    matchesPersonName(profile.full_name, query),
   );
-
-  return [...merged.values()];
 }
 
 export async function searchChatableUsersWithClient(
@@ -110,14 +125,36 @@ export async function searchChatableUsersWithClient(
   excludeUserId?: string,
 ): Promise<ChatParticipant[]> {
   const trimmed = query.trim();
-  if (!trimmed) return [];
+  if (!trimmed || roles.length === 0) return [];
 
   const merged = new Map<string, ChatParticipant>();
+  const wantsDoctors = roles.includes("doctor");
   const nonDoctorRoles = roles.filter((role) => role !== "doctor");
 
-  if (roles.includes("doctor")) {
-    for (const doctor of await searchApprovedDoctors(supabase, trimmed)) {
-      merged.set(doctor.id, doctor);
+  if (wantsDoctors) {
+    // Path 1: approved doctors via doctor_profiles (RLS-friendly public directory path)
+    try {
+      for (const doctor of await searchApprovedDoctors(supabase, trimmed)) {
+        merged.set(doctor.id, doctor);
+      }
+    } catch (error) {
+      console.error("chat doctor_profiles search failed", error);
+    }
+
+    // Path 2: profiles fallback + approval filter (covers join/RLS edge cases)
+    if (merged.size === 0) {
+      try {
+        const [approvedIds, profiles] = await Promise.all([
+          getApprovedDoctorUserIds(supabase),
+          searchProfilesByRole(supabase, trimmed, ["doctor"]),
+        ]);
+        for (const profile of profiles) {
+          if (!approvedIds.has(profile.id)) continue;
+          merged.set(profile.id, { ...profile, full_name: profile.full_name.trim() });
+        }
+      } catch (error) {
+        console.error("chat doctor profiles fallback search failed", error);
+      }
     }
   }
 
@@ -127,7 +164,10 @@ export async function searchChatableUsersWithClient(
       trimmed,
       nonDoctorRoles,
     )) {
-      merged.set(profile.id, profile);
+      merged.set(profile.id, {
+        ...profile,
+        full_name: profile.full_name.trim(),
+      });
     }
   }
 

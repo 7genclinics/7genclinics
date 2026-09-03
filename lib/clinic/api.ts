@@ -2,6 +2,10 @@ import { createClient } from "@/lib/supabase/client";
 import type { ClinicPaymentMethod, Gender, Profile } from "@/types";
 import type { Database } from "@/types/database";
 import { getErrorMessage } from "@/lib/errors";
+import {
+  getFlexibleSearchWords,
+  matchesAnyFlexibleText,
+} from "@/lib/search/flexible-match";
 import { pktDayBounds } from "./types";
 import type {
   ClinicAppointment,
@@ -218,15 +222,35 @@ export async function searchPatients(queryText: string): Promise<Profile[]> {
   const q = queryText.trim();
   if (q.length < 2) return [];
 
+  const words = getFlexibleSearchWords(q);
+  const searchWords = words.length > 0 ? words : [q.toLowerCase()];
+  const escape = (value: string) => value.replace(/[%_\\]/g, "\\$&");
+  const orFilter = searchWords
+    .flatMap((word) => [
+      `full_name.ilike.%${escape(word)}%`,
+      `phone.ilike.%${escape(word)}%`,
+      `email.ilike.%${escape(word)}%`,
+      `patient_code.ilike.%${escape(word)}%`,
+    ])
+    .join(",");
+
   const { data, error } = await table("profiles")
     .select("*")
     .eq("role", "patient")
-    .or(`full_name.ilike.%${q}%,phone.ilike.%${q}%,email.ilike.%${q}%,patient_code.ilike.%${q}%`)
+    .or(orFilter)
     .order("created_at", { ascending: false })
-    .limit(20);
+    .limit(50);
 
   if (error) throw error;
-  return (data ?? []) as Profile[];
+
+  return ((data ?? []) as Profile[])
+    .filter((profile) =>
+      matchesAnyFlexibleText(
+        [profile.full_name, profile.phone, profile.email, profile.patient_code],
+        q,
+      ),
+    )
+    .slice(0, 20);
 }
 
 export async function getPatientById(patientId: string): Promise<Profile | null> {

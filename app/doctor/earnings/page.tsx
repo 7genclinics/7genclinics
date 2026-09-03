@@ -15,6 +15,7 @@ import { getDoctorPayments } from "@/lib/doctor/api";
 import { isDoctorNetEarning } from "@/lib/doctor/stats";
 import { usePaymentsRealtime } from "@/lib/realtime/usePaymentsRealtime";
 import { formatCurrency, mapAppointmentType } from "@/lib/doctor/mappers";
+import { matchesAnyFlexibleText } from "@/lib/search/flexible-match";
 
 interface PayoutRecord {
   id: string;
@@ -170,8 +171,8 @@ export default function DoctorEarningsPage() {
     () =>
       individualTransactions.filter(
         (tx) =>
-          tx.patientName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          tx.id.toLowerCase().includes(searchQuery.toLowerCase())
+          !searchQuery.trim() ||
+          matchesAnyFlexibleText([tx.patientName, tx.id], searchQuery),
       ),
     [individualTransactions, searchQuery]
   );
@@ -231,9 +232,10 @@ export default function DoctorEarningsPage() {
   };
 
   // Filter payouts by period or ID
-  const filteredPayouts = payouts.filter(p => 
-    p.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    p.period.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredPayouts = payouts.filter(
+    (p) =>
+      !searchQuery.trim() ||
+      matchesAnyFlexibleText([p.id, p.period], searchQuery),
   );
 
   if (isLoading) {

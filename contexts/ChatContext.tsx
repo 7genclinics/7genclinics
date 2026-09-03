@@ -219,6 +219,27 @@ export function ChatProvider({
     [myId, openConversation, refreshConversations]
   );
 
+  const searchUsers = useCallback(
+    async (
+      query: string,
+      roles: Array<"patient" | "doctor" | "admin" | "super_admin">,
+    ) => {
+      const params = new URLSearchParams({
+        q: query,
+        roles: roles.join(","),
+      });
+      const response = await fetch(`/api/chat/search-users?${params.toString()}`);
+      if (!response.ok) {
+        const payload = (await response.json().catch(() => null)) as
+          | { error?: string }
+          | null;
+        throw new Error(payload?.error ?? "Search failed");
+      }
+      return (await response.json()) as ChatParticipant[];
+    },
+    [],
+  );
+
   // ── Send message ─────────────────────────────────────────
   const sendMessage = useCallback(
     async (body?: string, file?: File) => {
@@ -555,20 +576,7 @@ export function ChatProvider({
         setReplyTo,
         refreshConversations,
         broadcastTyping,
-        searchUsers: async (query, roles) => {
-          const params = new URLSearchParams({
-            q: query,
-            roles: roles.join(","),
-          });
-          const response = await fetch(`/api/chat/search-users?${params.toString()}`);
-          if (!response.ok) {
-            const payload = (await response.json().catch(() => null)) as
-              | { error?: string }
-              | null;
-            throw new Error(payload?.error ?? "Search failed");
-          }
-          return (await response.json()) as ChatParticipant[];
-        },
+        searchUsers,
         clearActiveChat,
         deleteActiveChat,
       }}

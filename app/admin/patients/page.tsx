@@ -27,6 +27,7 @@ import { useAdmin } from "@/contexts/AdminContext";
 import type { AdminAppointment, AdminPatientSummary, AdminPayment } from "@/lib/admin/types";
 import type { Profile } from "@/types";
 import { getErrorMessage } from "@/lib/errors";
+import { matchesAnyFlexibleText } from "@/lib/search/flexible-match";
 
 type PatientStatus = "active" | "inactive" | "blocked" | "pending";
 
@@ -176,11 +177,12 @@ export default function AdminPatientsPage() {
   );
 
   const filtered = dateFilteredSummaries.filter((s) => {
-    const q = searchQuery.toLowerCase();
     const matchesSearch =
-      s.profile.full_name.toLowerCase().includes(q) ||
-      s.profile.email.toLowerCase().includes(q) ||
-      s.profile.id.toLowerCase().includes(q);
+      !searchQuery.trim() ||
+      matchesAnyFlexibleText(
+        [s.profile.full_name, s.profile.email, s.profile.id],
+        searchQuery,
+      );
     const matchesStatus = statusFilter === "all" || deriveStatus(s) === statusFilter;
     return matchesSearch && matchesStatus;
   });

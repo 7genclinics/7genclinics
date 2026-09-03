@@ -2,11 +2,21 @@ import { mapToDoctorCard } from "@/lib/patient/mappers";
 import type { DoctorWithProfile } from "@/lib/patient/types";
 import { matchesDoctorTaxonomyTag } from "@/lib/doctor/taxonomy";
 import {
+  anyTokenMatchesWord,
+  getQueryWords,
+  getTextTokens,
+  matchesPersonName,
+  normalizeSearchText,
+  wordMatchesNormalizedBlob,
+} from "@/lib/search/flexible-match";
+import {
   findTaxonomyItemById,
   getTaxonomyFilterLabel,
   MENTAL_CONDITIONS,
   MENTAL_SYMPTOMS,
 } from "./catalog";
+
+export { getPersonSearchWords, matchesPersonName } from "@/lib/search/flexible-match";
 
 export const ALL_CITIES_LABEL = "All Cities";
 
@@ -56,126 +66,12 @@ export function buildDoctorSearchUrl(filters: DoctorSearchFilters): string {
   return query ? `/doctors?${query}` : "/doctors";
 }
 
-function normalizeSearchText(text: string | null | undefined): string {
-  return (text ?? "")
-    .toLowerCase()
-    .normalize("NFKD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[.'’`]/g, " ")
-    .replace(/[-_/\\,]+/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
-function cleanToken(token: string): string {
-  return token.replace(/^[^a-z0-9]+|[^a-z0-9]+$/g, "");
-}
-
-/** Expand honorific abbreviations so "dr" matches Doctor names and vice versa. */
-function expandSearchWord(word: string): string[] {
-  const variants = new Set<string>([word]);
-  if (word === "dr" || word === "doc") {
-    variants.add("doctor");
-  }
-  if (word === "doctor") {
-    variants.add("dr");
-  }
-  return [...variants];
-}
-
-function compactNormalized(text: string): string {
-  return normalizeSearchText(text).replace(/\s+/g, "");
-}
-
 function doctorCities(doc: DoctorWithProfile): string[] {
   const fromArray = doc.cities?.length ? doc.cities : [];
   const fromProfile = doc.profile?.city ? [doc.profile.city] : [];
   return [...new Set([...fromArray, ...fromProfile])];
 }
 
-function getQueryWords(q: string): string[] {
-  return normalizeSearchText(q)
-    .split(/\s+/)
-    .filter((word) => word.length > 0);
-}
-
-function getTextTokens(...parts: (string | null | undefined)[]): string[] {
-  return parts
-    .map((part) => normalizeSearchText(part))
-    .filter(Boolean)
-    .flatMap((text) => text.split(/\s+/))
-    .map(cleanToken)
-    .filter((token) => token.length > 0);
-}
-
-/** Token or prefix match; honorific-safe and not case sensitive. */
-function tokenMatchesWord(token: string, word: string, allowSingleCharPrefix = false): boolean {
-  if (!word || !token) return false;
-
-  const wordVariants = expandSearchWord(word);
-  const tokenVariants = expandSearchWord(token);
-
-  for (const w of wordVariants) {
-    for (const t of tokenVariants) {
-      if (t === w) return true;
-      if (w.length >= 2 && t.startsWith(w)) return true;
-      if (t.length >= 2 && w.startsWith(t)) return true;
-      if (allowSingleCharPrefix && w.length === 1 && t.length >= 2 && t.startsWith(w)) {
-        return true;
-      }
-    }
-  }
-
-  return false;
-}
-
-function anyTokenMatchesWord(
-  tokens: string[],
-  word: string,
-  allowSingleCharPrefix = false
-): boolean {
-  return tokens.some((token) => tokenMatchesWord(token, word, allowSingleCharPrefix));
-}
-
-function wordMatchesNormalizedBlob(blob: string, word: string): boolean {
-  if (!word) return false;
-  const compactBlob = blob.replace(/\s+/g, "");
-  const variants = expandSearchWord(word);
-
-  return variants.some((variant) => {
-    if (variant.length < 2) return false;
-    return blob.includes(variant) || compactBlob.includes(variant.replace(/\s+/g, ""));
-  });
-}
-
-export function getPersonSearchWords(q: string): string[] {
-  return getQueryWords(q);
-}
-
-/** Case-insensitive person name search (Dr / dr, dots, partial words). */
-export function matchesPersonName(fullName: string, q: string): boolean {
-  const queryWords = getQueryWords(q);
-  if (queryWords.length === 0) return false;
-
-  const nameTokens = getTextTokens(fullName);
-  const fullNorm = normalizeSearchText(fullName);
-  const compactName = compactNormalized(fullName);
-
-  const nameWordMatches = (word: string) => {
-    if (
-      word.length >= 2 &&
-      (wordMatchesNormalizedBlob(fullNorm, word) ||
-        compactName.includes(word.replace(/\s+/g, "")))
-    ) {
-      return true;
-    }
-    return anyTokenMatchesWord(nameTokens, word, true);
-  };
-
-  return queryWords.every((word) => nameWordMatches(word));
-}
-
-/** Case-insensitive name match; word order does not matter (first/last name). */
 function matchesDoctorName(doc: DoctorWithProfile, q: string): boolean {
   return matchesPersonName(doc.profile?.full_name ?? "", q);
 }

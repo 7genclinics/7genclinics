@@ -22,6 +22,7 @@ import type {
   ModeratedReview,
   ReviewModerationStatus,
 } from "@/lib/landing/types";
+import { matchesAnyFlexibleText } from "@/lib/search/flexible-match";
 
 export default function AdminDoctorPagesPage() {
   const [tab, setTab] = useState<"pages" | "reviews" | "settings">("pages");
@@ -64,10 +65,11 @@ export default function AdminDoctorPagesPage() {
   const filteredPages = useMemo(() => {
     return pages.filter((page) => {
       const matchesQuery =
-        !query ||
-        page.doctorName.toLowerCase().includes(query.toLowerCase()) ||
-        page.slug.includes(query.toLowerCase()) ||
-        page.specialization.toLowerCase().includes(query.toLowerCase());
+        !query.trim() ||
+        matchesAnyFlexibleText(
+          [page.doctorName, page.slug, page.specialization],
+          query,
+        );
       const matchesStatus = statusFilter === "all" || page.status === statusFilter;
       return matchesQuery && matchesStatus;
     });

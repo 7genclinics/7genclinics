@@ -16,6 +16,7 @@ import {
   updateAdminStaffMember,
 } from "@/lib/admin/api";
 import type { AdminStaffMember } from "@/lib/admin/staff-types";
+import { matchesAnyFlexibleText } from "@/lib/search/flexible-match";
 import {
   PERMISSION_KEYS,
   PERMISSION_LABELS,
@@ -221,9 +222,9 @@ export default function AdminStaffPage() {
   }, [loadData]);
 
   const filtered = useMemo(() => {
-    const q = searchQuery.toLowerCase();
-    return staff.filter(
-      (s) => s.full_name.toLowerCase().includes(q) || s.email.toLowerCase().includes(q)
+    if (!searchQuery.trim()) return staff;
+    return staff.filter((s) =>
+      matchesAnyFlexibleText([s.full_name, s.email], searchQuery),
     );
   }, [staff, searchQuery]);
 

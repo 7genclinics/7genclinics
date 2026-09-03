@@ -23,6 +23,7 @@ import {
 } from "@/lib/patient/mappers";
 import { AppointmentSessionAlert } from "@/components/shared/AppointmentSessionAlert";
 import { useAppointmentSessionSync } from "@/lib/hooks/useAppointmentSessionSync";
+import { matchesAnyFlexibleText } from "@/lib/search/flexible-match";
 import { UserAvatar } from "@/components/shared/UserAvatar";
 import { AppointmentFinancialDetails } from "@/components/shared/AppointmentFinancialDetails";
 import { PaymentProofUpload } from "@/components/patient/PaymentProofUpload";
@@ -110,13 +111,11 @@ export default function PatientAppointmentsPage() {
     }
 
     if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(
-        (apt) =>
-          apt.doctorName.toLowerCase().includes(query) ||
-          apt.doctorSpecialization.toLowerCase().includes(query) ||
-          apt.id.toLowerCase().includes(query) ||
-          apt.reason.toLowerCase().includes(query)
+      filtered = filtered.filter((apt) =>
+        matchesAnyFlexibleText(
+          [apt.doctorName, apt.doctorSpecialization, apt.id, apt.reason],
+          searchQuery,
+        ),
       );
     }
 

@@ -20,6 +20,7 @@ import {
   type ClinicAppointment,
 } from "@/lib/clinic/types";
 import { useClinicQueueRealtime } from "@/lib/realtime/useClinicQueueRealtime";
+import { matchesAnyFlexibleText } from "@/lib/search/flexible-match";
 
 interface Patient extends UIPatient {
   emergencyContact?: string;
@@ -252,11 +253,12 @@ export default function DoctorPatientsPage() {
 
   // Filtered and Pagination
   const filteredPatients = patients.filter((pt) => {
-            const matchesSearch =
-      pt.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      pt.condition.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      pt.phone.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      pt.code.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesSearch =
+      !searchQuery.trim() ||
+      matchesAnyFlexibleText(
+        [pt.name, pt.condition, pt.phone, pt.code],
+        searchQuery,
+      );
 
     if (!matchesSearch) return false;
     if (patientFilter === "active") return pt.sessionsCompleted > 0;

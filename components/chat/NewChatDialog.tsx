@@ -28,21 +28,30 @@ export function NewChatDialog({
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!query.trim()) { setResults([]); return; }
+    if (!query.trim()) {
+      setResults([]);
+      return;
+    }
     setError(null);
+    let cancelled = false;
     const timer = setTimeout(async () => {
       setLoading(true);
       try {
         const data = await searchUsers(query, allowedRoles);
-        setResults(data);
+        if (!cancelled) setResults(data);
       } catch (err) {
-        setError(getErrorMessage(err, "Search failed"));
+        if (!cancelled) setError(getErrorMessage(err, "Search failed"));
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [query, allowedRoles, searchUsers]);
+    }, 250);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+    // searchUsers is stable enough via context; avoid re-bouncing on identity churn
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [query, allowedRoles.join("|")]);
 
   const handleStart = async (user: ChatParticipant) => {
     setStarting(user.id);

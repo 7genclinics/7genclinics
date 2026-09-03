@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { matchesPersonName } from "@/lib/public/doctor-filters";
+import { matchesPersonName } from "@/lib/search/flexible-match";
 import { useChat } from "@/contexts/ChatContext";
 import { ConversationItem } from "./ConversationItem";
 import { NewChatDialog } from "./NewChatDialog";
