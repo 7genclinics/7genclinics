@@ -50,18 +50,30 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const supabase = createClient();
+    const orgId = snapshot?.organization_id;
+    const filter = orgId ? `organization_id=eq.${orgId}` : undefined;
     const channel = supabase
-      .channel("clinic-subscription")
+      .channel(orgId ? `clinic-subscription-${orgId}` : "clinic-subscription")
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "clinic_subscriptions" },
+        {
+          event: "*",
+          schema: "public",
+          table: "clinic_subscriptions",
+          ...(filter ? { filter } : {}),
+        },
         () => {
           void refresh();
         }
       )
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "clinic_subscription_payments" },
+        {
+          event: "*",
+          schema: "public",
+          table: "clinic_subscription_payments",
+          ...(filter ? { filter } : {}),
+        },
         () => {
           void refresh();
         }
@@ -70,7 +82,7 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
     return () => {
       void supabase.removeChannel(channel);
     };
-  }, [refresh]);
+  }, [refresh, snapshot?.organization_id]);
 
   const value = useMemo(
     () => ({ snapshot, loading, error, refresh }),

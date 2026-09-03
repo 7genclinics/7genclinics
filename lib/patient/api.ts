@@ -28,6 +28,7 @@ import {
   resolveDoctorRow,
   resolveDoctorRows,
 } from "@/lib/public/doctor-select";
+import { sanitizeSelfProfileUpdate } from "@/lib/auth/safe-profile-update";
 
 type TableName = keyof Database["public"]["Tables"];
 
@@ -667,7 +668,7 @@ export async function submitAppointmentReview(
 
 export async function updateUserProfile(userId: string, updates: Partial<Profile>) {
   const { data, error } = await table("profiles")
-    .update(updates as Database["public"]["Tables"]["profiles"]["Update"])
+    .update(sanitizeSelfProfileUpdate(updates))
     .eq("id", userId)
     .select()
     .single();

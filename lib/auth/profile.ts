@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/client";
 import type { Profile } from "@/types";
-import type { Database } from "@/types/database";
+import { sanitizeSelfProfileUpdate } from "@/lib/auth/safe-profile-update";
 import { uploadAvatar } from "@/lib/storage/avatar";
 
 export async function updateUserProfile(
@@ -9,7 +9,7 @@ export async function updateUserProfile(
 ): Promise<Profile> {
   const supabase = createClient();
   const { data, error } = await (supabase.from("profiles") as any)
-    .update(updates as Database["public"]["Tables"]["profiles"]["Update"])
+    .update(sanitizeSelfProfileUpdate(updates))
     .eq("id", userId)
     .select()
     .single();

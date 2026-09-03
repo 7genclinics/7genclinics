@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/client";
 import { finalizeAppointmentCancellation } from "@/lib/appointments/cancel";
+import { sanitizeSelfProfileUpdate } from "@/lib/auth/safe-profile-update";
 import type { DoctorProfile, Profile, AppointmentStatus } from "@/types";
 import type { Database } from "@/types/database";
 import { formatClinicalNotes } from "./notes";
@@ -417,7 +418,7 @@ export async function updateDoctorProfile(
 
 export async function updateUserProfile(userId: string, updates: Partial<Profile>) {
   const { data, error } = await table("profiles")
-    .update(updates as Database["public"]["Tables"]["profiles"]["Update"])
+    .update(sanitizeSelfProfileUpdate(updates))
     .eq("id", userId)
     .select()
     .single();
