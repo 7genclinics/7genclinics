@@ -1,17 +1,19 @@
+import { canonicalUrl } from "@/lib/seo/site";
 import { BRAND } from "@/lib/brand/site";
 import type { PublicLandingPageData } from "./types";
 
 export function doctorJsonLd(data: PublicLandingPageData, pageUrl: string) {
   const { doctor, content, reviews } = data;
+  const url = pageUrl.startsWith("http") ? pageUrl : canonicalUrl(pageUrl);
   const address = [content.clinicAddress, content.clinicCity, "Pakistan"]
     .filter(Boolean)
     .join(", ");
 
   const physician = {
     "@type": "Physician",
-    "@id": `${pageUrl}#physician`,
+    "@id": `${url}#physician`,
     name: doctor.fullName,
-    url: pageUrl,
+    url,
     image: doctor.avatarUrl || undefined,
     description: content.seoDescription || content.shortIntro || doctor.bio || undefined,
     medicalSpecialty: doctor.specialization,
@@ -47,7 +49,7 @@ export function doctorJsonLd(data: PublicLandingPageData, pageUrl: string) {
   const clinic = {
     "@type": "MedicalClinic",
     name: content.clinicName || BRAND.name,
-    url: pageUrl,
+    url,
     telephone: content.clinicPhone || undefined,
     address: address
       ? {
@@ -57,7 +59,7 @@ export function doctorJsonLd(data: PublicLandingPageData, pageUrl: string) {
           addressCountry: "PK",
         }
       : undefined,
-    employee: { "@id": `${pageUrl}#physician` },
+    employee: { "@id": `${url}#physician` },
   };
 
   return {

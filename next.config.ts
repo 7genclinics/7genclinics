@@ -1,6 +1,9 @@
 import type { NextConfig } from "next";
 
+const SITE_ORIGIN = "https://apnaclinic.pk";
+
 const nextConfig: NextConfig = {
+  trailingSlash: true,
   typescript: {
     ignoreBuildErrors: false,
   },
@@ -11,6 +14,16 @@ const nextConfig: NextConfig = {
         hostname: "**.supabase.co",
       },
     ],
+  },
+  async redirects() {
+    return [
+      {
+        source: "/:path*",
+        has: [{ type: "host", value: "www.apnaclinic.pk" }],
+        destination: `${SITE_ORIGIN}/:path*`,
+        permanent: true,
+      },
+    ];
   },
   async headers() {
     return [

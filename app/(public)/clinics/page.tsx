@@ -3,11 +3,15 @@ import { LandingFooter } from "@/components/public/LandingFooter";
 import { ClinicDirectoryCards } from "@/components/public/LandingClinicsSection";
 import { getListedOrganizationsServer } from "@/lib/public/organizations";
 import { BRAND } from "@/lib/brand/site";
+import { pageMetadata } from "@/lib/seo/metadata";
+import { JsonLd } from "@/components/seo/JsonLd";
+import { breadcrumbListJsonLd } from "@/lib/seo/site";
 
-export const metadata = {
-  title: `Clinics & hospitals | ${BRAND.name}`,
-  description: "Browse listed clinics and hospitals, then book a doctor for video or an in-person visit.",
-};
+export const metadata = pageMetadata({
+  title: "Clinics & hospitals",
+  description: `Browse listed clinics and hospitals on ${BRAND.name}, then book a doctor for video or an in-person visit.`,
+  path: "/clinics/",
+});
 
 export default async function ClinicsDirectoryPage() {
   let clinics: Awaited<ReturnType<typeof getListedOrganizationsServer>> = [];
@@ -19,11 +23,10 @@ export default async function ClinicsDirectoryPage() {
 
   return (
     <div className="min-h-screen bg-white">
+      <JsonLd data={breadcrumbListJsonLd([{ name: "Clinics", path: "/clinics/" }])} />
       <LandingHeader />
       <main className="mx-auto max-w-6xl px-4 py-12 sm:px-6 sm:py-16">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-brand-600">
-          Directory
-        </p>
+        <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-brand-600">Directory</p>
         <h1 className="mt-3 font-heading text-3xl font-bold tracking-tight sm:text-4xl">
           Clinics and hospitals
         </h1>

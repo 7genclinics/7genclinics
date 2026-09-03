@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { CalendarDays, Menu, X } from "lucide-react";
-import { BrandCone } from "@/components/brand/BrandMark";
+import { BrandMark } from "@/components/brand/BrandMark";
 import { MAIN_LANDING_NAV } from "@/lib/brand/main-nav";
 import type { PublicLandingPageData } from "@/lib/landing/types";
 import { cn } from "@/lib/utils";
@@ -17,7 +17,7 @@ export function DoctorSiteHeader({
   data: PublicLandingPageData;
   preview?: boolean;
 }) {
-  const { doctor, content } = data;
+  const { content } = data;
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 
@@ -41,33 +41,15 @@ export function DoctorSiteHeader({
     <header
       className={cn(
         "relative sticky top-0 z-50 bg-white/95 backdrop-blur-md transition-shadow",
-        scrolled ? "border-b border-brand-900/8 shadow-[0_8px_30px_rgba(15,20,42,0.06)]" : "border-b border-transparent",
+        scrolled
+          ? "border-b border-brand-900/8 shadow-[0_8px_30px_rgba(15,20,42,0.06)]"
+          : "border-b border-transparent",
         preview && "relative",
       )}
     >
       <DoctorTopBar content={content} />
       <div className="mx-auto flex h-[4.4rem] max-w-6xl items-center justify-between gap-4 px-4 sm:px-6">
-        <a href="#home" className="flex min-w-0 items-center gap-2.5">
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-brand-50 ring-1 ring-brand-900/8">
-            <BrandCone className="h-7 w-7" />
-          </span>
-          <span className="min-w-0">
-            <span className="block truncate font-heading text-sm font-semibold leading-tight text-brand-900 sm:text-base">
-              {doctor.fullName}
-            </span>
-            <span className="block truncate text-[11px] text-slate-500">
-              {content.professionalTitle || doctor.specialization}
-              {data.organization ? (
-                <>
-                  {" · "}
-                  <Link href={`/clinics/${data.organization.slug}`} className="hover:text-brand-600">
-                    {data.organization.name}
-                  </Link>
-                </>
-              ) : null}
-            </span>
-          </span>
-        </a>
+        <BrandMark href="/" size="md" />
 
         <nav className="hidden items-center gap-6 lg:flex">
           {MAIN_LANDING_NAV.map((link) => (
@@ -99,7 +81,6 @@ export function DoctorSiteHeader({
         </button>
       </div>
 
-      {/* Overlay menu — absolute under header so it does not push page content */}
       <div
         className={cn(
           "absolute inset-x-0 top-full z-50 lg:hidden",

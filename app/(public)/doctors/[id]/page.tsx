@@ -5,6 +5,9 @@ import { getPublicLandingPage } from "@/lib/landing/public";
 import { doctorJsonLd } from "@/lib/landing/schema";
 import { doctorPublicPath } from "@/lib/landing/slug";
 import { BRAND } from "@/lib/brand/site";
+import { pageMetadata } from "@/lib/seo/metadata";
+import { JsonLd } from "@/components/seo/JsonLd";
+import { breadcrumbListJsonLd, canonicalUrl } from "@/lib/seo/site";
 
 export const revalidate = 60;
 
@@ -18,34 +21,32 @@ export async function generateMetadata({ params, searchParams }: DoctorPageProps
   const query = await searchParams;
   const result = await getPublicLandingPage(id, { preview: query.preview === "1" });
   if (result.kind !== "ok") {
-    return { title: `Doctor | ${BRAND.name}` };
+    return pageMetadata({
+      title: "Doctor",
+      description: `Doctor profile on ${BRAND.name}.`,
+      path: doctorPublicPath(id),
+      index: false,
+    });
   }
 
   const { doctor, content } = result.data;
-  const title = content.seoTitle || `${doctor.fullName} | ${doctor.specialization} | ${BRAND.name}`;
+  const title = content.seoTitle || `${doctor.fullName} | ${doctor.specialization}`;
   const description =
     content.seoDescription ||
     content.shortIntro ||
     `Book a physical or online consultation with ${doctor.fullName}.`;
   const image = content.ogImageUrl || content.heroImageUrl || doctor.avatarUrl || undefined;
+  const path = doctorPublicPath(doctor.slug);
 
   return {
-    title,
-    description,
-    alternates: { canonical: doctorPublicPath(doctor.slug) },
-    openGraph: {
+    ...pageMetadata({
       title,
       description,
-      url: doctorPublicPath(doctor.slug),
-      type: "profile",
-      images: image ? [{ url: image }] : undefined,
-    },
-    twitter: {
-      card: "summary_large_image",
-      title,
-      description,
-      images: image ? [image] : undefined,
-    },
+      path,
+      ogType: "profile",
+      image,
+    }),
+    title: { absolute: `${title} | ${BRAND.name}` },
   };
 }
 
@@ -65,16 +66,16 @@ export default async function DoctorPublicPage({ params, searchParams }: DoctorP
 
   if (result.kind !== "ok") notFound();
 
-  const jsonLd = doctorJsonLd(
-    result.data,
-    doctorPublicPath(result.data.slug),
-  );
+  const jsonLd = doctorJsonLd(result.data, canonicalUrl(doctorPublicPath(result.data.slug)));
 
   return (
     <div className="min-h-screen bg-white pb-20 md:pb-0">
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      <JsonLd data={jsonLd} />
+      <JsonLd
+        data={breadcrumbListJsonLd([
+          { name: "Doctors", path: "/doctors/" },
+          { name: result.data.doctor.fullName, path: doctorPublicPath(result.data.slug) },
+        ])}
       />
       <DoctorLandingView data={result.data} />
     </div>

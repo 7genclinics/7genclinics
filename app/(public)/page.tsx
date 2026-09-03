@@ -1,12 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
-import {
-  ArrowRight,
-  BadgeCheck,
-  Clock,
-  MapPin,
-  Phone,
-} from "lucide-react";
+import { ArrowRight, BadgeCheck } from "lucide-react";
 import { LandingHeader } from "@/components/public/LandingHeader";
 import { LandingFooter } from "@/components/public/LandingFooter";
 import { DoctorSearchHero } from "@/components/public/DoctorSearchHero";
@@ -19,37 +13,49 @@ import { getApprovedDoctorsServer } from "@/lib/public/doctors";
 import { getListedOrganizationsServer } from "@/lib/public/organizations";
 import { BRAND } from "@/lib/brand/site";
 import { CONE_COLORS } from "@/lib/brand/colors";
+import { pageMetadata } from "@/lib/seo/metadata";
+import { JsonLd } from "@/components/seo/JsonLd";
+import {
+  breadcrumbListJsonLd,
+  organizationJsonLd,
+  websiteJsonLd,
+} from "@/lib/seo/site";
+import type { Metadata } from "next";
 
-const stats = [
-  { value: "PMDC", label: "Verified doctors only" },
-  { value: "2 ways", label: "Video from home or walk in" },
-  { value: "Same day", label: "Tokens and desk billing" },
-  { value: "Nationwide", label: BRAND.citiesLabel.split(", ").slice(0, 3).join(", ") },
-];
+export const metadata: Metadata = {
+  ...pageMetadata({
+    title: `${BRAND.name}, Pakistan's best online and physical clinic platform`,
+    description: BRAND.description,
+    path: "/",
+  }),
+  title: {
+    absolute: `${BRAND.name}, Pakistan's best online and physical clinic platform`,
+  },
+};
 
 const services = [
   {
     title: "Video consultation",
     copy: "Join a private room from your phone or laptop. Pay ahead, evenings included.",
-    href: "/doctors",
+    href: "/doctors/",
     image: "/card_video_consultation.png",
   },
   {
     title: "Chat with a doctor",
     copy: "Message based care when you need advice without a live video call.",
-    href: "/doctors",
+    href: "/doctors/",
     image: "/card_chat_doctor.png",
   },
   {
     title: "Clinic appointment",
     copy: "Reserve a physical slot. Reception checks you in and issues a queue token.",
-    href: "/doctors",
+    href: "/doctors/",
     image: "/card_clinic_appointment.png",
   },
   {
     title: "Walk in visit",
     copy: "No booking needed. Register at the desk, wait your turn, settle after the consult.",
-    href: "/register",
+    href: "/register/",
     image: "/card_walk_in_visit.png",
   },
 ];
@@ -219,12 +225,6 @@ const faqs = [
   },
 ];
 
-const hours = [
-  { day: "Monday to Saturday", time: "9:00 AM to 9:00 PM" },
-  { day: "Sunday", time: "10:00 AM to 6:00 PM" },
-  { day: "Video and chat", time: "Until 11:00 PM" },
-];
-
 export default async function HomePage() {
   const [doctors, clinics] = await Promise.all([
     getApprovedDoctorsServer().catch(() => []),
@@ -233,6 +233,9 @@ export default async function HomePage() {
 
   return (
     <div className="landing-page min-h-screen bg-white text-brand-900">
+      <JsonLd data={organizationJsonLd()} />
+      <JsonLd data={websiteJsonLd()} />
+      <JsonLd data={breadcrumbListJsonLd([])} />
       <LandingHeader overlay />
 
       <main>
@@ -286,19 +289,6 @@ export default async function HomePage() {
         </section>
 
         <ConeStripe className="h-1.5" />
-
-        <section className="border-b border-brand-900/8 bg-white">
-          <div className="mx-auto grid max-w-6xl grid-cols-2 gap-px sm:grid-cols-4">
-            {stats.map((stat) => (
-              <div key={stat.label} className="px-4 py-8 text-center sm:px-6 sm:py-10">
-                <p className="font-heading text-xl font-bold tracking-tight text-brand-900 sm:text-2xl">
-                  {stat.value}
-                </p>
-                <p className="mt-1 text-xs leading-relaxed text-slate-500 sm:text-sm">{stat.label}</p>
-              </div>
-            ))}
-          </div>
-        </section>
 
         <section id="services" className="bg-[#f4f8f8] py-20 sm:py-24">
           <div className="mx-auto max-w-6xl px-4 sm:px-6">
@@ -397,7 +387,7 @@ export default async function HomePage() {
         <section id="care" className="bg-[#F4F8F8] py-10 sm:py-14">
           <div className="mx-auto grid max-w-6xl gap-4 px-4 sm:px-6 lg:grid-cols-2">
             <Link
-              href="/doctors"
+              href="/doctors/"
               className="group relative isolate min-h-[460px] overflow-hidden rounded-2xl text-white"
             >
               <Image
@@ -427,7 +417,7 @@ export default async function HomePage() {
             </Link>
 
             <Link
-              href="/doctors"
+              href="/doctors/"
               className="group relative isolate min-h-[460px] overflow-hidden rounded-2xl text-white"
             >
               <Image
@@ -559,7 +549,7 @@ export default async function HomePage() {
                 confidence.
               </p>
               <Link
-                href="/assessment"
+                href="/assessment/"
                 className="mt-8 inline-flex items-center gap-2 rounded-full bg-brand-500 px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-brand-600"
               >
                 Take the assessment
@@ -618,48 +608,6 @@ export default async function HomePage() {
           </div>
         </section>
 
-        <section id="contact" className="border-t border-brand-900/8 bg-[#f4f8f8] py-20 sm:py-24">
-          <div className="mx-auto grid max-w-6xl gap-10 px-4 sm:px-6 lg:grid-cols-2">
-            <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-brand-600">
-                Visit and contact
-              </p>
-              <h2 className="mt-3 font-heading text-3xl font-bold tracking-tight sm:text-4xl">
-                Hours, cities, and the desk.
-              </h2>
-              <p className="mt-4 max-w-md text-slate-600">
-                Video and chat run nationwide. Walk ins and reserved clinic slots follow the
-                doctor’s location and today’s queue.
-              </p>
-              <ul className="mt-8 space-y-3 text-sm text-slate-700">
-                <li className="flex items-center gap-3">
-                  <Phone className="h-4 w-4 text-brand-500" />
-                  {BRAND.phone}
-                </li>
-                <li className="flex items-center gap-3">
-                  <MapPin className="h-4 w-4 text-brand-500" />
-                  {BRAND.citiesLabel}
-                </li>
-                <li className="flex items-center gap-3">
-                  <Clock className="h-4 w-4 text-brand-500" />
-                  Reception answers during clinic hours
-                </li>
-              </ul>
-            </div>
-            <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-1">
-              {hours.map((row) => (
-                <div
-                  key={row.day}
-                  className="flex items-center justify-between rounded-2xl border border-brand-900/8 bg-white px-5 py-4"
-                >
-                  <p className="font-heading text-sm font-semibold">{row.day}</p>
-                  <p className="text-sm text-slate-600">{row.time}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
         <section className="relative isolate min-h-[360px] overflow-hidden sm:min-h-[420px] lg:min-h-[480px]">
           <Image
             src="/online_consultation.jpg"
@@ -682,14 +630,14 @@ export default async function HomePage() {
             </div>
             <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
               <Link
-                href="/doctors"
+                href="/doctors/"
                 className="inline-flex items-center gap-2 rounded-full bg-brand-500 px-6 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-brand-600"
               >
                 Find a doctor
                 <ArrowRight className="h-4 w-4" />
               </Link>
               <Link
-                href="/register"
+                href="/register/"
                 className="inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/90 px-6 py-3 text-sm font-semibold text-brand-900 backdrop-blur-sm transition-colors hover:border-white/40 hover:bg-white"
               >
                 Create account

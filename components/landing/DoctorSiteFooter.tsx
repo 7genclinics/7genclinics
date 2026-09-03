@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Clock, Mail, MapPin, Phone } from "lucide-react";
-import { BrandCone } from "@/components/brand/BrandMark";
+import { BrandMark } from "@/components/brand/BrandMark";
 import { MAIN_LANDING_NAV } from "@/lib/brand/main-nav";
 import { BRAND } from "@/lib/brand/site";
 import type { LandingSocialPlatform, PublicLandingPageData } from "@/lib/landing/types";
@@ -67,23 +67,15 @@ export function DoctorSiteFooter({ data }: { data: PublicLandingPageData }) {
     { href: "/#services", label: "Video consultation" },
     { href: "/#services", label: "Clinic appointment" },
     { href: "/#visit", label: "Walk-in visit" },
-    { href: "/assessment", label: "Self-assessment" },
-    { href: "/doctors", label: "Find a doctor" },
+    { href: "/assessment/", label: "Self-assessment" },
+    { href: "/doctors/", label: "Find a doctor" },
   ];
 
   return (
     <footer className="bg-white text-slate-600">
       <div className="mx-auto grid max-w-6xl gap-10 px-4 py-14 sm:px-6 lg:grid-cols-12">
         <div className="lg:col-span-4">
-          <div className="flex items-center gap-2.5">
-            <span className="flex h-10 w-10 items-center justify-center rounded-full bg-brand-50 ring-1 ring-brand-900/8">
-              <BrandCone className="h-7 w-7" />
-            </span>
-            <div>
-              <p className="font-heading text-base font-semibold text-brand-900">{doctor.fullName}</p>
-              <p className="text-xs text-slate-500">{doctor.specialization}</p>
-            </div>
-          </div>
+          <BrandMark href="/" size="md" />
           <p className="mt-4 max-w-sm text-sm leading-relaxed text-slate-600">
             {content.footerTagline || BRAND.tagline}
           </p>
@@ -146,7 +138,7 @@ export function DoctorSiteFooter({ data }: { data: PublicLandingPageData }) {
             {content.clinicPhone && <li>{content.clinicPhone}</li>}
             <li>
               <Link href="/" className="font-medium text-brand-600 hover:text-brand-800">
-                Part of {BRAND.name}
+                {BRAND.name}
               </Link>
             </li>
           </ul>
@@ -156,9 +148,9 @@ export function DoctorSiteFooter({ data }: { data: PublicLandingPageData }) {
       <div className="border-t border-brand-900/8">
         <div className="mx-auto flex max-w-6xl flex-col gap-2 px-4 py-5 text-xs text-slate-500 sm:flex-row sm:items-center sm:justify-between sm:px-6">
           <p>
-            © {new Date().getFullYear()} {doctor.fullName}. {BRAND.name}.
+            © {new Date().getFullYear()} {BRAND.name}.
           </p>
-          <p>PMDC {doctor.pmdcNumber}</p>
+          {doctor.pmdcNumber ? <p>PMDC {doctor.pmdcNumber}</p> : null}
         </div>
       </div>
     </footer>

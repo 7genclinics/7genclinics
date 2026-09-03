@@ -44,8 +44,27 @@ export async function updateSession(request: NextRequest) {
   const path = request.nextUrl.pathname;
 
   // Public routes that don't require authentication
-  const publicRoutes = ["/", "/doctors", "/clinics", "/about", "/contact"];
+  const publicRoutes = [
+    "/",
+    "/doctors",
+    "/clinics",
+    "/browse",
+    "/assessment",
+    "/about",
+    "/contact",
+  ];
   const authRoutes = ["/login", "/register", "/forgot-password", "/pending-review"];
+  const publicExact = new Set([
+    "/sw.js",
+    "/site.webmanifest",
+    "/robots.txt",
+    "/sitemap.xml",
+    "/manifest.webmanifest",
+  ]);
+
+  if (publicExact.has(path) || path.startsWith("/auth/")) {
+    return supabaseResponse;
+  }
 
   async function loadProfile(userId: string) {
     const { data: profileRow } = await supabase

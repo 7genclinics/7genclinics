@@ -1,3 +1,5 @@
+import { SITE_ORIGIN } from "@/lib/seo/site";
+
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -25,13 +27,10 @@ export function createId(prefix = "id"): string {
 }
 
 export function doctorPublicPath(slug: string): string {
-  return `/doctors/${slug}`;
+  return `/doctors/${slug}/`;
 }
 
 export function absoluteDoctorUrl(slug: string, origin?: string): string {
-  const base =
-    origin ??
-    (typeof window !== "undefined" ? window.location.origin : "") ??
-    "";
+  const base = (origin || SITE_ORIGIN).replace(/\/$/, "");
   return `${base}${doctorPublicPath(slug)}`;
 }

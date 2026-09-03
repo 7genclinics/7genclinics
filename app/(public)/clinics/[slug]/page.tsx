@@ -8,9 +8,12 @@ import {
   getApprovedDoctorsForOrganizationServer,
   getListedOrganizationBySlugServer,
 } from "@/lib/public/organizations";
-import { organizationKindLabel } from "@/lib/org/paths";
+import { organizationKindLabel, clinicPublicPath } from "@/lib/org/paths";
 import { BRAND } from "@/lib/brand/site";
 import { Suspense } from "react";
+import { pageMetadata } from "@/lib/seo/metadata";
+import { JsonLd } from "@/components/seo/JsonLd";
+import { breadcrumbListJsonLd } from "@/lib/seo/site";
 
 interface ClinicPageProps {
   params: Promise<{ slug: string }>;
@@ -19,13 +22,21 @@ interface ClinicPageProps {
 export async function generateMetadata({ params }: ClinicPageProps): Promise<Metadata> {
   const { slug } = await params;
   const clinic = await getListedOrganizationBySlugServer(slug);
-  if (!clinic) return { title: `Clinic | ${BRAND.name}` };
-  return {
-    title: `${clinic.name} | ${BRAND.name}`,
+  if (!clinic) {
+    return pageMetadata({
+      title: "Clinic",
+      description: `Clinic listing on ${BRAND.name}.`,
+      path: clinicPublicPath(slug),
+      index: false,
+    });
+  }
+  return pageMetadata({
+    title: clinic.name,
     description: clinic.address
       ? `${organizationKindLabel(clinic.kind)} in ${clinic.city ?? "Pakistan"}. ${clinic.address}`
       : `Book a doctor at ${clinic.name}.`,
-  };
+    path: clinicPublicPath(clinic.slug),
+  });
 }
 
 export default async function ClinicPublicPage({ params }: ClinicPageProps) {
@@ -42,6 +53,12 @@ export default async function ClinicPublicPage({ params }: ClinicPageProps) {
 
   return (
     <div className="min-h-screen bg-white">
+      <JsonLd
+        data={breadcrumbListJsonLd([
+          { name: "Clinics", path: "/clinics/" },
+          { name: clinic.name, path: clinicPublicPath(clinic.slug) },
+        ])}
+      />
       <LandingHeader />
       <main className="mx-auto max-w-6xl px-4 py-12 sm:px-6 sm:py-16">
         <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-brand-600">

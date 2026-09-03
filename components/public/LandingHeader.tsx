@@ -66,7 +66,7 @@ export function LandingHeader({ overlay = false }: LandingHeaderProps) {
         </nav>
 
         <div className="hidden items-center gap-2 md:flex">
-          <Link href="/login">
+          <Link href="/login/">
             <Button
               variant="ghost"
               className={cn(
@@ -77,7 +77,7 @@ export function LandingHeader({ overlay = false }: LandingHeaderProps) {
               Login
             </Button>
           </Link>
-          <Link href="/doctors">
+          <Link href="/doctors/">
             <Button
               className={cn(
                 "font-medium",
@@ -141,12 +141,12 @@ export function LandingHeader({ overlay = false }: LandingHeaderProps) {
               </Link>
             ))}
             <div className="mt-3 flex flex-col gap-2 border-t border-brand-100 pt-4 pb-2">
-              <Link href="/login" onClick={() => setMobileOpen(false)}>
+              <Link href="/login/" onClick={() => setMobileOpen(false)}>
                 <Button variant="outline" className="w-full">
                   Login
                 </Button>
               </Link>
-              <Link href="/doctors" onClick={() => setMobileOpen(false)}>
+              <Link href="/doctors/" onClick={() => setMobileOpen(false)}>
                 <Button className="w-full bg-brand-500 text-white hover:bg-brand-600">
                   Find a doctor
                 </Button>

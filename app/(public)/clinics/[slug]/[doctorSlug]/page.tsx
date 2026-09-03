@@ -3,10 +3,12 @@ import { notFound, permanentRedirect } from "next/navigation";
 import { DoctorLandingView } from "@/components/landing/DoctorLandingView";
 import { getPublicLandingPage } from "@/lib/landing/public";
 import { doctorJsonLd } from "@/lib/landing/schema";
-import { clinicDoctorPublicPath } from "@/lib/org/paths";
-import { doctorPublicPath } from "@/lib/landing/slug";
+import { clinicDoctorPublicPath, clinicPublicPath } from "@/lib/org/paths";
 import { getListedOrganizationBySlugServer } from "@/lib/public/organizations";
 import { BRAND } from "@/lib/brand/site";
+import { pageMetadata } from "@/lib/seo/metadata";
+import { JsonLd } from "@/components/seo/JsonLd";
+import { breadcrumbListJsonLd, canonicalUrl } from "@/lib/seo/site";
 
 export const revalidate = 60;
 
@@ -21,13 +23,25 @@ export async function generateMetadata({ params, searchParams }: NestedDoctorPag
   const clinic = await getListedOrganizationBySlugServer(slug);
   const result = await getPublicLandingPage(doctorSlug, { preview: query.preview === "1" });
   if (!clinic || result.kind !== "ok" || result.data.organization?.slug !== slug) {
-    return { title: `Doctor | ${BRAND.name}` };
+    return pageMetadata({
+      title: "Doctor",
+      description: `Doctor profile on ${BRAND.name}.`,
+      path: clinicDoctorPublicPath(slug, doctorSlug),
+      index: false,
+    });
   }
   const { doctor, content } = result.data;
+  const title = content.seoTitle || `${doctor.fullName} | ${clinic.name}`;
+  const description =
+    content.seoDescription || content.shortIntro || `Book ${doctor.fullName} at ${clinic.name}.`;
   return {
-    title: content.seoTitle || `${doctor.fullName} | ${clinic.name} | ${BRAND.name}`,
-    description: content.seoDescription || content.shortIntro || `Book ${doctor.fullName} at ${clinic.name}.`,
-    alternates: { canonical: clinicDoctorPublicPath(slug, result.data.slug) },
+    ...pageMetadata({
+      title,
+      description,
+      path: clinicDoctorPublicPath(slug, result.data.slug),
+      ogType: "profile",
+    }),
+    title: { absolute: `${title} | ${BRAND.name}` },
   };
 }
 
@@ -48,13 +62,18 @@ export default async function ClinicDoctorPublicPage({ params, searchParams }: N
   }
   if (result.kind !== "ok" || result.data.organization?.slug !== slug) notFound();
 
-  const jsonLd = doctorJsonLd(result.data, doctorPublicPath(result.data.slug));
+  const pagePath = clinicDoctorPublicPath(slug, result.data.slug);
+  const jsonLd = doctorJsonLd(result.data, canonicalUrl(pagePath));
 
   return (
     <div className="min-h-screen bg-white pb-20 md:pb-0">
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      <JsonLd data={jsonLd} />
+      <JsonLd
+        data={breadcrumbListJsonLd([
+          { name: "Clinics", path: "/clinics/" },
+          { name: clinic.name, path: clinicPublicPath(slug) },
+          { name: result.data.doctor.fullName, path: pagePath },
+        ])}
       />
       <DoctorLandingView data={result.data} />
     </div>

@@ -3,37 +3,37 @@ import { BrandMark, ConeStripe } from "@/components/brand/BrandMark";
 import { BRAND } from "@/lib/brand/site";
 
 const patientLinks = [
-  { href: "/doctors", label: "Browse doctors" },
-  { href: "/clinics", label: "Clinics and hospitals" },
-  { href: "/assessment", label: "Self assessment" },
-  { href: "/register", label: "Create account" },
-  { href: "/login?role=patient", label: "Patient login" },
+  { href: "/doctors/", label: "Browse doctors" },
+  { href: "/clinics/", label: "Clinics and hospitals" },
+  { href: "/assessment/", label: "Self assessment" },
+  { href: "/register/", label: "Create account" },
+  { href: "/login/?role=patient", label: "Patient login" },
 ];
 
 /** Physical clinic module — login then land on the matching dashboard. */
 const clinicFloorLinks = [
   {
-    href: "/login?role=receptionist&redirect=/reception/dashboard",
+    href: "/login/?role=receptionist&redirect=/reception/dashboard/",
     label: "Reception desk",
   },
   {
-    href: "/login?role=receptionist&redirect=/reception/queue",
+    href: "/login/?role=receptionist&redirect=/reception/queue/",
     label: "Live queue",
   },
   {
-    href: "/login?role=receptionist&redirect=/reception/walk-in",
+    href: "/login/?role=receptionist&redirect=/reception/walk-in/",
     label: "Walk in register",
   },
   {
-    href: "/login?role=receptionist&redirect=/reception/billing",
+    href: "/login/?role=receptionist&redirect=/reception/billing/",
     label: "Desk billing",
   },
   {
-    href: "/login?role=doctor&redirect=/doctor/queue",
+    href: "/login/?role=doctor&redirect=/doctor/queue/",
     label: "Doctor clinic queue",
   },
   {
-    href: "/register?role=doctor",
+    href: "/register/?role=doctor",
     label: "Join as doctor",
   },
 ];

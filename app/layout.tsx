@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Syne, Manrope, Poppins, Playfair_Display } from "next/font/google";
 import { ServiceWorkerRegistration } from "@/components/pwa/ServiceWorkerRegistration";
 import { BRAND } from "@/lib/brand/site";
+import { SITE_ORIGIN, SITE_URL } from "@/lib/seo/site";
 import "./globals.css";
 
 const manrope = Manrope({
@@ -30,8 +31,13 @@ const playfair = Playfair_Display({
 });
 
 export const metadata: Metadata = {
-  title: `${BRAND.name}, Pakistan's best online and physical clinic platform`,
+  metadataBase: new URL(SITE_URL),
+  title: {
+    default: `${BRAND.name}, Pakistan's best online and physical clinic platform`,
+    template: `%s | ${BRAND.name}`,
+  },
   description: BRAND.description,
+  applicationName: BRAND.name,
   keywords: [
     "hybrid clinic",
     "pakistan",
@@ -42,6 +48,19 @@ export const metadata: Metadata = {
     "PMDC doctors",
     BRAND.name,
   ],
+  authors: [{ name: BRAND.name, url: SITE_ORIGIN }],
+  openGraph: {
+    type: "website",
+    locale: "en_PK",
+    siteName: BRAND.name,
+    title: `${BRAND.name}, Pakistan's best online and physical clinic platform`,
+    description: BRAND.description,
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: `${BRAND.name}, Pakistan's best online and physical clinic platform`,
+    description: BRAND.description,
+  },
   icons: {
     icon: [
       { url: "/apna-clinic-favicon.png", type: "image/png", sizes: "any" },
