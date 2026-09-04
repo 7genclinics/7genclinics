@@ -14,7 +14,6 @@ function escapeIlikePattern(value: string): string {
 
 function pickSearchWords(query: string): string[] {
   const words = getFlexibleSearchWords(query);
-  // Prefer meaningful tokens, but keep short ones if that is all we have.
   const meaningful = words.filter((word) => word.length >= 2);
   return meaningful.length > 0 ? meaningful : words;
 }
@@ -118,6 +117,35 @@ async function searchProfilesByRole(
   );
 }
 
+async function searchViaRpc(
+  supabase: SupabaseClient<Database>,
+  query: string,
+  roles: ChatableRole[],
+  excludeUserId?: string,
+): Promise<ChatParticipant[] | null> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (supabase as any).rpc("search_chatable_profiles", {
+    p_query: query,
+    p_roles: roles,
+    p_exclude: excludeUserId ?? null,
+  });
+
+  if (error) {
+    // Migration may not be applied yet — fall back to client queries.
+    console.warn("search_chatable_profiles RPC unavailable", error.message);
+    return null;
+  }
+
+  return ((data ?? []) as ChatParticipant[])
+    .filter((profile) => matchesPersonName(profile.full_name, query))
+    .map((profile) => ({
+      id: profile.id,
+      full_name: profile.full_name.trim(),
+      avatar_url: profile.avatar_url ?? null,
+      role: profile.role,
+    }));
+}
+
 export async function searchChatableUsersWithClient(
   supabase: SupabaseClient<Database>,
   query: string,
@@ -127,12 +155,16 @@ export async function searchChatableUsersWithClient(
   const trimmed = query.trim();
   if (!trimmed || roles.length === 0) return [];
 
+  const fromRpc = await searchViaRpc(supabase, trimmed, roles, excludeUserId);
+  if (fromRpc) {
+    return fromRpc.slice(0, 20);
+  }
+
   const merged = new Map<string, ChatParticipant>();
   const wantsDoctors = roles.includes("doctor");
   const nonDoctorRoles = roles.filter((role) => role !== "doctor");
 
   if (wantsDoctors) {
-    // Path 1: approved doctors via doctor_profiles (RLS-friendly public directory path)
     try {
       for (const doctor of await searchApprovedDoctors(supabase, trimmed)) {
         merged.set(doctor.id, doctor);
@@ -141,20 +173,18 @@ export async function searchChatableUsersWithClient(
       console.error("chat doctor_profiles search failed", error);
     }
 
-    // Path 2: profiles fallback + approval filter (covers join/RLS edge cases)
-    if (merged.size === 0) {
-      try {
-        const [approvedIds, profiles] = await Promise.all([
-          getApprovedDoctorUserIds(supabase),
-          searchProfilesByRole(supabase, trimmed, ["doctor"]),
-        ]);
-        for (const profile of profiles) {
-          if (!approvedIds.has(profile.id)) continue;
-          merged.set(profile.id, { ...profile, full_name: profile.full_name.trim() });
-        }
-      } catch (error) {
-        console.error("chat doctor profiles fallback search failed", error);
+    // Always merge profiles fallback so join/RLS edge cases still surface doctors.
+    try {
+      const [approvedIds, profiles] = await Promise.all([
+        getApprovedDoctorUserIds(supabase),
+        searchProfilesByRole(supabase, trimmed, ["doctor"]),
+      ]);
+      for (const profile of profiles) {
+        if (!approvedIds.has(profile.id)) continue;
+        merged.set(profile.id, { ...profile, full_name: profile.full_name.trim() });
       }
+    } catch (error) {
+      console.error("chat doctor profiles fallback search failed", error);
     }
   }
 

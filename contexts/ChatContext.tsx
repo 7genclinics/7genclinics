@@ -99,27 +99,51 @@ export function ChatProvider({
   const { markChatConversationRead, setActiveChatConversationId } = useNotifications();
 
   // ── Conversations ────────────────────────────────────────
+  const mergeConversations = useCallback(
+    (incoming: ChatConversation[], previous: ChatConversation[]) => {
+      if (previous.length === 0) return incoming;
+      const prevById = new Map(previous.map((c) => [c.id, c]));
+      return incoming.map((row) => {
+        const prior = prevById.get(row.id);
+        if (!prior) return row;
+        const incomingName = row.other_user.full_name?.trim() ?? "";
+        const priorName = prior.other_user.full_name?.trim() ?? "";
+        const incomingUnknown =
+          !incomingName ||
+          incomingName === "Unknown" ||
+          incomingName === "User";
+        const priorKnown =
+          priorName && priorName !== "Unknown" && priorName !== "User";
+        if (incomingUnknown && priorKnown) {
+          return { ...row, other_user: prior.other_user };
+        }
+        return row;
+      });
+    },
+    []
+  );
+
   const refreshConversations = useCallback(async () => {
     setIsLoadingConversations(true);
     try {
       const data = await getConversations(myId);
-      setConversations(data);
+      setConversations((prev) => mergeConversations(data, prev));
     } catch {
       // keep stale state
     } finally {
       setIsLoadingConversations(false);
     }
-  }, [myId]);
+  }, [myId, mergeConversations]);
 
   /** Quiet refresh — used by realtime/visibility so the list doesn't flash. */
   const softRefreshConversations = useCallback(async () => {
     try {
       const data = await getConversations(myId);
-      setConversations(data);
+      setConversations((prev) => mergeConversations(data, prev));
     } catch {
       // keep stale state
     }
-  }, [myId]);
+  }, [myId, mergeConversations]);
 
   useEffect(() => {
     if (myId) refreshConversations();
@@ -190,7 +214,21 @@ export function ChatProvider({
 
       // Ensure ChatWindow can render immediately (it needs the conversation in list).
       setConversations((prev) => {
-        if (prev.some((c) => c.id === convId)) return prev;
+        const existing = prev.find((c) => c.id === convId);
+        if (existing) {
+          // Re-open: restore identity if list previously showed Unknown.
+          if (
+            otherUser &&
+            (!existing.other_user.full_name ||
+              existing.other_user.full_name === "Unknown" ||
+              existing.other_user.full_name === "User")
+          ) {
+            return prev.map((c) =>
+              c.id === convId ? { ...c, other_user: otherUser } : c
+            );
+          }
+          return prev;
+        }
         const [participant_a, participant_b] =
           myId < otherId ? [myId, otherId] : [otherId, myId];
         const optimistic: ChatConversation = {

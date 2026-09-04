@@ -54,19 +54,36 @@ export async function getConversations(myId: string): Promise<ChatConversation[]
 
   if (!activeRows.length) return [];
 
-  const otherIds = activeRows.map((r: any) =>
-    r.participant_a === myId ? r.participant_b : r.participant_a
+  const otherIds = [
+    ...new Set(
+      activeRows.map((r: any) =>
+        r.participant_a === myId ? r.participant_b : r.participant_a
+      )
+    ),
+  ] as string[];
+
+  // Prefer SECURITY DEFINER RPC so chat peers (and approved doctors) resolve
+  // even when generic profiles RLS would hide them → "Unknown".
+  const profileMap = new Map<string, ChatParticipant>();
+  const { data: peerProfiles, error: peerErr } = await db().rpc(
+    "get_chat_peer_profiles",
+    { p_ids: otherIds }
   );
 
-  const { data: profiles, error: pErr } = await supabase
-    .from("profiles")
-    .select("id, full_name, avatar_url, role")
-    .in("id", otherIds);
-  if (pErr) throw pErr;
-
-  const profileMap = new Map<string, ChatParticipant>(
-    ((profiles ?? []) as ChatParticipant[]).map((p) => [p.id, p])
-  );
+  if (!peerErr && Array.isArray(peerProfiles)) {
+    for (const row of peerProfiles as ChatParticipant[]) {
+      if (row?.id) profileMap.set(row.id, row);
+    }
+  } else {
+    const { data: profiles, error: pErr } = await supabase
+      .from("profiles")
+      .select("id, full_name, avatar_url, role")
+      .in("id", otherIds);
+    if (pErr) throw pErr;
+    for (const row of (profiles ?? []) as ChatParticipant[]) {
+      profileMap.set(row.id, row);
+    }
+  }
 
   const results: ChatConversation[] = await Promise.all(
     activeRows.map(async (row: any) => {
