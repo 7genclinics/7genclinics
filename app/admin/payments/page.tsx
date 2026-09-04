@@ -26,6 +26,7 @@ import { REFUND_STATUS_LABEL } from "@/lib/refunds/policy";
 import type { AdminPayment } from "@/lib/admin/types";
 import type { PaymentMethod, PaymentStatus, PayoutStatus, RefundStatus } from "@/types";
 import { getErrorMessage } from "@/lib/errors";
+import { matchesAnyFlexibleText } from "@/lib/search/flexible-match";
 
 function formatPKR(value: number) {
   return `PKR ${Math.round(value).toLocaleString("en-PK")}`;
@@ -199,7 +200,6 @@ export default function AdminPaymentsPage() {
   };
 
   const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
     const fromTs = dateFrom ? new Date(dateFrom + "T00:00:00").getTime() : null;
     const toTs = dateTo ? new Date(dateTo + "T23:59:59").getTime() : null;
 
@@ -210,17 +210,19 @@ export default function AdminPaymentsPage() {
       const created = new Date(p.created_at).getTime();
       if (fromTs && created < fromTs) return false;
       if (toTs && created > toTs) return false;
-      if (q) {
-        const haystack = [
-          p.transaction_id,
-          p.patient?.full_name,
-          p.doctor?.profile?.full_name,
-          p.payout_reference,
-        ]
-          .filter(Boolean)
-          .join(" ")
-          .toLowerCase();
-        if (!haystack.includes(q)) return false;
+      if (
+        search.trim() &&
+        !matchesAnyFlexibleText(
+          [
+            p.transaction_id,
+            p.patient?.full_name,
+            p.doctor?.profile?.full_name,
+            p.payout_reference,
+          ],
+          search,
+        )
+      ) {
+        return false;
       }
       return true;
     });

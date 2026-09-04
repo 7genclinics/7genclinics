@@ -30,6 +30,7 @@ import { usePatient } from "@/contexts/PatientContext";
 import { usePaymentsRealtime } from "@/lib/realtime/usePaymentsRealtime";
 import type { PaymentMethod, PaymentStatus } from "@/types";
 import { getErrorMessage } from "@/lib/errors";
+import { matchesAnyFlexibleText } from "@/lib/search/flexible-match";
 
 type StatusFilter = "all" | PaymentStatus;
 type SortField = "date" | "amount";
@@ -210,7 +211,6 @@ export default function PatientPaymentsPage() {
   }, [transactions]);
 
   const filtered = useMemo(() => {
-    const q = searchQuery.trim().toLowerCase();
     const fromTs = dateFrom ? new Date(dateFrom + "T00:00:00").getTime() : null;
     const toTs = dateTo ? new Date(dateTo + "T23:59:59").getTime() : null;
 
@@ -220,11 +220,14 @@ export default function PatientPaymentsPage() {
       const created = new Date(tx.createdAt).getTime();
       if (fromTs && created < fromTs) return false;
       if (toTs && created > toTs) return false;
-      if (q) {
-        const haystack = [tx.id, tx.doctorName, tx.specialization, tx.method, tx.status]
-          .join(" ")
-          .toLowerCase();
-        if (!haystack.includes(q)) return false;
+      if (
+        searchQuery.trim() &&
+        !matchesAnyFlexibleText(
+          [tx.id, tx.doctorName, tx.specialization, tx.method, tx.status],
+          searchQuery,
+        )
+      ) {
+        return false;
       }
       return true;
     });

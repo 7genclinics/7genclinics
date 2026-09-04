@@ -156,11 +156,11 @@ export async function searchChatableUsersWithClient(
   if (!trimmed || roles.length === 0) return [];
 
   const fromRpc = await searchViaRpc(supabase, trimmed, roles, excludeUserId);
+  const merged = new Map<string, ChatParticipant>();
   if (fromRpc) {
-    return fromRpc.slice(0, 20);
+    for (const profile of fromRpc) merged.set(profile.id, profile);
   }
 
-  const merged = new Map<string, ChatParticipant>();
   const wantsDoctors = roles.includes("doctor");
   const nonDoctorRoles = roles.filter((role) => role !== "doctor");
 

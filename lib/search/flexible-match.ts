@@ -3,13 +3,16 @@
  * Ignores case, dots, hyphens, extra spaces, and Dr/Doctor honorifics.
  */
 
+const HONORIFIC_WORDS = new Set(["dr", "doc", "doctor"]);
+
 function normalizeSearchText(text: string | null | undefined): string {
   return (text ?? "")
     .toLowerCase()
     .normalize("NFKD")
     .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[.'’`]/g, " ")
+    .replace(/[.'’`·•‧∙．。]/g, " ")
     .replace(/[-_/\\,]+/g, " ")
+    .replace(/[^a-z0-9\s]+/g, " ")
     .replace(/\s+/g, " ")
     .trim();
 }
@@ -26,7 +29,13 @@ function expandSearchWord(word: string): string[] {
 }
 
 function compactNormalized(text: string): string {
-  return normalizeSearchText(text).replace(/\s+/g, "");
+  return normalizeSearchText(text).replace(/[^a-z0-9]+/g, "");
+}
+
+/** Drop Dr/Doctor tokens when the query also has a real name (e.g. "dr laila"). */
+function significantQueryWords(words: string[]): string[] {
+  const rest = words.filter((word) => !HONORIFIC_WORDS.has(word));
+  return rest.length > 0 ? rest : words;
 }
 
 function getQueryWords(q: string): string[] {
@@ -106,10 +115,11 @@ export function matchesFlexibleText(
   const haystack = text ?? "";
   const fullNorm = normalizeSearchText(haystack);
   const compactHay = compactNormalized(haystack);
-  const compactQuery = compactNormalized(q);
-  const queryNorm = normalizeSearchText(q);
+  const matchWords = significantQueryWords(queryWords);
+  const compactQuery = matchWords.join("");
+  const queryNorm = matchWords.join(" ");
 
-  // "drlaila" matches "Dr.Laila" / "dr laila" / "Dr Laila"
+  // "dr laila" / "dr.laila" / "Dr Laila" all match "Dr.Laila"
   if (compactQuery.length >= 2 && compactHay.includes(compactQuery)) {
     return true;
   }
@@ -120,7 +130,7 @@ export function matchesFlexibleText(
   }
 
   const tokens = getTextTokens(haystack);
-  return queryWords.every((word) => {
+  return matchWords.every((word) => {
     if (
       word.length >= 2 &&
       (wordMatchesNormalizedBlob(fullNorm, word) ||

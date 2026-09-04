@@ -1,4 +1,5 @@
 import type { PatientPrescription } from "./types";
+import { matchesAnyFlexibleText } from "@/lib/search/flexible-match";
 
 export const PRESCRIPTION_ITEMS_PER_PAGE = 6;
 
@@ -48,21 +49,19 @@ export function filterPrescriptions(
   }
 ): PatientPrescription[] {
   let filtered = [...prescriptions];
-  const query = options.searchQuery.trim().toLowerCase();
-
-  if (query) {
-    filtered = filtered.filter((prc) => {
-      const haystack = [
-        prc.doctorName,
-        prc.specialization,
-        prc.prescription?.medication ?? "",
-        prc.prescription?.dosage ?? "",
-        prc.clinicalNote,
-      ]
-        .join(" ")
-        .toLowerCase();
-      return haystack.includes(query);
-    });
+  if (options.searchQuery.trim()) {
+    filtered = filtered.filter((prc) =>
+      matchesAnyFlexibleText(
+        [
+          prc.doctorName,
+          prc.specialization,
+          prc.prescription?.medication,
+          prc.prescription?.dosage,
+          prc.clinicalNote,
+        ],
+        options.searchQuery,
+      ),
+    );
   }
 
   if (options.filterType === "medication") {

@@ -27,6 +27,7 @@ import type { AdminAppointment, AdminDoctor, AdminPayment } from "@/lib/admin/ty
 import type { DoctorStatus } from "@/types";
 import { SPECIALIZATIONS, PAKISTAN_CITIES } from "@/types";
 import { getErrorMessage } from "@/lib/errors";
+import { matchesAnyFlexibleText } from "@/lib/search/flexible-match";
 
 function formatPKR(value: number) {
   return `₨${Math.round(value).toLocaleString("en-PK")}`;
@@ -163,11 +164,12 @@ export default function AdminDoctorsPage() {
   };
 
   const filteredDoctors = doctors.filter((doc) => {
-    const name = doc.profile?.full_name?.toLowerCase() ?? "";
-    const spec = doc.specialization?.toLowerCase() ?? "";
-    const city = doc.profile?.city?.toLowerCase() ?? "";
-    const q = searchQuery.toLowerCase();
-    const matchesSearch = name.includes(q) || spec.includes(q) || city.includes(q);
+    const matchesSearch =
+      !searchQuery.trim() ||
+      matchesAnyFlexibleText(
+        [doc.profile?.full_name, doc.specialization, doc.profile?.city],
+        searchQuery,
+      );
     const matchesStatus = statusFilter === "all" || doc.status === statusFilter;
     return matchesSearch && matchesStatus;
   });

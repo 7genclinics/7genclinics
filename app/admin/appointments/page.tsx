@@ -25,6 +25,7 @@ import { completeManualRefund } from "@/lib/refunds/process";
 import type { AdminAppointment } from "@/lib/admin/types";
 import type { AppointmentStatus, AppointmentType } from "@/types";
 import { getErrorMessage } from "@/lib/errors";
+import { matchesAnyFlexibleText } from "@/lib/search/flexible-match";
 
 const TYPE_LABEL: Record<AppointmentType, string> = {
   video: "Video",
@@ -178,12 +179,19 @@ export default function AdminAppointmentsPage() {
     if (activeTab === "Completed" && apt.status !== "completed") return false;
     if (activeTab === "Cancelled" && apt.status !== "cancelled" && apt.status !== "no_show" && apt.status !== "expired_no_show") return false;
 
-    if (searchQuery) {
-      const q = searchQuery.toLowerCase();
-      const doctorName = apt.doctor?.profile?.full_name?.toLowerCase() ?? "";
-      const patientName = apt.patient?.full_name?.toLowerCase() ?? "";
-      const reason = apt.patient_notes?.toLowerCase() ?? "";
-      if (!doctorName.includes(q) && !patientName.includes(q) && !reason.includes(q)) return false;
+    if (searchQuery.trim()) {
+      if (
+        !matchesAnyFlexibleText(
+          [
+            apt.doctor?.profile?.full_name,
+            apt.patient?.full_name,
+            apt.patient_notes,
+          ],
+          searchQuery,
+        )
+      ) {
+        return false;
+      }
     }
     return true;
   });

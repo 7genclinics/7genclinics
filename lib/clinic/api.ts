@@ -206,16 +206,19 @@ export async function getTodayClinicAppointments(doctorId?: string): Promise<Cli
 }
 
 export async function searchClinicAppointments(queryText: string): Promise<ClinicAppointment[]> {
-  const q = queryText.trim().toLowerCase();
   const rows = await getTodayClinicAppointments();
-  if (!q) return rows;
-  return rows.filter((apt) => {
-    const name = apt.patient?.full_name?.toLowerCase() ?? "";
-    const phone = apt.patient?.phone ?? "";
-    const code = apt.patient?.patient_code?.toLowerCase() ?? "";
-    const token = apt.token_number?.toLowerCase() ?? "";
-    return name.includes(q) || phone.includes(q) || code.includes(q) || token.includes(q);
-  });
+  if (!queryText.trim()) return rows;
+  return rows.filter((apt) =>
+    matchesAnyFlexibleText(
+      [
+        apt.patient?.full_name,
+        apt.patient?.phone,
+        apt.patient?.patient_code,
+        apt.token_number,
+      ],
+      queryText,
+    ),
+  );
 }
 
 export async function searchPatients(queryText: string): Promise<Profile[]> {
