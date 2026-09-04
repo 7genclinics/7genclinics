@@ -1,3 +1,5 @@
+import { normalizeSlotTime } from "./slots";
+
 /** Statuses that occupy a doctor's calendar slot (not bookable by others). */
 export const SLOT_OCCUPYING_STATUSES = [
   "scheduled",
@@ -25,8 +27,6 @@ export function isSlotOccupyingStatus(status: string): boolean {
 export function isSlotFreeingStatus(status: string): boolean {
   return (SLOT_FREEING_STATUSES as readonly string[]).includes(status);
 }
-
-import { normalizeSlotTime } from "./slots.ts";
 
 export function getSlotUiStatus(
   time: string,

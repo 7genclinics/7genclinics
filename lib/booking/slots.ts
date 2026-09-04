@@ -51,7 +51,6 @@ export function minutesUntilSlot(
   now: Date = new Date(),
 ): number {
   if (!isValidBookingDate(date)) return -1;
-  const today = getPkTodayDate(now);
   const [y, m, d] = date.split("-").map(Number);
   const [h, min] = normalizeSlotTime(time).split(":").map(Number);
   const slotUtcMs = Date.UTC(y, m - 1, d, h - 5, min, 0); // Asia/Karachi UTC+5
