@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/client";
+import { getCurrentAuthUser } from "@/lib/auth/current-user";
 import type {
   AppointmentStatus,
   AppointmentType,
@@ -139,19 +140,7 @@ const PRESCRIPTION_APPOINTMENT_SELECT = `
 `;
 
 export async function getPatientContext(): Promise<PatientContextResult> {
-  const supabase = createClient();
-
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-
-  let user = session?.user ?? null;
-  if (!user) {
-    const {
-      data: { user: fetchedUser },
-    } = await supabase.auth.getUser();
-    user = fetchedUser;
-  }
+  const user = await getCurrentAuthUser();
 
   if (!user) {
     return {

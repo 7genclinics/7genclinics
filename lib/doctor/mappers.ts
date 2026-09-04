@@ -140,8 +140,6 @@ export function mergeClinicPatientsIntoRegistry(
   return Array.from(byId.values());
 }
 
-const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-
 export function getInitials(name: string): string {
   return name
     .split(" ")
@@ -249,38 +247,16 @@ export function mapAppointmentTypeToDb(type: string): AppointmentType {
   return map[type] ?? "video";
 }
 
-export function dayNameToIndex(day: string): number {
-  const index = DAY_NAMES.indexOf(day);
-  return index >= 0 ? index : 0;
-}
-
-export function indexToDayName(index: number): string {
-  return DAY_NAMES[index] ?? "Sunday";
-}
-
-export function time12To24(time12: string): string {
-  const match = time12.trim().match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
-  if (!match) return "09:00:00";
-  let hours = parseInt(match[1], 10);
-  const minutes = match[2];
-  const period = match[3].toUpperCase();
-  if (period === "PM" && hours !== 12) hours += 12;
-  if (period === "AM" && hours === 12) hours = 0;
-  return `${hours.toString().padStart(2, "0")}:${minutes}:00`;
-}
-
-export function time24To12(time24: string): string {
-  const [hoursStr, minutesStr] = time24.split(":");
-  let hours = parseInt(hoursStr, 10);
-  const minutes = minutesStr?.slice(0, 2) ?? "00";
-  const period = hours >= 12 ? "PM" : "AM";
-  hours = hours % 12 || 12;
-  return `${hours}:${minutes} ${period}`;
-}
-
-export function formatSlotRange(startTime: string, endTime: string): string {
-  return `${time24To12(startTime)} - ${time24To12(endTime)}`;
-}
+export {
+  dayNameToIndex,
+  formatSlotRange,
+  indexToDayName,
+  parseClockTo24,
+  parseSlotRangeLabel,
+  time12To24,
+  time24To12,
+  weeklyScheduleToSlotRows,
+} from "./schedule-time";
 
 export function timeAgo(date: string): string {
   const diffMs = Date.now() - new Date(date).getTime();

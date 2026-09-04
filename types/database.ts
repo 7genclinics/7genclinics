@@ -2683,6 +2683,7 @@ export type Database = {
           full_name: string
           id: string
           is_active: boolean
+          permissions: Json
           phone: string
         }[]
       }
@@ -2724,8 +2725,20 @@ export type Database = {
         Returns: string
       }
       review_display_name: { Args: { p_full_name: string }; Returns: string }
+      save_doctor_availability_slots: {
+        Args: {
+          p_doctor_id: string
+          p_slot_duration_minutes?: number
+          p_slots: Json
+        }
+        Returns: undefined
+      }
       set_doctor_clinic_staff_active: {
         Args: { p_is_active: boolean; p_user_id: string }
+        Returns: undefined
+      }
+      set_doctor_clinic_staff_permissions: {
+        Args: { p_permissions: Json; p_user_id: string }
         Returns: undefined
       }
       set_doctor_taxonomy: {

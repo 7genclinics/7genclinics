@@ -1,5 +1,11 @@
 import { createClient } from "@/lib/supabase/client";
+import { getCurrentAuthUser } from "@/lib/auth/current-user";
 import type { ClinicPaymentMethod, Gender, Profile } from "@/types";
+import {
+  FULL_RECEPTION_PERMISSIONS,
+  normalizeReceptionPermissions,
+  type ReceptionPermissions,
+} from "@/lib/doctor/reception-permissions";
 import type { Database } from "@/types/database";
 import { getErrorMessage } from "@/lib/errors";
 import {
@@ -83,13 +89,10 @@ export function normalizeClinicAppointment(row: Record<string, unknown>): Clinic
 }
 
 export async function getReceptionContext(): Promise<
-  | { ok: true; data: { profile: Profile } }
+  | { ok: true; data: { profile: Profile; permissions: ReceptionPermissions } }
   | { ok: false; message: string }
 > {
-  const supabase = createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getCurrentAuthUser();
 
   if (!user) {
     return { ok: false, message: "You are not signed in." };
@@ -112,7 +115,22 @@ export async function getReceptionContext(): Promise<
     return { ok: false, message: "Reception access required." };
   }
 
-  return { ok: true, data: { profile: typed } };
+  if (typed.role === "admin" || typed.role === "super_admin") {
+    return { ok: true, data: { profile: typed, permissions: FULL_RECEPTION_PERMISSIONS } };
+  }
+
+  const { data: staff } = await table("admin_staff")
+    .select("permissions")
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  return {
+    ok: true,
+    data: {
+      profile: typed,
+      permissions: normalizeReceptionPermissions(staff?.permissions),
+    },
+  };
 }
 
 export async function getClinicServices(includeInactive = false): Promise<ClinicService[]> {

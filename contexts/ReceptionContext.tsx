@@ -6,17 +6,23 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
 import Link from "next/link";
 import { getReceptionContext } from "@/lib/clinic/api";
 import type { Profile } from "@/types";
+import {
+  FULL_RECEPTION_PERMISSIONS,
+  type ReceptionPermissions,
+} from "@/lib/doctor/reception-permissions";
 import { Button } from "@/components/ui/Button";
 import { getErrorMessage } from "@/lib/errors";
 
 interface ReceptionContextValue {
   profile: Profile;
+  permissions: ReceptionPermissions;
   isLoading: boolean;
   error: string | null;
   refresh: () => Promise<void>;
@@ -26,20 +32,25 @@ const ReceptionContext = createContext<ReceptionContextValue | null>(null);
 
 export function ReceptionProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [permissions, setPermissions] = useState<ReceptionPermissions>(FULL_RECEPTION_PERMISSIONS);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const profileRef = useRef(profile);
+  profileRef.current = profile;
 
   const refresh = useCallback(async () => {
-    setIsLoading(true);
+    const keepExisting = Boolean(profileRef.current);
+    if (!keepExisting) setIsLoading(true);
     setError(null);
     try {
       const result = await getReceptionContext();
       if (!result.ok) {
         setError(result.message);
-        setProfile(null);
+        if (!keepExisting) setProfile(null);
         return;
       }
       setProfile(result.data.profile);
+      setPermissions(result.data.permissions);
     } catch (err) {
       setError(getErrorMessage(err, "Failed to load reception data"));
     } finally {
@@ -53,8 +64,8 @@ export function ReceptionProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo<ReceptionContextValue | null>(() => {
     if (!profile) return null;
-    return { profile, isLoading, error, refresh };
-  }, [profile, isLoading, error, refresh]);
+    return { profile, permissions, isLoading, error, refresh };
+  }, [profile, permissions, isLoading, error, refresh]);
 
   if (isLoading && !value) {
     return (

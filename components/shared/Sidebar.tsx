@@ -38,9 +38,10 @@ interface SidebarProps {
   role: "patient" | "doctor" | "admin" | "receptionist";
   isOpen?: boolean;
   onClose?: () => void;
+  allowedHrefs?: string[];
 }
 
-export function Sidebar({ role, isOpen = false, onClose }: SidebarProps) {
+export function Sidebar({ role, isOpen = false, onClose, allowedHrefs }: SidebarProps) {
   const pathname = usePathname();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   // Safely read unread count — ChatContext may not be mounted in all portals
@@ -104,8 +105,13 @@ export function Sidebar({ role, isOpen = false, onClose }: SidebarProps) {
   };
 
   const navItems = (navigationMap[role] || []).filter((item) => {
-    if (!frozen || (role !== "doctor" && role !== "receptionist")) return true;
-    return item.href.endsWith("/subscription");
+    if (frozen && (role === "doctor" || role === "receptionist")) {
+      return item.href.endsWith("/subscription");
+    }
+    if (allowedHrefs) {
+      return allowedHrefs.some((href) => item.href === href || item.href.startsWith(`${href}/`));
+    }
+    return true;
   });
 
   const handleLogout = async () => {

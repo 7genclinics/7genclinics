@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/client";
+import { getCurrentAuthUser } from "@/lib/auth/current-user";
 import type { AdminPermissions, Profile, UserRole, AppointmentStatus, DoctorStatus } from "@/types";
 import type { AdminStaffMember } from "./staff-types";
 import type { Database } from "@/types/database";
@@ -87,19 +88,7 @@ const PAYMENT_ADMIN_SELECT = `
 `;
 
 export async function getAdminContext(): Promise<AdminContextResult> {
-  const supabase = createClient();
-
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-
-  let user = session?.user ?? null;
-  if (!user) {
-    const {
-      data: { user: fetchedUser },
-    } = await supabase.auth.getUser();
-    user = fetchedUser;
-  }
+  const user = await getCurrentAuthUser();
 
   if (!user) {
     return {

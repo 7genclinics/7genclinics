@@ -6,6 +6,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
@@ -28,15 +29,18 @@ export function AdminProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const profileRef = useRef(profile);
+  profileRef.current = profile;
 
   const refresh = useCallback(async () => {
-    setIsLoading(true);
+    const keepExisting = Boolean(profileRef.current);
+    if (!keepExisting) setIsLoading(true);
     setError(null);
     try {
       const result = await getAdminContext();
       if (!result.ok) {
         setError(result.message);
-        setProfile(null);
+        if (!keepExisting) setProfile(null);
         return;
       }
       setProfile(result.data.profile);

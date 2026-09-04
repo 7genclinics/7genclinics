@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import {
@@ -18,6 +18,7 @@ import {
   removeDocBlockedSlot,
   type DoctorBlockedSlot,
 } from "@/lib/doctor/api";
+import { formatSlotRange, parseClockTo24, parseSlotRangeLabel, time24To12 } from "@/lib/doctor/mappers";
 
 interface DaySchedule {
   day: string;
@@ -50,9 +51,17 @@ export default function DoctorSchedulePage() {
     bookingNotice: documents.schedule_config?.bookingNotice ?? 2,
     maxPatients: documents.schedule_config?.maxPatients ?? 10,
   });
+  const configsRef = useRef(configs);
+  configsRef.current = configs;
+  const documentsRef = useRef(documents);
+  documentsRef.current = documents;
+  const scheduleRef = useRef(schedule);
+  scheduleRef.current = schedule;
+  const constraintsHydratedRef = useRef(false);
+  const capacitySaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [savingPlanner, setSavingPlanner] = useState(false);
 
   const [toastMessage, setToastMessage] = useState("");
-  const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [addingSlotTo, setAddingSlotTo] = useState<number | null>(null);
   const [newSlotStart, setNewSlotStart] = useState("17:00");
@@ -76,18 +85,33 @@ export default function DoctorSchedulePage() {
 
   const showToast = (message: string) => {
     setToastMessage(message);
-    setTimeout(() => setToastMessage(""), 3000);
+    setTimeout(() => setToastMessage(""), 4000);
   };
+
+  const errorMessage = (err: unknown, fallback: string) =>
+    err instanceof Error && err.message ? err.message : fallback;
 
   const loadSchedule = async () => {
     setIsLoading(true);
     try {
       const slots = await getAvailabilitySlots(doctorProfile.id);
       setSchedule(slotsToWeeklySchedule(slots));
-      if (documents.blocked_dates) setBlockedDates(documents.blocked_dates);
-      if (documents.schedule_config) setConfigs(documents.schedule_config);
-    } catch {
-      showToast("Failed to load schedule.");
+      if (documentsRef.current.blocked_dates) {
+        setBlockedDates(documentsRef.current.blocked_dates);
+      }
+      // Do not overwrite constraint fields after the doctor has changed them.
+      // A late load was resetting the dropdowns, so the first Save wrote the old values.
+      if (!constraintsHydratedRef.current && documentsRef.current.schedule_config) {
+        const saved = documentsRef.current.schedule_config;
+        setConfigs({
+          bufferTime: Number(saved.bufferTime) || 0,
+          bookingNotice: Number(saved.bookingNotice) || 1,
+          maxPatients: Number(saved.maxPatients) || 10,
+        });
+      }
+      constraintsHydratedRef.current = true;
+    } catch (err) {
+      showToast(errorMessage(err, "Failed to load schedule."));
     } finally {
       setIsLoading(false);
     }
@@ -111,92 +135,176 @@ export default function DoctorSchedulePage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [doctorProfile.id]);
 
+  const persistWeeklyHours = async (next: DaySchedule[], successMessage?: string) => {
+    setSchedule(next);
+    try {
+      await saveAvailabilitySlots(doctorProfile.id, next, 30);
+      if (successMessage) showToast(successMessage);
+    } catch (err) {
+      showToast(errorMessage(err, "Failed to save schedule."));
+    }
+  };
+
+  const persistConstraints = async (
+    next: typeof configs,
+    successMessage?: string,
+  ) => {
+    constraintsHydratedRef.current = true;
+    const result = await updateDoctorDocuments(doctorProfile.id, documentsRef.current, {
+      schedule_config: next,
+    });
+    setDocuments(result.documents);
+    if (successMessage) showToast(successMessage);
+  };
+
+  const updateConstraint = async <K extends keyof typeof configs>(
+    key: K,
+    value: (typeof configs)[K],
+    successMessage: string,
+  ) => {
+    const next = { ...configsRef.current, [key]: value };
+    setConfigs(next);
+    try {
+      await persistConstraints(next, successMessage);
+    } catch (err) {
+      showToast(errorMessage(err, "Failed to save constraints."));
+    }
+  };
+
+  useEffect(() => {
+    return () => {
+      if (capacitySaveTimer.current) clearTimeout(capacitySaveTimer.current);
+    };
+  }, []);
+
   const toggleDay = (index: number) => {
     const updated = [...schedule];
-    updated[index].isActive = !updated[index].isActive;
+    updated[index] = { ...updated[index], isActive: !updated[index].isActive };
     if (!updated[index].isActive) {
-      updated[index].slots = [];
+      updated[index] = { ...updated[index], slots: [] };
     } else if (updated[index].slots.length === 0) {
-      updated[index].slots = ["05:00 PM - 05:30 PM"];
+      updated[index] = { ...updated[index], slots: [formatSlotRange("17:00:00", "17:30:00")] };
     }
-    setSchedule(updated);
+    void persistWeeklyHours(updated, `${updated[index].day} hours saved.`);
   };
 
   const removeSlot = (dayIndex: number, slotIndex: number) => {
-    const updated = [...schedule];
-    updated[dayIndex].slots.splice(slotIndex, 1);
-    if (updated[dayIndex].slots.length === 0) {
-      updated[dayIndex].isActive = false;
-    }
-    setSchedule(updated);
+    const updated = schedule.map((day, index) => {
+      if (index !== dayIndex) return day;
+      const slots = day.slots.filter((_, i) => i !== slotIndex);
+      return { ...day, slots, isActive: slots.length > 0 };
+    });
+    void persistWeeklyHours(updated, "Slot removed.");
   };
 
   const formatTime = (time: string) => {
-    const [hours, minutes] = time.split(':').map(Number);
-    const period = hours >= 12 ? 'PM' : 'AM';
-    const displayHours = hours % 12 || 12;
-    return `${displayHours}:${minutes.toString().padStart(2, '0')} ${period}`;
+    const parsed = parseClockTo24(time);
+    return parsed ? time24To12(parsed) : time;
+  };
+
+  const slotStartKey = (slot: string) => {
+    try {
+      return parseSlotRangeLabel(slot).start;
+    } catch {
+      return slot;
+    }
   };
 
   const addSlot = (dayIndex: number) => {
-    const formattedStart = formatTime(newSlotStart);
-    const formattedEnd = formatTime(newSlotEnd);
-    const slotString = `${formattedStart} - ${formattedEnd}`;
-
-    const updated = [...schedule];
-    if (!updated[dayIndex].isActive) {
-      updated[dayIndex].isActive = true;
+    const start = parseClockTo24(newSlotStart);
+    const end = parseClockTo24(newSlotEnd);
+    if (!start || !end) {
+      showToast("Enter a valid start and end time.");
+      return;
     }
-    // Prevent duplicate slot additions
-    if (updated[dayIndex].slots.includes(slotString)) {
+    if (start >= end) {
+      showToast("End time must be after start time.");
+      return;
+    }
+    const slotString = formatSlotRange(start, end);
+    const current = schedule[dayIndex];
+    const already = current.slots.some((slot) => {
+      try {
+        const parsed = parseSlotRangeLabel(slot);
+        return parsed.start === start && parsed.end === end;
+      } catch {
+        return slot === slotString;
+      }
+    });
+    if (already) {
       showToast("This slot already exists.");
       return;
     }
-    updated[dayIndex].slots.push(slotString);
-    updated[dayIndex].slots.sort();
-    setSchedule(updated);
+
+    const updated = schedule.map((day, index) => {
+      if (index !== dayIndex) return day;
+      const slots = [...day.slots, slotString].sort((a, b) =>
+        slotStartKey(a).localeCompare(slotStartKey(b)),
+      );
+      return { ...day, isActive: true, slots };
+    });
     setAddingSlotTo(null);
-    showToast(`Added slot for ${updated[dayIndex].day}.`);
+    void persistWeeklyHours(updated, `Saved ${updated[dayIndex].day} slot.`);
   };
 
   // Preset Handlers
   const applyPreset = (presetName: "evening" | "fullday" | "weekends") => {
     let updated: DaySchedule[] = [];
+    let label = "";
     if (presetName === "evening") {
-      updated = schedule.map(sch => {
+      updated = schedule.map((sch) => {
         const isWeekday = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"].includes(sch.day);
         return {
           day: sch.day,
           isActive: isWeekday,
-          slots: isWeekday ? ["05:00 PM - 05:30 PM", "05:30 PM - 06:00 PM", "06:00 PM - 06:30 PM", "06:30 PM - 07:00 PM"] : []
+          slots: isWeekday
+            ? [
+                formatSlotRange("17:00:00", "17:30:00"),
+                formatSlotRange("17:30:00", "18:00:00"),
+                formatSlotRange("18:00:00", "18:30:00"),
+                formatSlotRange("18:30:00", "19:00:00"),
+              ]
+            : [],
         };
       });
-      showToast("Evening Only preset applied.");
+      label = "Evening shift saved.";
     } else if (presetName === "fullday") {
-      updated = schedule.map(sch => {
+      updated = schedule.map((sch) => {
         const isWeekday = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"].includes(sch.day);
         return {
           day: sch.day,
           isActive: isWeekday,
-          slots: isWeekday ? [
-            "09:00 AM - 09:30 AM", "09:30 AM - 10:00 AM", "10:00 AM - 10:30 AM",
-            "02:00 PM - 02:30 PM", "02:30 PM - 03:00 PM", "03:00 PM - 03:30 PM"
-          ] : []
+          slots: isWeekday
+            ? [
+                formatSlotRange("09:00:00", "09:30:00"),
+                formatSlotRange("09:30:00", "10:00:00"),
+                formatSlotRange("10:00:00", "10:30:00"),
+                formatSlotRange("14:00:00", "14:30:00"),
+                formatSlotRange("14:30:00", "15:00:00"),
+                formatSlotRange("15:00:00", "15:30:00"),
+              ]
+            : [],
         };
       });
-      showToast("Full Day (Weekday) preset applied.");
-    } else if (presetName === "weekends") {
-      updated = schedule.map(sch => {
+      label = "Full shift saved.";
+    } else {
+      updated = schedule.map((sch) => {
         const isWeekend = ["Saturday", "Sunday"].includes(sch.day);
         return {
           day: sch.day,
           isActive: isWeekend,
-          slots: isWeekend ? ["10:00 AM - 10:30 AM", "10:30 AM - 11:00 AM", "11:00 AM - 11:30 AM"] : []
+          slots: isWeekend
+            ? [
+                formatSlotRange("10:00:00", "10:30:00"),
+                formatSlotRange("10:30:00", "11:00:00"),
+                formatSlotRange("11:00:00", "11:30:00"),
+              ]
+            : [],
         };
       });
-      showToast("Weekends Only preset applied.");
+      label = "Weekend hours saved.";
     }
-    setSchedule(updated);
+    void persistWeeklyHours(updated, label);
   };
 
   // ── Granular blocked slot handlers ─────────────────────────────
@@ -220,8 +328,8 @@ export default function DoctorSchedulePage() {
       setSlotBlockReason("Personal leave");
       setShowSlotBlockForm(false);
       showToast("Slot blocked — patients cannot book this time.");
-    } catch {
-      showToast("Failed to block slot.");
+    } catch (err) {
+      showToast(errorMessage(err, "Failed to block slot."));
     } finally {
       setSavingSlotBlock(false);
     }
@@ -253,7 +361,7 @@ export default function DoctorSchedulePage() {
     };
     const updated = [...blockedDates, newBlock];
     try {
-      const result = await updateDoctorDocuments(doctorProfile.id, documents, {
+      const result = await updateDoctorDocuments(doctorProfile.id, documentsRef.current, {
         blocked_dates: updated,
       });
       setDocuments(result.documents);
@@ -270,7 +378,7 @@ export default function DoctorSchedulePage() {
   const removeBlockDate = async (id: string) => {
     const updated = blockedDates.filter((b) => b.id !== id);
     try {
-      const result = await updateDoctorDocuments(doctorProfile.id, documents, {
+      const result = await updateDoctorDocuments(doctorProfile.id, documentsRef.current, {
         blocked_dates: updated,
       });
       setDocuments(result.documents);
@@ -282,19 +390,19 @@ export default function DoctorSchedulePage() {
   };
 
   const handleSaveAll = async () => {
-    setIsSaving(true);
+    setSavingPlanner(true);
     try {
-      await saveAvailabilitySlots(doctorProfile.id, schedule, 30);
-      const result = await updateDoctorDocuments(doctorProfile.id, documents, {
-        schedule_config: configs,
+      const latestConfigs = configsRef.current;
+      const result = await updateDoctorDocuments(doctorProfile.id, documentsRef.current, {
+        schedule_config: latestConfigs,
       });
       setDocuments(result.documents);
-      showToast("Active weekly planner changes saved.");
-      await loadSchedule();
-    } catch {
-      showToast("Failed to save schedule.");
+      await saveAvailabilitySlots(doctorProfile.id, scheduleRef.current, 30);
+      showToast("Schedule saved.");
+    } catch (err) {
+      showToast(errorMessage(err, "Failed to save schedule."));
     } finally {
-      setIsSaving(false);
+      setSavingPlanner(false);
     }
   };
 
@@ -603,7 +711,9 @@ export default function DoctorSchedulePage() {
                 <label className="text-xs font-semibold text-muted-foreground">Session Buffer Time</label>
                 <select
                   value={configs.bufferTime}
-                  onChange={(e) => setConfigs({ ...configs, bufferTime: parseInt(e.target.value) })}
+                  onChange={(e) => {
+                    void updateConstraint("bufferTime", Number(e.target.value), "Buffer time saved.");
+                  }}
                   className="w-full h-9 px-3 rounded-lg border border-border bg-card text-xs focus:outline-none focus:ring-1 focus:ring-brand-400/20 focus:border-brand-400"
                 >
                   <option value={0}>No Buffer</option>
@@ -618,7 +728,9 @@ export default function DoctorSchedulePage() {
                 <label className="text-xs font-semibold text-muted-foreground">Minimum Booking Notice</label>
                 <select
                   value={configs.bookingNotice}
-                  onChange={(e) => setConfigs({ ...configs, bookingNotice: parseInt(e.target.value) })}
+                  onChange={(e) => {
+                    void updateConstraint("bookingNotice", Number(e.target.value), "Booking notice saved.");
+                  }}
                   className="w-full h-9 px-3 rounded-lg border border-border bg-card text-xs focus:outline-none focus:ring-1 focus:ring-brand-400/20 focus:border-brand-400"
                 >
                   <option value={1}>1 Hour in advance</option>
@@ -641,7 +753,16 @@ export default function DoctorSchedulePage() {
                   max="20"
                   step="1"
                   value={configs.maxPatients}
-                  onChange={(e) => setConfigs({ ...configs, maxPatients: parseInt(e.target.value) })}
+                  onChange={(e) => {
+                    const next = { ...configsRef.current, maxPatients: Number(e.target.value) };
+                    setConfigs(next);
+                    if (capacitySaveTimer.current) clearTimeout(capacitySaveTimer.current);
+                    capacitySaveTimer.current = setTimeout(() => {
+                      void persistConstraints(next, "Daily capacity saved.").catch((err) => {
+                        showToast(errorMessage(err, "Failed to save constraints."));
+                      });
+                    }, 250);
+                  }}
                   className="w-full h-1 bg-secondary rounded-lg appearance-none cursor-pointer accent-brand-500"
                 />
               </div>
@@ -722,11 +843,14 @@ export default function DoctorSchedulePage() {
           </Card>
 
           {/* Action Footer */}
-          <div className="pt-2">
-            <Button onClick={handleSaveAll} disabled={isSaving} className="w-full bg-brand-500 hover:bg-brand-600 text-white font-semibold py-5 gap-2 shadow-md">
+          <div className="sticky bottom-4 z-30 pt-2">
+            <Button onClick={handleSaveAll} disabled={savingPlanner} className="w-full bg-brand-500 hover:bg-brand-600 text-white font-semibold py-5 gap-2 shadow-md">
               <Save className="h-4.5 w-4.5" />
-              <span>{isSaving ? "Saving Planner changes..." : "Save Active Planner"}</span>
+              <span>{savingPlanner ? "Saving planner..." : "Save Active Planner"}</span>
             </Button>
+            <p className="mt-2 text-[10px] text-muted-foreground text-center">
+              Constraints save as soon as you change them. Use this button to save weekly hours and constraints together.
+            </p>
           </div>
         </div>
       </div>

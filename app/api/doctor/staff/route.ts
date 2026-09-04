@@ -7,6 +7,11 @@ import {
   requireApprovedDoctor,
   sendClinicStaffInviteEmail,
 } from "@/lib/doctor/staff-server";
+import {
+  hasAnyReceptionModule,
+  normalizeReceptionPermissions,
+  type ReceptionAccessMode,
+} from "@/lib/doctor/reception-permissions";
 
 export async function GET() {
   try {
@@ -37,11 +42,21 @@ export async function POST(request: Request) {
       email?: string;
       phone?: string;
       password?: string;
+      permissions?: unknown;
+      access?: ReceptionAccessMode;
     };
 
     if (!body.fullName?.trim() || !body.email?.trim()) {
       return NextResponse.json(
         { error: "Full name and email are required." },
+        { status: 400 }
+      );
+    }
+
+    const permissions = normalizeReceptionPermissions(body.permissions ?? { access: body.access ?? "full" });
+    if (permissions.access === "specific" && !hasAnyReceptionModule(permissions)) {
+      return NextResponse.json(
+        { error: "Choose at least one area for specific access." },
         { status: 400 }
       );
     }
@@ -56,6 +71,7 @@ export async function POST(request: Request) {
       email: body.email,
       phone: body.phone,
       password,
+      permissions,
     });
 
     const emailResult = await sendClinicStaffInviteEmail({

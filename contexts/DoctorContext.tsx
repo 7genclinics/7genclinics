@@ -6,6 +6,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
@@ -34,17 +35,22 @@ export function DoctorProvider({ children }: { children: ReactNode }) {
   const [documents, setDocuments] = useState<DoctorContextData["documents"]>({});
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const profileRef = useRef(profile);
+  profileRef.current = profile;
 
   const refresh = useCallback(async () => {
-    setIsLoading(true);
+    const keepExisting = Boolean(profileRef.current);
+    if (!keepExisting) setIsLoading(true);
     setError(null);
     try {
       const result = await getDoctorContext();
       if (!result.ok) {
         setError(result.message);
-        setProfile(null);
-        setDoctorProfile(null);
-        setDocuments({});
+        if (!keepExisting) {
+          setProfile(null);
+          setDoctorProfile(null);
+          setDocuments({});
+        }
         return;
       }
       setProfile(result.data.profile);

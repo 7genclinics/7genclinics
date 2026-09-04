@@ -1,7 +1,13 @@
 import { randomBytes } from "crypto";
 import { createClient } from "@/lib/supabase/server";
 import type { Profile } from "@/types";
+import type { Json } from "@/types/database";
 import { BRAND } from "@/lib/brand/site";
+import {
+  normalizeReceptionPermissions,
+  receptionPermissionsPayload,
+  type ReceptionPermissions,
+} from "@/lib/doctor/reception-permissions";
 
 export type ClinicStaffMember = {
   id: string;
@@ -10,6 +16,7 @@ export type ClinicStaffMember = {
   phone: string | null;
   is_active: boolean;
   created_at: string | null;
+  permissions: ReceptionPermissions;
 };
 
 export async function requireApprovedDoctor() {
@@ -51,7 +58,12 @@ export async function listDoctorClinicStaff(): Promise<ClinicStaffMember[]> {
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("list_doctor_clinic_staff");
   if (error) throw error;
-  return (data ?? []) as ClinicStaffMember[];
+  return ((data ?? []) as Array<Omit<ClinicStaffMember, "permissions"> & { permissions?: unknown }>).map(
+    (row) => ({
+      ...row,
+      permissions: normalizeReceptionPermissions(row.permissions),
+    })
+  );
 }
 
 export async function createDoctorClinicStaff(input: {
@@ -59,6 +71,7 @@ export async function createDoctorClinicStaff(input: {
   email: string;
   phone?: string;
   password: string;
+  permissions: ReceptionPermissions;
 }) {
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("provision_clinic_staff", {
@@ -67,7 +80,7 @@ export async function createDoctorClinicStaff(input: {
     p_full_name: input.fullName.trim(),
     p_phone: input.phone?.trim() ?? "",
     p_role: "receptionist",
-    p_permissions: {},
+    p_permissions: receptionPermissionsPayload(input.permissions) as Json,
   });
 
   if (error) throw new Error(error.message);
@@ -80,6 +93,18 @@ export async function setDoctorClinicStaffActive(userId: string, isActive: boole
   const { error } = await supabase.rpc("set_doctor_clinic_staff_active", {
     p_user_id: userId,
     p_is_active: isActive,
+  });
+  if (error) throw new Error(error.message);
+}
+
+export async function setDoctorClinicStaffPermissions(
+  userId: string,
+  permissions: ReceptionPermissions
+) {
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("set_doctor_clinic_staff_permissions", {
+    p_user_id: userId,
+    p_permissions: receptionPermissionsPayload(permissions) as Json,
   });
   if (error) throw new Error(error.message);
 }

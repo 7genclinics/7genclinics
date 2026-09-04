@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/client";
+import { getCurrentAuthUser } from "@/lib/auth/current-user";
 import { finalizeAppointmentCancellation } from "@/lib/appointments/cancel";
 import { sanitizeSelfProfileUpdate } from "@/lib/auth/safe-profile-update";
 import type { DoctorProfile, Profile, AppointmentStatus } from "@/types";
@@ -7,7 +8,8 @@ import { formatClinicalNotes } from "./notes";
 import {
   dayNameToIndex,
   formatSlotRange,
-  time12To24,
+  parseClockTo24,
+  weeklyScheduleToSlotRows,
 } from "./mappers";
 import type {
   AppointmentWithPatient,
@@ -76,19 +78,7 @@ async function ensureDoctorProfile(
 }
 
 export async function getDoctorContext(): Promise<DoctorContextResult> {
-  const supabase = createClient();
-
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-
-  let user = session?.user ?? null;
-  if (!user) {
-    const {
-      data: { user: fetchedUser },
-    } = await supabase.auth.getUser();
-    user = fetchedUser;
-  }
+  const user = await getCurrentAuthUser();
 
   if (!user) {
     return {
@@ -321,35 +311,62 @@ export async function saveAvailabilitySlots(
   }>,
   slotDurationMinutes = 30
 ) {
+  const user = await getCurrentAuthUser();
+  if (!user) {
+    throw new Error("Your session expired. Sign in again, then save the schedule.");
+  }
+
+  const parsed = weeklyScheduleToSlotRows(schedule, slotDurationMinutes);
+  const payload = parsed.map((row) => ({
+    day_of_week: row.day_of_week,
+    start_time: row.start_time,
+    end_time: row.end_time,
+    slot_duration_minutes: row.slot_duration_minutes,
+  }));
+
+  const supabase = createClient();
+  const { error: rpcError } = await supabase.rpc("save_doctor_availability_slots", {
+    p_doctor_id: doctorProfileId,
+    p_slots: payload,
+    p_slot_duration_minutes: slotDurationMinutes,
+  });
+
+  if (!rpcError) {
+    return getAvailabilitySlots(doctorProfileId);
+  }
+
+  const missingFn =
+    rpcError.code === "PGRST202" ||
+    /could not find the function/i.test(rpcError.message ?? "");
+  if (!missingFn) {
+    throw new Error(rpcError.message || "Failed to save availability slots.");
+  }
+
+  const { data: doctorRow, error: doctorError } = await table("doctor_profiles")
+    .select("organization_id")
+    .eq("id", doctorProfileId)
+    .single();
+  if (doctorError) throw doctorError;
+
   const { error: deleteError } = await table("availability_slots")
     .delete()
     .eq("doctor_id", doctorProfileId);
-
   if (deleteError) throw deleteError;
 
-  const rows = schedule.flatMap((daySchedule) => {
-    if (!daySchedule.isActive || daySchedule.slots.length === 0) return [];
-
-    return daySchedule.slots.map((slot) => {
-      const [startLabel, endLabel] = slot.split(" - ").map((part) => part.trim());
-      return {
-        doctor_id: doctorProfileId,
-        day_of_week: dayNameToIndex(daySchedule.day),
-        start_time: time12To24(startLabel),
-        end_time: time12To24(endLabel),
-        slot_duration_minutes: slotDurationMinutes,
-        is_active: true,
-      };
-    });
-  });
-
-  if (rows.length === 0) return [];
+  if (payload.length === 0) return [];
 
   const { data, error } = await table("availability_slots")
-    .insert(rows as Database["public"]["Tables"]["availability_slots"]["Insert"][])
+    .insert(
+      payload.map((row) => ({
+        ...row,
+        doctor_id: doctorProfileId,
+        organization_id: doctorRow?.organization_id ?? undefined,
+        is_active: true,
+      })) as Database["public"]["Tables"]["availability_slots"]["Insert"][],
+    )
     .select();
 
-  if (error) throw error;
+  if (error) throw new Error(error.message || "Failed to save availability slots.");
   return data ?? [];
 }
 
@@ -390,7 +407,27 @@ export async function updateDoctorDocuments(
   currentDocuments: DoctorDocuments,
   patch: Partial<DoctorDocuments>
 ) {
-  const merged = { ...currentDocuments, ...patch };
+  const { data: latestRow, error: latestError } = await table("doctor_profiles")
+    .select("documents")
+    .eq("id", doctorProfileId)
+    .single();
+  if (latestError) throw latestError;
+
+  const fromDb = parseDocuments(latestRow?.documents);
+  const scheduleConfig = {
+    bufferTime: 5,
+    bookingNotice: 2,
+    maxPatients: 10,
+    ...fromDb.schedule_config,
+    ...currentDocuments.schedule_config,
+    ...patch.schedule_config,
+  };
+  const merged: DoctorDocuments = {
+    ...fromDb,
+    ...currentDocuments,
+    ...patch,
+    schedule_config: scheduleConfig,
+  };
 
   const { data, error } = await table("doctor_profiles")
     .update({ documents: merged as Database["public"]["Tables"]["doctor_profiles"]["Update"]["documents"] })
@@ -535,13 +572,28 @@ export async function addDocBlockedSlot(
   startTime?: string, // "HH:MM" or omit for full-day
   endTime?: string
 ): Promise<DoctorBlockedSlot> {
+  const start = startTime ? parseClockTo24(startTime) : null;
+  const end = endTime ? parseClockTo24(endTime) : null;
+  if ((startTime && !start) || (endTime && !end)) {
+    throw new Error("Enter a valid blocked start and end time.");
+  }
+  if (start && end && start >= end) {
+    throw new Error("Blocked end time must be after start time.");
+  }
+
+  const { data: doctorRow } = await table("doctor_profiles")
+    .select("organization_id")
+    .eq("id", doctorProfileId)
+    .maybeSingle();
+
   const { data, error } = await (createClient() as any)
     .from("doctor_blocked_slots")
     .insert({
       doctor_id: doctorProfileId,
+      organization_id: doctorRow?.organization_id ?? undefined,
       blocked_date: blockedDate,
-      start_time: startTime ?? null,
-      end_time: endTime ?? null,
+      start_time: start,
+      end_time: end,
       reason: reason || "Unavailable",
     })
     .select()

@@ -1,4 +1,5 @@
 import type { ClinicStaffMember } from "./staff-server";
+import type { ReceptionPermissions } from "./reception-permissions";
 
 export async function getDoctorClinicStaff(): Promise<ClinicStaffMember[]> {
   const response = await fetch("/api/doctor/staff");
@@ -14,6 +15,7 @@ export async function createDoctorClinicStaffAccount(input: {
   email: string;
   phone?: string;
   password?: string;
+  permissions: ReceptionPermissions;
 }) {
   const response = await fetch("/api/doctor/staff", {
     method: "POST",
@@ -31,6 +33,22 @@ export async function createDoctorClinicStaffAccount(input: {
     throw new Error(payload.error ?? "Failed to create staff member");
   }
   return payload;
+}
+
+export async function setDoctorClinicStaffAccountPermissions(
+  userId: string,
+  permissions: ReceptionPermissions
+) {
+  const response = await fetch(`/api/doctor/staff/${userId}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ permissions }),
+  });
+  const payload = (await response.json()) as { staff?: ClinicStaffMember | null; error?: string };
+  if (!response.ok) {
+    throw new Error(payload.error ?? "Failed to update staff access");
+  }
+  return payload.staff;
 }
 
 export async function setDoctorClinicStaffAccountActive(userId: string, isActive: boolean) {
