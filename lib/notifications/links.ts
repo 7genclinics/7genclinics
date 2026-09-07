@@ -38,11 +38,17 @@ const BY_TYPE: Record<string, Record<PortalRole, string>> = {
     admin: "/admin/doctors",
     receptionist: "/reception/dashboard",
   },
+  organization: {
+    patient: "/patient/dashboard",
+    doctor: "/doctor/clinic",
+    admin: "/admin/organizations",
+    receptionist: "/reception/dashboard",
+  },
   chat: {
     patient: "/patient/chat",
     doctor: "/doctor/chat",
     admin: "/admin/chat",
-    receptionist: "/reception/dashboard",
+    receptionist: "/reception/chat",
   },
   assessment: {
     patient: "/patient/assessments",
@@ -114,6 +120,26 @@ export function resolveNotificationPath(
     return conversationId
       ? `${base}?conversation=${encodeURIComponent(conversationId)}`
       : base;
+  }
+
+  if (type === "payment") {
+    const appointmentId =
+      typeof m.appointment_id === "string"
+        ? m.appointment_id
+        : typeof m.appointmentId === "string"
+          ? m.appointmentId
+          : null;
+    if (portal === "patient") {
+      const event = typeof m.event === "string" ? m.event : "";
+      if (event === "payment_approved" || appointmentId) {
+        return appointmentId
+          ? `/patient/appointments?appointment=${encodeURIComponent(appointmentId)}&booked=confirmed`
+          : "/patient/appointments?booked=confirmed";
+      }
+    }
+    const paymentBase = BY_TYPE.payment[portal];
+    const paymentId = typeof m.payment_id === "string" ? m.payment_id : null;
+    return paymentId ? `${paymentBase}?payment=${encodeURIComponent(paymentId)}` : paymentBase;
   }
 
   if (type === "appointment") {

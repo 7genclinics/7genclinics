@@ -10,13 +10,13 @@ import {
   updateOrganization,
   createOrganization,
   inviteJoinPath,
-  inviteOrganizationMember,
   listMyMemberships,
   listMyOrganizations,
   listOrganizationMembers,
   listPendingInvites,
   revokeOrganizationInvite,
 } from "@/lib/org/api";
+import { resendOrganizationInvite, sendOrganizationInvite } from "@/lib/org/invite-client";
 import type {
   Organization,
   OrganizationInvite,
@@ -110,15 +110,23 @@ export default function DoctorClinicPage() {
     setError(null);
     setMessage(null);
     try {
-      const result = await inviteOrganizationMember({
+      const result = await sendOrganizationInvite({
         organizationId: manageOrg.id,
         email: inviteEmail,
         role: inviteRole,
       });
       if (result.status === "added") {
-        setMessage(`${inviteEmail} was added to ${manageOrg.name}.`);
+        setMessage(
+          result.emailSent
+            ? `${inviteEmail} was added to ${manageOrg.name} and emailed.`
+            : `${inviteEmail} was added to ${manageOrg.name}.${result.temporaryPassword ? ` Temporary password: ${result.temporaryPassword}` : ""}`,
+        );
       } else {
-        setMessage(`Invite created. Share ${window.location.origin}${inviteJoinPath(result.token)}`);
+        setMessage(
+          result.emailSent
+            ? `Invite emailed to ${inviteEmail}.`
+            : `Invite created but email was not sent. Share ${window.location.origin}${inviteJoinPath(result.token)}`,
+        );
       }
       setInviteEmail("");
       await load();
@@ -142,7 +150,7 @@ export default function DoctorClinicPage() {
       <div>
         <h1 className="text-2xl font-semibold text-slate-900">My clinic</h1>
         <p className="mt-1 text-sm text-slate-600">
-          Create your own clinic or hospital, then invite other doctors. Reception logins still live under Reception / Staff.
+          Create your own clinic or hospital, then invite other doctors by email. Reception logins can be created here or under Reception / Staff.
         </p>
       </div>
 
@@ -224,13 +232,21 @@ export default function DoctorClinicPage() {
                 {invites
                   .filter((invite) => invite.organization_id === manageOrg?.id)
                   .map((invite) => (
-                    <div key={invite.id} className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
+                    <div key={invite.id} className="flex flex-wrap items-center justify-between gap-2 rounded-md border px-3 py-2 text-sm">
                       <span>
                         Pending: {invite.email} ({invite.member_role})
                       </span>
-                      <Button variant="outline" size="sm" onClick={() => void revokeOrganizationInvite(invite.id).then(load)}>
-                        Revoke
-                      </Button>
+                      <div className="flex gap-2">
+                        <Button variant="outline" size="sm" onClick={() => void resendOrganizationInvite(invite.id).then((result) => {
+                          setMessage(result.emailSent ? `Invite resent to ${invite.email}.` : `Email was not sent${result.emailError ? `: ${result.emailError}` : ""}`);
+                          return load();
+                        }).catch((err) => setError(getErrorMessage(err, "Could not resend invite")))}>
+                          Resend email
+                        </Button>
+                        <Button variant="outline" size="sm" onClick={() => void revokeOrganizationInvite(invite.id).then(load)}>
+                          Revoke
+                        </Button>
+                      </div>
                     </div>
                   ))}
               </div>

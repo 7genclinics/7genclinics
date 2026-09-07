@@ -52,6 +52,7 @@ export async function updateSession(request: NextRequest) {
     "/assessment",
     "/about",
     "/contact",
+    "/join",
   ];
   const authRoutes = ["/login", "/register", "/forgot-password", "/pending-review"];
   const publicExact = new Set([

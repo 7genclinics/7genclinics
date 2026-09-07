@@ -192,6 +192,7 @@ export default function AdminStaffPage() {
   const { profile: currentAdmin } = useAdmin();
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const [actionId, setActionId] = useState<string | null>(null);
   const [canManage, setCanManage] = useState(false);
 
@@ -301,7 +302,7 @@ export default function AdminStaffPage() {
     setSaving(true);
     setError(null);
     try {
-      await createAdminStaffMember({
+      const result = await createAdminStaffMember({
         fullName: form.fullName,
         email: form.email,
         phone: form.phone || undefined,
@@ -312,6 +313,11 @@ export default function AdminStaffPage() {
       });
       await loadData();
       closeModal();
+      setNotice(
+        result.emailSent
+          ? `Staff account created and emailed to ${form.email.trim()}.`
+          : `Staff account created.${result.temporaryPassword ? ` Temporary password: ${result.temporaryPassword}` : result.emailError ? ` Email was not sent: ${result.emailError}` : ""}`,
+      );
     } catch (err) {
       setError(getErrorMessage(err, "Failed to create staff member"));
     } finally {
@@ -399,6 +405,9 @@ export default function AdminStaffPage() {
 
       {error && (
         <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>
+      )}
+      {notice && (
+        <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">{notice}</div>
       )}
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -577,13 +586,13 @@ export default function AdminStaffPage() {
                     </div>
                     {showAdd && (
                       <div className="space-y-2">
-                        <Label htmlFor="password">Temporary password</Label>
+                        <Label htmlFor="password">Temporary password (optional)</Label>
                         <Input
                           id="password"
                           type="password"
                           value={form.password}
                           onChange={(e) => setForm((p) => ({ ...p, password: e.target.value }))}
-                          placeholder="Min. 6 characters"
+                          placeholder="Leave blank to generate and email one"
                         />
                       </div>
                     )}
@@ -616,7 +625,7 @@ export default function AdminStaffPage() {
                     </Button>
                     <Button
                       onClick={showAdd ? handleCreate : handleUpdate}
-                      disabled={saving || !form.fullName.trim() || (showAdd && (!form.email.trim() || form.password.length < 6))}
+                      disabled={saving || !form.fullName.trim() || (showAdd && !form.email.trim())}
                     >
                       {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                       {showAdd ? "Create Staff Member" : "Save Changes"}

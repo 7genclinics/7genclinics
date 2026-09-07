@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import {
   Eye,
@@ -694,17 +694,60 @@ export function LandingEditor() {
         </div>
 
         {showPreview && (
-          <div className="hidden min-h-[70vh] overflow-hidden rounded-xl border border-border bg-slate-100 xl:block">
+          <div className="hidden min-h-[70vh] min-w-0 overflow-hidden rounded-xl border border-border bg-slate-100 xl:block">
             <div className="border-b border-border bg-white px-4 py-2 text-xs font-medium text-muted-foreground">
               Live preview
             </div>
-            <div className="h-[calc(100%-2.5rem)] overflow-auto">
-              <div className="origin-top scale-[0.72]" style={{ width: "138.8%" }}>
-                <DoctorLandingView data={previewData} preview />
-              </div>
-            </div>
+            <ScaledLandingPreview data={previewData} />
           </div>
         )}
+      </div>
+    </div>
+  );
+}
+
+const PREVIEW_PAGE_WIDTH = 1280;
+
+function ScaledLandingPreview({ data }: { data: PublicLandingPageData }) {
+  const viewportRef = useRef<HTMLDivElement>(null);
+  const pageRef = useRef<HTMLDivElement>(null);
+  const [scale, setScale] = useState(1);
+  const [scaledHeight, setScaledHeight] = useState(800);
+
+  useLayoutEffect(() => {
+    const viewport = viewportRef.current;
+    const page = pageRef.current;
+    if (!viewport || !page) return;
+
+    const update = () => {
+      const nextScale = Math.min(1, viewport.clientWidth / PREVIEW_PAGE_WIDTH);
+      setScale(nextScale);
+      setScaledHeight(page.scrollHeight * nextScale);
+    };
+
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(viewport);
+    observer.observe(page);
+    return () => observer.disconnect();
+  }, [data]);
+
+  return (
+    <div
+      ref={viewportRef}
+      className="h-[calc(100%-2.5rem)] min-w-0 overflow-x-hidden overflow-y-auto"
+    >
+      <div style={{ height: scaledHeight, width: "100%" }}>
+        <div
+          ref={pageRef}
+          style={{
+            width: PREVIEW_PAGE_WIDTH,
+            transform: `scale(${scale})`,
+            transformOrigin: "top left",
+          }}
+        >
+          <DoctorLandingView data={data} preview />
+        </div>
       </div>
     </div>
   );

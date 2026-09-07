@@ -14,6 +14,8 @@ import { useNotifications } from "@/contexts/NotificationContext";
 import type { AppNotification } from "@/lib/notifications/api";
 import { notificationHref } from "@/lib/notifications/links";
 import { ENABLE_PUSH_EVENT } from "@/components/pwa/PushNotificationManager";
+import { LanguageToggle } from "@/components/shared/LanguageToggle";
+import { useOptionalLocale } from "@/contexts/LocaleContext";
 
 function isStandalonePwa(): boolean {
   if (typeof window === "undefined") return false;
@@ -112,6 +114,8 @@ export function Header({ title, user, onMenuClick }: HeaderProps) {
   const dropdownRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
   const { notifications, unreadCount, markRead, markAllRead } = useNotifications();
+  const locale = useOptionalLocale();
+  const t = locale?.t;
 
   const [pushPermission, setPushPermission] = useState<NotificationPermission | "unsupported">("unsupported");
   const [isInstalledApp, setIsInstalledApp] = useState(false);
@@ -142,15 +146,18 @@ export function Header({ title, user, onMenuClick }: HeaderProps) {
     }, 1200);
   };
 
-  const deviceLabel = isInstalledApp ? "phone" : "device";
+  const deviceLabel = isInstalledApp
+    ? t?.("header.phone") ?? "phone"
+    : t?.("header.device") ?? "device";
   const pushStatusLabel =
     pushPermission === "granted"
-      ? `System notifications on`
+      ? t?.("header.pushOn") ?? "System notifications on"
       : pushPermission === "denied"
-        ? `System notifications blocked — tap to retry`
+        ? t?.("header.pushBlocked") ?? "System notifications blocked — tap to retry"
         : pushPermission === "unsupported"
-          ? "System notifications not supported"
-          : `Enable ${deviceLabel} notifications`;
+          ? t?.("header.pushUnsupported") ?? "System notifications not supported"
+          : t?.("header.pushEnable", { device: deviceLabel }) ??
+            `Enable ${deviceLabel} notifications`;
 
   const displayUser = user || {
     name: "User Account",
@@ -229,6 +236,7 @@ export function Header({ title, user, onMenuClick }: HeaderProps) {
 
         {/* Right side */}
         <div className="flex items-center gap-2 sm:gap-3">
+          {displayUser.role === "patient" ? <LanguageToggle /> : null}
           {/* Phone / OS push — separate from in-app bell panel */}
           {pushPermission !== "unsupported" && (
             <button
@@ -278,7 +286,7 @@ export function Header({ title, user, onMenuClick }: HeaderProps) {
                 {/* Header */}
                 <div className="flex items-center justify-between px-4 py-3 border-b border-border">
                   <div className="flex items-center gap-2">
-                    <p className="font-semibold text-sm">Notifications</p>
+                    <p className="font-semibold text-sm">{t?.("header.notifications") ?? "Notifications"}</p>
                     {unreadCount > 0 && (
                       <span className="flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-[9px] font-bold text-white">
                         {unreadCount}
@@ -291,7 +299,7 @@ export function Header({ title, user, onMenuClick }: HeaderProps) {
                       className="flex items-center gap-1 text-[11px] text-brand-600 dark:text-brand-300 hover:text-brand-700 font-semibold transition-colors"
                     >
                       <CheckCheck className="h-3.5 w-3.5" />
-                      Mark all read
+                      {t?.("header.markAllRead") ?? "Mark all read"}
                     </button>
                   )}
                 </div>
@@ -333,7 +341,7 @@ export function Header({ title, user, onMenuClick }: HeaderProps) {
                   ) : (
                     <div className="flex flex-col items-center justify-center py-10 gap-2 text-muted-foreground">
                       <Bell className="h-7 w-7 opacity-30" />
-                      <p className="text-xs">No notifications yet</p>
+                      <p className="text-xs">{t?.("header.noNotifications") ?? "No notifications yet"}</p>
                     </div>
                   )}
                 </div>
@@ -388,7 +396,7 @@ export function Header({ title, user, onMenuClick }: HeaderProps) {
                       className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-foreground hover:bg-accent cursor-pointer"
                     >
                       <User className="h-4 w-4" />
-                      <span>My Profile</span>
+                      <span>{t?.("header.myProfile") ?? "My Profile"}</span>
                     </button>
                     <button
                       onClick={() => {
@@ -398,7 +406,7 @@ export function Header({ title, user, onMenuClick }: HeaderProps) {
                       className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-foreground hover:bg-accent cursor-pointer"
                     >
                       <Settings className="h-4 w-4" />
-                      <span>Account Settings</span>
+                      <span>{t?.("header.accountSettings") ?? "Account Settings"}</span>
                     </button>
                   </div>
                   <div className="border-t border-border py-1">
@@ -409,7 +417,11 @@ export function Header({ title, user, onMenuClick }: HeaderProps) {
                       className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-destructive hover:bg-destructive/10 cursor-pointer disabled:cursor-not-allowed disabled:opacity-60"
                     >
                       <LogOut className="h-4 w-4" />
-                      <span>{isLoggingOut ? "Logging out..." : "Log Out"}</span>
+                      <span>
+                        {isLoggingOut
+                          ? t?.("common.loggingOut") ?? "Logging out..."
+                          : t?.("common.logOut") ?? "Log Out"}
+                      </span>
                     </button>
                   </div>
                 </div>

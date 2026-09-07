@@ -4,6 +4,7 @@ import type {
   ChatConversation,
   ChatMessage,
   ChatParticipant,
+  ChatUserRole,
   MessageDeleteMode,
   MessageReaction,
 } from "@/types/chat";
@@ -367,7 +368,7 @@ export async function searchMessages(conversationId: string, query: string): Pro
 
 export async function searchChatableUsers(
   query: string,
-  roles: Array<"patient" | "doctor" | "admin" | "super_admin">
+  roles: ChatUserRole[],
 ): Promise<ChatParticipant[]> {
   const supabase = createClient();
   const {

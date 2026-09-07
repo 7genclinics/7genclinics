@@ -6,9 +6,10 @@ import { useChat } from "@/contexts/ChatContext";
 import { ConversationItem } from "./ConversationItem";
 import { NewChatDialog } from "./NewChatDialog";
 import { Search, Plus, MessageSquare } from "lucide-react";
+import type { ChatUserRole } from "@/types/chat";
 
 interface ConversationListProps {
-  allowedRoles: Array<"patient" | "doctor" | "admin" | "super_admin">;
+  allowedRoles: ChatUserRole[];
   onSelect: () => void;
 }
 

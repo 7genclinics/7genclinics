@@ -1,38 +1,23 @@
-import { NextResponse } from "next/server";
-import { createServerClient } from "@supabase/ssr";
-import { cookies } from "next/headers";
+import { createRouteHandlerClient } from "@/lib/supabase/route-handler";
 import { getErrorMessage } from "@/lib/errors";
-import { getSupabaseKey, getSupabaseUrl } from "@/lib/supabase/env";
 
 /** Mark a consultation ongoing only after the assigned doctor joins Jitsi. */
 export async function POST(request: Request) {
-  try {
-    const cookieStore = await cookies();
-    const supabase = createServerClient(getSupabaseUrl(), getSupabaseKey(), {
-      cookies: {
-        getAll: () => cookieStore.getAll(),
-        setAll: (cs) =>
-          cs.forEach(({ name, value, options }) =>
-            cookieStore.set(name, value, options)
-          ),
-      },
-    });
+  const { supabase, json } = await createRouteHandlerClient();
 
+  try {
     const {
       data: { user },
     } = await supabase.auth.getUser();
     if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const { appointmentId } = (await request.json()) as {
       appointmentId?: string;
     };
     if (!appointmentId) {
-      return NextResponse.json(
-        { error: "appointmentId is required" },
-        { status: 400 }
-      );
+      return json({ error: "appointmentId is required" }, { status: 400 });
     }
 
     const { data: appointment, error: fetchError } = await supabase
@@ -47,10 +32,10 @@ export async function POST(request: Request) {
       .maybeSingle();
 
     if (fetchError) {
-      return NextResponse.json({ error: fetchError.message }, { status: 500 });
+      return json({ error: fetchError.message }, { status: 500 });
     }
     if (!appointment) {
-      return NextResponse.json({ error: "Appointment not found" }, { status: 404 });
+      return json({ error: "Appointment not found" }, { status: 404 });
     }
 
     const row = appointment as unknown as {
@@ -59,13 +44,10 @@ export async function POST(request: Request) {
       doctor: { user_id: string } | null;
     };
     if (row.doctor?.user_id !== user.id) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      return json({ error: "Forbidden" }, { status: 403 });
     }
     if (["cancelled", "completed", "no_show", "expired_no_show"].includes(row.status)) {
-      return NextResponse.json(
-        { error: "This appointment cannot be started." },
-        { status: 409 }
-      );
+      return json({ error: "This appointment cannot be started." }, { status: 409 });
     }
 
     if (row.status === "scheduled") {
@@ -76,13 +58,13 @@ export async function POST(request: Request) {
         .eq("id", appointmentId)
         .eq("status", "scheduled");
       if (updateError) {
-        return NextResponse.json({ error: updateError.message }, { status: 500 });
+        return json({ error: updateError.message }, { status: 500 });
       }
     }
 
-    return NextResponse.json({ ok: true, status: "ongoing" });
+    return json({ ok: true, status: "ongoing" });
   } catch (err) {
-    return NextResponse.json(
+    return json(
       { error: getErrorMessage(err, "Internal error") },
       { status: 500 }
     );

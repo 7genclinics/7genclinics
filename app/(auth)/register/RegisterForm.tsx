@@ -74,6 +74,10 @@ export default function RegisterForm() {
   const redirect = searchParams.get("redirect") ?? "/patient/dashboard";
   const roleParam = searchParams.get("role") === "doctor" ? "doctor" : "patient";
 
+  const emailParam = searchParams.get("email") ?? "";
+  const safeRedirect =
+    redirect.startsWith("/") && !redirect.startsWith("//") ? redirect : null;
+
   const [accountType, setAccountType] = useState<"patient" | "doctor">(roleParam);
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -96,7 +100,7 @@ export default function RegisterForm() {
 
   const patientForm = useForm<PatientFormValues>({
     resolver: zodResolver(baseSchema),
-    defaultValues: { city: "Lahore" },
+    defaultValues: { city: "Lahore", email: emailParam },
   });
 
   const doctorForm = useForm<DoctorFormValues>({
@@ -107,6 +111,7 @@ export default function RegisterForm() {
       experienceYears: 0,
       consultationFee: 3000,
       taxonomyTags: [],
+      email: emailParam,
     },
   });
 
@@ -140,14 +145,15 @@ export default function RegisterForm() {
       // email always points to the live site, never localhost.
       const siteUrl =
         process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ??
-        "https://stress-saviour.vercel.app";
+        "https://apnaclinic.pk";
 
+      const joinAfterSignup = Boolean(safeRedirect?.startsWith("/join/"));
       const postConfirmNext =
         role === "patient"
-          ? redirect && redirect.startsWith("/") && !redirect.startsWith("//")
-            ? redirect
-            : "/patient/dashboard"
-          : "/pending-review";
+          ? safeRedirect ?? "/patient/dashboard"
+          : joinAfterSignup
+            ? safeRedirect!
+            : "/pending-review";
 
       const { data: authData, error: signUpError } = await supabase.auth.signUp({
         email: data.email,
@@ -191,7 +197,7 @@ export default function RegisterForm() {
           console.warn("Doctor taxonomy sync after signup failed", taxonomyErr);
         }
         router.refresh();
-        router.push("/pending-review");
+        router.push(joinAfterSignup && safeRedirect ? safeRedirect : "/pending-review");
         return;
       }
 

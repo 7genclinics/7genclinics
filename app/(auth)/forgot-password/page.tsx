@@ -24,7 +24,7 @@ export default function ForgotPasswordPage() {
       const supabase = createClient();
       const siteUrl =
         process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ??
-        "https://stress-saviour.vercel.app";
+        "https://apnaclinic.pk";
 
       const { error: resetError } = await supabase.auth.resetPasswordForEmail(
         email.trim().toLowerCase(),

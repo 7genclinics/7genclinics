@@ -5,11 +5,9 @@ import {
 } from "@/lib/appointments/session-timing";
 import { getErrorMessage } from "@/lib/errors";
 import { sendSystemPushForNotification } from "@/lib/notifications/server-push";
+import { appPublicUrl, resendFromAddress, resendReplyTo } from "@/lib/email/resend";
 
-const SITE_URL = (process.env.NEXT_PUBLIC_APP_URL ?? "https://stress-saviour.vercel.app").replace(
-  /\/$/,
-  ""
-);
+const SITE_URL = appPublicUrl();
 
 interface AppointmentRow {
   id: string;
@@ -47,8 +45,9 @@ async function sendEmail(to: string, subject: string, html: string) {
     method: "POST",
     headers: { Authorization: `Bearer ${resendKey}`, "Content-Type": "application/json" },
     body: JSON.stringify({
-      from: "Apna Clinic <noreply@apnaclinic.pk>",
+      from: resendFromAddress(),
       to: [to],
+      reply_to: resendReplyTo(),
       subject,
       html,
     }),

@@ -31,6 +31,7 @@ import { usePaymentsRealtime } from "@/lib/realtime/usePaymentsRealtime";
 import type { PaymentMethod, PaymentStatus } from "@/types";
 import { getErrorMessage } from "@/lib/errors";
 import { matchesAnyFlexibleText } from "@/lib/search/flexible-match";
+import { useLocale } from "@/contexts/LocaleContext";
 
 type StatusFilter = "all" | PaymentStatus;
 type SortField = "date" | "amount";
@@ -146,6 +147,7 @@ const ITEMS_PER_PAGE = 8;
 
 export default function PatientPaymentsPage() {
   const { profile } = usePatient();
+  const { t } = useLocale();
   const [transactions, setTransactions] = useState<PatientPaymentRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -307,9 +309,9 @@ export default function PatientPaymentsPage() {
 
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight">Billing & Payments</h2>
+          <h2 className="text-2xl font-bold tracking-tight">{t("payments.title")}</h2>
           <p className="text-sm text-muted-foreground mt-1">
-            Track your consultation payments, invoices, and platform transactions.
+            {t("payments.subtitle")}
           </p>
         </div>
         <div className="flex items-center gap-2">

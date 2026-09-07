@@ -8,6 +8,7 @@ const ALLOWED_ROLES: ChatParticipant["role"][] = [
   "doctor",
   "admin",
   "super_admin",
+  "receptionist",
 ];
 
 function parseRoles(raw: string | null): ChatParticipant["role"][] {

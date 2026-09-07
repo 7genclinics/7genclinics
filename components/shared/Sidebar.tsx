@@ -32,6 +32,7 @@ import {
 import { useContext, useState } from "react";
 import { ChatContext } from "@/contexts/ChatContext";
 import { useSubscription } from "@/contexts/SubscriptionContext";
+import { useOptionalLocale } from "@/contexts/LocaleContext";
 import { BrandMark } from "@/components/brand/BrandMark";
 
 interface SidebarProps {
@@ -49,17 +50,20 @@ export function Sidebar({ role, isOpen = false, onClose, allowedHrefs }: Sidebar
   const totalUnread = chatCtx?.totalUnread ?? 0;
   const { snapshot } = useSubscription();
   const frozen = Boolean(snapshot?.frozen);
+  const locale = useOptionalLocale();
+  const t = locale?.t;
+  const isRtl = locale?.isUrdu ?? false;
 
   // Define navigation items based on role
   const navigationMap = {
     patient: [
-      { name: "Dashboard", href: "/patient/dashboard", icon: LayoutDashboard },
-      { name: "Appointments", href: "/patient/appointments", icon: Calendar },
-      { name: "Browse Doctors", href: "/patient/doctors", icon: UserCheck },
-      { name: "Messages", href: "/patient/chat", icon: MessageSquare, badge: totalUnread },
-      { name: "Prescriptions", href: "/patient/prescriptions", icon: FileText },
-      { name: "Payments", href: "/patient/payments", icon: CreditCard },
-      { name: "My Profile", href: "/patient/profile", icon: User },
+      { name: t?.("nav.dashboard") ?? "Dashboard", href: "/patient/dashboard", icon: LayoutDashboard },
+      { name: t?.("nav.appointments") ?? "Appointments", href: "/patient/appointments", icon: Calendar },
+      { name: t?.("nav.doctors") ?? "Browse Doctors", href: "/patient/doctors", icon: UserCheck },
+      { name: t?.("nav.messages") ?? "Messages", href: "/patient/chat", icon: MessageSquare, badge: totalUnread },
+      { name: t?.("nav.prescriptions") ?? "Prescriptions", href: "/patient/prescriptions", icon: FileText },
+      { name: t?.("nav.payments") ?? "Payments", href: "/patient/payments", icon: CreditCard },
+      { name: t?.("nav.profile") ?? "My Profile", href: "/patient/profile", icon: User },
     ],
     doctor: [
       { name: "Dashboard", href: "/doctor/dashboard", icon: LayoutDashboard },
@@ -82,6 +86,7 @@ export function Sidebar({ role, isOpen = false, onClose, allowedHrefs }: Sidebar
       { name: "Queue", href: "/reception/queue", icon: Ticket },
       { name: "Walk-In", href: "/reception/walk-in", icon: Stethoscope },
       { name: "Patients", href: "/reception/patients", icon: Users },
+      { name: "Messages", href: "/reception/chat", icon: MessageSquare, badge: totalUnread },
       { name: "Billing", href: "/reception/billing", icon: Wallet },
       { name: "Medicines", href: "/reception/medicines", icon: Pill },
       { name: "Subscription", href: "/reception/subscription", icon: Repeat },
@@ -179,7 +184,11 @@ export function Sidebar({ role, isOpen = false, onClose, allowedHrefs }: Sidebar
           className="group flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-destructive hover:bg-destructive/10 transition-all duration-200 cursor-pointer disabled:cursor-not-allowed disabled:opacity-60"
         >
           <LogOut className="h-4 w-4 shrink-0 transition-transform duration-200 group-hover:translate-x-0.5" />
-          <span>{isLoggingOut ? "Logging out..." : "Log Out"}</span>
+          <span>
+            {isLoggingOut
+              ? t?.("common.loggingOut") ?? "Logging out..."
+              : t?.("common.logOut") ?? "Log Out"}
+          </span>
         </button>
       </div>
     </div>
@@ -188,7 +197,12 @@ export function Sidebar({ role, isOpen = false, onClose, allowedHrefs }: Sidebar
   return (
     <>
       {/* Desktop Sidebar (Permanent) */}
-      <aside className="hidden md:fixed md:inset-y-0 md:z-30 md:flex md:w-64 md:flex-col">
+      <aside
+        className={cn(
+          "hidden md:fixed md:inset-y-0 md:z-30 md:flex md:w-64 md:flex-col",
+          isRtl ? "md:right-0" : "md:left-0",
+        )}
+      >
         {sidebarContent}
       </aside>
 
@@ -202,8 +216,9 @@ export function Sidebar({ role, isOpen = false, onClose, allowedHrefs }: Sidebar
       >
         <aside
           className={cn(
-            "fixed inset-y-0 left-0 z-50 w-72 transform transition-transform duration-300 ease-out bg-card",
-            isOpen ? "translate-x-0" : "-translate-x-full"
+            "fixed inset-y-0 z-50 w-72 transform transition-transform duration-300 ease-out bg-card",
+            isRtl ? "right-0" : "left-0",
+            isOpen ? "translate-x-0" : isRtl ? "translate-x-full" : "-translate-x-full",
           )}
           onClick={(e) => e.stopPropagation()}
         >

@@ -7,6 +7,9 @@ import {
 } from "@/lib/admin/staff-server";
 import type { AdminPermissions } from "@/types";
 import type { StaffAccessPreset } from "@/lib/admin/staff-permissions";
+import { generateStaffPassword } from "@/lib/doctor/staff-server";
+import { BRAND } from "@/lib/brand/site";
+import { sendStaffCredentialsEmail } from "@/lib/org/invite-email";
 import { getErrorMessage } from "@/lib/errors";
 
 export async function GET() {
@@ -43,28 +46,59 @@ export async function POST(request: Request) {
       permissions?: Partial<AdminPermissions>;
     };
 
-    if (!body.fullName?.trim() || !body.email?.trim() || !body.password || body.password.length < 6) {
+    if (!body.fullName?.trim() || !body.email?.trim()) {
       return NextResponse.json(
-        { error: "Full name, email, and a password of at least 6 characters are required." },
+        { error: "Full name and email are required." },
         { status: 400 }
       );
     }
+
+    const password =
+      body.password && body.password.length >= 6
+        ? body.password
+        : generateStaffPassword();
+    const role =
+      body.role === "super_admin" ? "super_admin" : body.role === "receptionist" ? "receptionist" : "admin";
+    const loginPath =
+      role === "receptionist"
+        ? "/login?role=receptionist&redirect=/reception/dashboard"
+        : "/login?role=admin&redirect=/admin/dashboard";
 
     const userId = await createStaffMember({
       fullName: body.fullName,
       email: body.email,
       phone: body.phone,
-      password: body.password,
-      role: body.role === "super_admin" ? "super_admin" : body.role === "receptionist" ? "receptionist" : "admin",
+      password,
+      role,
       accessPreset: body.accessPreset ?? "operations",
       permissions: body.permissions,
       createdBy: auth.userId,
     });
 
+    const emailResult = await sendStaffCredentialsEmail({
+      to: body.email.trim().toLowerCase(),
+      name: body.fullName.trim(),
+      email: body.email.trim().toLowerCase(),
+      password,
+      invitedByName: auth.profile.full_name,
+      roleLabel: role === "receptionist" ? "reception" : role === "super_admin" ? "super admin" : "admin",
+      loginPath,
+      subject: `Your ${BRAND.name} staff login`,
+      heading: "Staff access",
+    });
+
     const staff = await listStaffMembers();
     const created = staff.find((member) => member.id === userId);
 
-    return NextResponse.json({ staff: created ?? null }, { status: 201 });
+    return NextResponse.json(
+      {
+        staff: created ?? null,
+        emailSent: emailResult.sent,
+        emailError: emailResult.sent ? undefined : emailResult.reason,
+        temporaryPassword: emailResult.sent ? undefined : password,
+      },
+      { status: 201 }
+    );
   } catch (error) {
     return NextResponse.json(
       { error: getErrorMessage(error, "Failed to create staff member") },

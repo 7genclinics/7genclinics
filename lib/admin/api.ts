@@ -180,7 +180,7 @@ export async function createAdminStaffMember(input: {
   fullName: string;
   email: string;
   phone?: string;
-  password: string;
+  password?: string;
   role: "admin" | "super_admin" | "receptionist";
   accessPreset: "full" | "operations" | "finance" | "support" | "custom";
   permissions?: Partial<AdminPermissions>;
@@ -190,11 +190,17 @@ export async function createAdminStaffMember(input: {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(input),
   });
-  const payload = (await response.json()) as { staff?: AdminStaffMember; error?: string };
+  const payload = (await response.json()) as {
+    staff?: AdminStaffMember;
+    error?: string;
+    emailSent?: boolean;
+    emailError?: string;
+    temporaryPassword?: string;
+  };
   if (!response.ok) {
     throw new Error(payload.error ?? "Failed to create staff member");
   }
-  return payload.staff!;
+  return payload;
 }
 
 export async function updateAdminStaffMember(
@@ -682,23 +688,32 @@ export async function approvePatientPayment(
 
   if (aptError) throw aptError;
 
+  const aptRow = payment as AdminPayment & {
+    doctor?: { user_id?: string; profile?: { full_name?: string } | null };
+  };
+  const doctorUserId = aptRow.doctor?.user_id;
+  const doctorName = aptRow.doctor?.profile?.full_name
+    ? `Dr. ${aptRow.doctor.profile.full_name}`
+    : "";
+
   await notifyPatientPayment(
     row.patient_id,
-    "Booking confirmed",
-    `Your payment of PKR ${Math.round(Number(row.amount)).toLocaleString("en-PK")} was approved. Your appointment is now confirmed.`,
-    { payment_id: paymentId, appointment_id: row.appointment_id }
+    "Payment approved",
+    `Your payment of PKR ${Math.round(Number(row.amount)).toLocaleString("en-PK")} was approved. Your appointment${doctorName ? ` with ${doctorName}` : ""} is now confirmed.`,
+    {
+      payment_id: paymentId,
+      appointment_id: row.appointment_id,
+      event: "payment_approved",
+    }
   );
 
-  // Also notify the doctor that the appointment is now confirmed
-  const aptRow = payment as AdminPayment & { doctor?: { user_id?: string } };
-  const doctorUserId = aptRow.doctor?.user_id;
   if (doctorUserId) {
     await safeNotify(() => createNotification(
       doctorUserId,
-      "Appointment confirmed",
-      `A patient's payment was verified. Your appointment is now confirmed and scheduled.`,
+      "Payment approved",
+      `A patient's payment was approved. The appointment is now confirmed and scheduled.`,
       "appointment",
-      { appointment_id: row.appointment_id, payment_id: paymentId }
+      { appointment_id: row.appointment_id, payment_id: paymentId, event: "payment_approved" }
     ));
   }
 

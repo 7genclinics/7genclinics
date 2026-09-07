@@ -1,11 +1,9 @@
-import { NextResponse } from "next/server";
-import { createServerClient } from "@supabase/ssr";
-import { cookies } from "next/headers";
-import { getSupabaseUrl, getSupabaseKey } from "@/lib/supabase/env";
+import { createRouteHandlerClient } from "@/lib/supabase/route-handler";
 import { getErrorMessage } from "@/lib/errors";
 import {
   buildRoomName,
   buildRoomPath,
+  consultationJwtExpiryUnix,
   getJitsiDomain,
   isJitsiJwtConfigured,
   isSelfHostedJitsiConfigured,
@@ -14,30 +12,21 @@ import {
 
 /** Patients/doctors may join from this many minutes before the scheduled start. */
 const JOIN_EARLY_MINUTES = 10;
-/** Each request gets a fresh short-lived token, capped at the appointment end. */
-const TOKEN_TTL_MINUTES = 15;
 
 export async function POST(request: Request) {
-  try {
-    const cookieStore = await cookies();
-    const supabase = createServerClient(getSupabaseUrl(), getSupabaseKey(), {
-      cookies: {
-        getAll: () => cookieStore.getAll(),
-        setAll: (cs) =>
-          cs.forEach(({ name, value, options }) => cookieStore.set(name, value, options)),
-      },
-    });
+  const { supabase, json } = await createRouteHandlerClient();
 
+  try {
     const {
       data: { user },
     } = await supabase.auth.getUser();
     if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const { appointmentId } = (await request.json()) as { appointmentId?: string };
     if (!appointmentId) {
-      return NextResponse.json({ error: "appointmentId is required" }, { status: 400 });
+      return json({ error: "appointmentId is required" }, { status: 400 });
     }
 
     const { data: appointment, error: aptError } = await supabase
@@ -56,10 +45,10 @@ export async function POST(request: Request) {
       .maybeSingle();
 
     if (aptError) {
-      return NextResponse.json({ error: aptError.message }, { status: 500 });
+      return json({ error: aptError.message }, { status: 500 });
     }
     if (!appointment) {
-      return NextResponse.json({ error: "Appointment not found" }, { status: 404 });
+      return json({ error: "Appointment not found" }, { status: 404 });
     }
 
     const apt = appointment as unknown as {
@@ -77,7 +66,6 @@ export async function POST(request: Request) {
       patient: { id: string; full_name: string; avatar_url: string | null; email: string } | null;
     };
 
-    // ── Access control: only the assigned doctor, the patient, or an admin ──
     const { data: profile } = await supabase
       .from("profiles")
       .select("id, role, full_name, avatar_url, email")
@@ -93,15 +81,15 @@ export async function POST(request: Request) {
     } | null;
 
     if (!me) {
-      return NextResponse.json({ error: "Profile not found" }, { status: 403 });
+      return json({ error: "Profile not found" }, { status: 403 });
     }
 
     const isDoctor = apt.doctor?.user_id === me.id;
     const isPatient = apt.patient_id === me.id;
-    const isAdmin = me.role === "admin";
+    const isAdmin = me.role === "admin" || me.role === "super_admin";
 
     if (!isDoctor && !isPatient && !isAdmin) {
-      return NextResponse.json(
+      return json(
         { error: "You are not a participant of this appointment." },
         { status: 403 }
       );
@@ -112,30 +100,24 @@ export async function POST(request: Request) {
         apt.status === "cancelled"
           ? "This appointment has been cancelled and the meeting room is closed."
           : "This appointment is no longer available.";
-      return NextResponse.json(
-        { error: label, message: label },
-        { status: 409 }
-      );
+      return json({ error: label, message: label }, { status: 409 });
     }
     if (apt.status === "pending_payment") {
-      return NextResponse.json(
+      return json(
         { error: "Payment for this appointment has not been confirmed yet." },
         { status: 409 }
       );
     }
 
-    // ── Time window ──
     const scheduledStart = new Date(apt.scheduled_at).getTime();
     const scheduledEnd = scheduledStart + apt.duration_minutes * 60_000;
     const windowOpens = scheduledStart - JOIN_EARLY_MINUTES * 60_000;
     const windowCloses = scheduledEnd;
     const now = Date.now();
 
-    // Doctor/patient tokens are only issued inside the appointment window.
-    // Rejoining an ongoing room does not bypass expiry.
     if (!isAdmin) {
       if (now < windowOpens) {
-        return NextResponse.json(
+        return json(
           {
             error: "too_early",
             message: `The consultation room opens ${JOIN_EARLY_MINUTES} minutes before the scheduled time.`,
@@ -145,7 +127,7 @@ export async function POST(request: Request) {
         );
       }
       if (now > windowCloses) {
-        return NextResponse.json(
+        return json(
           { error: "expired", message: "The join window for this consultation has ended." },
           { status: 410 }
         );
@@ -153,17 +135,16 @@ export async function POST(request: Request) {
     }
 
     if (!isSelfHostedJitsiConfigured()) {
-      return NextResponse.json(
+      return json(
         {
           error: "video_not_configured",
           message:
-            "Secure video hosting is temporarily unavailable. Please contact support.",
+            "Secure video hosting is not configured. Set JITSI_DOMAIN, JITSI_APP_ID, and JITSI_APP_SECRET, then retry.",
         },
         { status: 503 }
       );
     }
 
-    // ── Secure room name (persisted once per appointment) ──
     const room = buildRoomName(apt.id);
     const domain = getJitsiDomain();
     const canonicalUrl = `https://${domain}/${buildRoomPath(room)}`;
@@ -175,8 +156,6 @@ export async function POST(request: Request) {
         .eq("id", apt.id);
     }
 
-    // The doctor is the moderator. The appointment becomes ongoing only after
-    // Jitsi confirms that the doctor actually joined (POST /api/video/started).
     const role: "moderator" | "participant" = isDoctor || isAdmin ? "moderator" : "participant";
 
     const displayName = isDoctor
@@ -190,14 +169,24 @@ export async function POST(request: Request) {
       email: me.email,
       avatarUrl: me.avatar_url,
       moderator: role === "moderator",
-      expiresAt: Math.floor(
-        (isAdmin
-          ? now + TOKEN_TTL_MINUTES * 60_000
-          : Math.min(windowCloses, now + TOKEN_TTL_MINUTES * 60_000)) / 1000
-      ),
+      expiresAt: consultationJwtExpiryUnix({
+        nowMs: now,
+        windowClosesMs: windowCloses,
+        isAdmin,
+      }),
     });
 
-    return NextResponse.json({
+    if (!jwt) {
+      return json(
+        {
+          error: "video_not_configured",
+          message: "Secure video hosting could not issue a meeting token. Contact support.",
+        },
+        { status: 503 }
+      );
+    }
+
+    return json({
       domain,
       room: buildRoomPath(room),
       jwt,
@@ -211,7 +200,7 @@ export async function POST(request: Request) {
       patientName: apt.patient?.full_name ?? "Patient",
     });
   } catch (err) {
-    return NextResponse.json(
+    return json(
       { error: getErrorMessage(err, "Internal error") },
       { status: 500 }
     );

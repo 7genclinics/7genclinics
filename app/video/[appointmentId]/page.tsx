@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { Clock, Loader2, PhoneOff, ShieldCheck, Video, XCircle } from "lucide-react";
+import { getCurrentAuthUser } from "@/lib/auth/current-user";
 
 interface JoinInfo {
   domain: string;
@@ -53,17 +54,29 @@ export default function VideoConsultationPage() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const apiRef = useRef<any>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const leavingRef = useRef(false);
 
   const requestJoin = useCallback(async (): Promise<
     | { ok: true; info: JoinInfo }
     | { ok: false; status: number; error: string; message?: string; opensAt?: string }
   > => {
-    const res = await fetch("/api/video/join", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ appointmentId }),
-    });
-    const body = await res.json();
+    await getCurrentAuthUser();
+
+    const post = () =>
+      fetch("/api/video/join", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ appointmentId }),
+      });
+
+    let res = await post();
+    if (res.status === 401) {
+      await getCurrentAuthUser();
+      res = await post();
+    }
+
+    const body = await res.json().catch(() => ({}));
     if (!res.ok) {
       return {
         ok: false,
@@ -97,8 +110,11 @@ export default function VideoConsultationPage() {
       if (stopped) return;
       if (!result.ok) {
         if (result.status === 401) {
-          const returnTo = `/video/${appointmentId}`;
-          router.replace(`/login?redirect=${encodeURIComponent(returnTo)}`);
+          setPhase({
+            kind: "error",
+            message:
+              "Your clinic session expired. Sign in again, then open this consultation from Appointments — you will not be asked to log into the video room itself.",
+          });
           return;
         }
         if (result.status === 425 && result.opensAt) {
@@ -127,6 +143,7 @@ export default function VideoConsultationPage() {
     pollRef.current = setInterval(async () => {
       const result = await requestJoin();
       if (!result.ok) {
+        if (result.status === 401) return;
         if (pollRef.current) clearInterval(pollRef.current);
         setPhase({
           kind: "error",
@@ -156,44 +173,41 @@ export default function VideoConsultationPage() {
     if (phase.kind !== "in_call" || !containerRef.current || !window.JitsiMeetExternalAPI) return;
     const { info } = phase;
 
+    leavingRef.current = false;
     const api = new window.JitsiMeetExternalAPI(info.domain, {
       roomName: info.room,
       parentNode: containerRef.current,
-      ...(info.jwt ? { jwt: info.jwt } : {}),
+      jwt: info.jwt,
       userInfo: { displayName: info.displayName },
       configOverwrite: {
         prejoinConfig: { enabled: false },
         disableDeepLinking: true,
         startWithAudioMuted: false,
         subject: `Consultation — ${info.doctorName} / ${info.patientName}`,
-        // Without JWT auth the lobby would show a moderator prompt; keep it off.
         enableLobbyChat: false,
+        enableWelcomePage: false,
+        requireDisplayName: false,
+        hideEmailInSettings: true,
       },
       interfaceConfigOverwrite: {
         SHOW_JITSI_WATERMARK: false,
         MOBILE_APP_PROMO: false,
+        AUTHENTICATION_ENABLE: false,
       },
     });
     apiRef.current = api;
 
     api.addListener("videoConferenceJoined", async () => {
-      // The doctor owns lobby control. Patients enter as non-moderators and
-      // remain in Jitsi's lobby until the doctor admits them.
-      if (info.role === "moderator") {
+      if (info.role !== "moderator") return;
+      if (info.jwtConfigured) {
         api.executeCommand("toggleLobby", true);
-        const started = await fetch("/api/video/started", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ appointmentId }),
-        });
-        if (!started.ok) {
-          setPhase({
-            kind: "error",
-            message:
-              "The consultation opened, but its status could not be updated. Please return to appointments and try again.",
-          });
-        }
       }
+      await fetch("/api/video/started", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ appointmentId }),
+      });
     });
     api.addListener(
       "errorOccurred",
@@ -203,17 +217,22 @@ export default function VideoConsultationPage() {
           text.includes("auth") ||
           text.includes("token") ||
           text.includes("expired") ||
-          text.includes("not allowed");
+          text.includes("not allowed") ||
+          text.includes("login");
         setPhase({
           kind: "error",
           message: isAuthError
-            ? "This meeting link has expired or is invalid. Return to your appointments and join again to get a fresh link."
+            ? "The meeting token expired. Use Try again — you should rejoin without a Jitsi login screen."
             : "The video connection failed. Check your connection and try joining again.",
         });
       }
     );
-    api.addListener("readyToClose", () => leaveToDashboard(info.role));
-    api.addListener("videoConferenceLeft", () => leaveToDashboard(info.role));
+    api.addListener("readyToClose", () => {
+      if (leavingRef.current) leaveToDashboard(info.role);
+    });
+    api.addListener("videoConferenceLeft", () => {
+      if (leavingRef.current) leaveToDashboard(info.role);
+    });
 
     return () => {
       api.dispose();
@@ -257,7 +276,17 @@ export default function VideoConsultationPage() {
           <Button variant="outline" onClick={() => router.back()}>
             Go back
           </Button>
-          <Button onClick={() => window.location.reload()}>Try again</Button>
+          {phase.message.toLowerCase().includes("sign in") ? (
+            <Button
+              onClick={() =>
+                router.replace(`/login?redirect=${encodeURIComponent(`/video/${appointmentId}`)}`)
+              }
+            >
+              Sign in
+            </Button>
+          ) : (
+            <Button onClick={() => window.location.reload()}>Try again</Button>
+          )}
         </div>
       </Shell>
     );
@@ -311,6 +340,7 @@ export default function VideoConsultationPage() {
           size="sm"
           className="bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold h-8"
           onClick={() => {
+            leavingRef.current = true;
             apiRef.current?.executeCommand("hangup");
             leaveToDashboard(phase.info.role);
           }}

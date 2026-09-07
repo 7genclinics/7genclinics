@@ -1,8 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import {
@@ -29,9 +29,13 @@ import { AppointmentFinancialDetails } from "@/components/shared/AppointmentFina
 import { PaymentProofUpload } from "@/components/patient/PaymentProofUpload";
 import { fetchPlatformPaymentAccounts, FALLBACK_PAYMENT_ACCOUNTS, type PaymentAccountDetails, type BookablePaymentMethod } from "@/lib/payment/config";
 import { getErrorMessage } from "@/lib/errors";
+import { usePaymentsRealtime } from "@/lib/realtime/usePaymentsRealtime";
+import { useLocale } from "@/contexts/LocaleContext";
 
 export default function PatientAppointmentsPage() {
   const searchParams = useSearchParams();
+  const router = useRouter();
+  const { t } = useLocale();
   const [activeTab, setActiveTab] = useState<"Upcoming" | "Completed" | "Cancelled" | "Expired" | "All">("Upcoming");
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
@@ -46,6 +50,8 @@ export default function PatientAppointmentsPage() {
   const [actionLoading, setActionLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [bannerKind, setBannerKind] = useState<"pending" | "approved" | "awaiting" | null>(null);
+  const seenPaidIds = useRef<Set<string> | null>(null);
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [uploadProofFile, setUploadProofFile] = useState<File | null>(null);
   const [platformAccounts, setPlatformAccounts] = useState<PaymentAccountDetails[]>(
@@ -53,17 +59,14 @@ export default function PatientAppointmentsPage() {
   );
   const itemsPerPage = 6;
 
-  useEffect(() => {
-    if (searchParams.get("booked") === "pending") {
-      setSuccessMessage(
-        "Payment proof submitted! Please wait for admin to verify. You will receive a notification once confirmed."
-      );
-    } else if (searchParams.get("booked") === "awaiting") {
-      setSuccessMessage(
-        "Appointment booked! Open it below and add your payment screenshot when ready to request confirmation."
-      );
-    }
-  }, [searchParams]);
+  const clearBookedQuery = useCallback(() => {
+    const booked = searchParams.get("booked");
+    if (!booked) return;
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("booked");
+    const next = params.toString();
+    router.replace(next ? `/patient/appointments?${next}` : "/patient/appointments", { scroll: false });
+  }, [router, searchParams]);
 
   const loadAppointments = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
@@ -92,6 +95,71 @@ export default function PatientAppointmentsPage() {
   useAppointmentSessionSync(true, () => {
     loadAppointments(true);
   });
+
+  usePaymentsRealtime({
+    enabled: true,
+    onChange: () => {
+      loadAppointments(true);
+    },
+  });
+
+  useEffect(() => {
+    if (loading) return;
+
+    const booked = searchParams.get("booked");
+    const awaitingReview = appointments.some((apt) => apt.status === "Payment Review");
+    const paidUpcoming = appointments.some(
+      (apt) => apt.isPaid && ["Confirmed", "Ready", "Starting Soon"].includes(apt.status)
+    );
+
+    const paidIds = new Set(appointments.filter((apt) => apt.isPaid).map((apt) => apt.id));
+    let newlyApproved = false;
+    if (seenPaidIds.current) {
+      for (const id of paidIds) {
+        if (!seenPaidIds.current.has(id)) {
+          newlyApproved = true;
+          break;
+        }
+      }
+    }
+    seenPaidIds.current = paidIds;
+
+    if (booked === "awaiting") {
+      setBannerKind("awaiting");
+      setSuccessMessage(
+        "Appointment booked! Open it below and add your payment screenshot when ready to request confirmation."
+      );
+      return;
+    }
+
+    const showApproved =
+      booked === "confirmed" ||
+      newlyApproved ||
+      (booked === "pending" && !awaitingReview && paidUpcoming);
+
+    if (showApproved) {
+      setBannerKind("approved");
+      setSuccessMessage(
+        "Payment approved! Your booking is confirmed. You also have a payment approval notification in the bell."
+      );
+      if (booked === "pending" || booked === "confirmed") clearBookedQuery();
+      return;
+    }
+
+    if (booked === "pending" && awaitingReview) {
+      setBannerKind("pending");
+      setSuccessMessage(
+        "Payment proof submitted! Please wait for admin to verify. You will receive a notification once confirmed."
+      );
+      return;
+    }
+
+    if (booked === "pending" && !awaitingReview) {
+      setBannerKind(null);
+      setSuccessMessage(null);
+      clearBookedQuery();
+    }
+  }, [appointments, clearBookedQuery, loading, searchParams]);
 
   const getFilteredAppointments = () => {
     let filtered = [...appointments];
@@ -224,15 +292,15 @@ export default function PatientAppointmentsPage() {
     <div className="space-y-6 max-w-6xl mx-auto">
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight">My Appointments</h2>
+          <h2 className="text-2xl font-bold tracking-tight">{t("appointments.title")}</h2>
           <p className="text-sm text-muted-foreground mt-1">
-            Manage your upcoming and past consultations with doctors.
+            {t("appointments.subtitle")}
           </p>
         </div>
         <Link href="/patient/doctors">
           <Button className="bg-brand-500 hover:bg-brand-600 text-white">
             <Plus className="h-4 w-4 mr-2" />
-            Book New Appointment
+            {t("appointments.bookNew")}
           </Button>
         </Link>
       </div>
@@ -244,9 +312,25 @@ export default function PatientAppointmentsPage() {
       )}
 
       {successMessage && (
-        <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800 flex items-start gap-2">
+        <div className={`rounded-lg border px-4 py-3 text-sm flex items-start gap-2 ${
+          bannerKind === "pending"
+            ? "border-violet-200 bg-violet-50 text-violet-900"
+            : "border-emerald-200 bg-emerald-50 text-emerald-800"
+        }`}>
           <BadgeCheck className="h-4 w-4 shrink-0 mt-0.5" />
-          <span>{successMessage}</span>
+          <span className="flex-1">{successMessage}</span>
+          <button
+            type="button"
+            aria-label="Dismiss"
+            className="shrink-0 rounded-md p-0.5 text-current/70 hover:bg-black/5"
+            onClick={() => {
+              setSuccessMessage(null);
+              setBannerKind(null);
+              clearBookedQuery();
+            }}
+          >
+            <X className="h-4 w-4" />
+          </button>
         </div>
       )}
 

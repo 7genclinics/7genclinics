@@ -6,9 +6,10 @@ import { ConversationList } from "./ConversationList";
 import { ChatWindow } from "./ChatWindow";
 import { useChat } from "@/contexts/ChatContext";
 import { MessageSquare } from "lucide-react";
+import type { ChatUserRole } from "@/types/chat";
 
 interface ChatLayoutProps {
-  allowedRoles: Array<"patient" | "doctor" | "admin" | "super_admin">;
+  allowedRoles: ChatUserRole[];
 }
 
 export function ChatLayout({ allowedRoles }: ChatLayoutProps) {

@@ -2,9 +2,12 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
+import { X } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { useSubscription } from "@/contexts/SubscriptionContext";
 import { formatPkr } from "@/lib/subscription/types";
+
+const FROZEN_DISMISS_KEY = "sub-reminder-frozen-dismissed";
 
 export function SubscriptionReminder({
   portal,
@@ -13,7 +16,7 @@ export function SubscriptionReminder({
 }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { snapshot } = useSubscription();
+  const { snapshot, refresh } = useSubscription();
   const [open, setOpen] = useState(false);
 
   const href = portal === "doctor" ? "/doctor/subscription" : "/reception/subscription";
@@ -28,6 +31,9 @@ export function SubscriptionReminder({
   useEffect(() => {
     if (!shouldPrompt || !snapshot) {
       setOpen(false);
+      if (snapshot?.phase === "ok") {
+        window.sessionStorage.removeItem(FROZEN_DISMISS_KEY);
+      }
       return;
     }
 
@@ -41,6 +47,7 @@ export function SubscriptionReminder({
     }
 
     if (snapshot.phase === "frozen") {
+      if (window.sessionStorage.getItem(FROZEN_DISMISS_KEY)) return;
       setOpen(true);
       return;
     }
@@ -52,6 +59,22 @@ export function SubscriptionReminder({
     window.sessionStorage.setItem("sub-grace-last", String(now));
     setOpen(true);
   }, [shouldPrompt, snapshot]);
+
+  useEffect(() => {
+    if (snapshot?.phase !== "frozen") return;
+    const timer = window.setInterval(() => {
+      void refresh();
+    }, 15_000);
+    return () => window.clearInterval(timer);
+  }, [snapshot?.phase, refresh]);
+
+  const closeDialog = () => {
+    if (snapshot?.phase === "frozen") {
+      window.sessionStorage.setItem(FROZEN_DISMISS_KEY, "1");
+    }
+    setOpen(false);
+    void refresh();
+  };
 
   if (!open || !snapshot) return null;
 
@@ -71,19 +94,27 @@ export function SubscriptionReminder({
 
   return (
     <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/40 p-4">
-      <div className="w-full max-w-md rounded-2xl border bg-card p-5 shadow-xl">
-        <p className="text-xs font-semibold uppercase tracking-wide text-brand-600">Subscription</p>
+      <div className="relative w-full max-w-md rounded-2xl border bg-card p-5 shadow-xl">
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          aria-label="Close"
+          className="absolute right-2 top-2 h-8 w-8 text-muted-foreground"
+          onClick={closeDialog}
+        >
+          <X className="h-4 w-4" />
+        </Button>
+        <p className="pr-8 text-xs font-semibold uppercase tracking-wide text-brand-600">Subscription</p>
         <h3 className="mt-1 text-lg font-semibold">{title}</h3>
         <p className="mt-2 text-sm text-muted-foreground">{body}</p>
         <div className="mt-4 flex justify-end gap-2">
-          {snapshot.phase !== "frozen" && (
-            <Button variant="outline" onClick={() => setOpen(false)}>
-              Later
-            </Button>
-          )}
+          <Button variant="outline" onClick={closeDialog}>
+            Close
+          </Button>
           <Button
             onClick={() => {
-              setOpen(false);
+              closeDialog();
               router.push(href);
             }}
           >

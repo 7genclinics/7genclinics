@@ -51,7 +51,7 @@ function ReceptionAccessPicker({
         >
           <p className="text-sm font-medium text-slate-900">Whole access</p>
           <p className="mt-1 text-xs text-slate-500">
-            Dashboard, queue, walk-in, patients, billing, medicines, and subscription.
+            Dashboard, queue, walk-in, patients, messages/chat, billing, medicines, and subscription.
           </p>
         </button>
         <button
@@ -94,7 +94,14 @@ function ReceptionAccessPicker({
                   }
                   className="mt-0.5 h-4 w-4 accent-brand-500"
                 />
-                <span className="text-sm text-slate-800">{RECEPTION_ACCESS_LABELS[key]}</span>
+                <span>
+                  <span className="text-sm text-slate-800">{RECEPTION_ACCESS_LABELS[key]}</span>
+                  {key === "chat" && (
+                    <span className="mt-0.5 block text-xs text-slate-500">
+                      Chat with clinic patients when you are busy.
+                    </span>
+                  )}
+                </span>
               </label>
             );
           })}

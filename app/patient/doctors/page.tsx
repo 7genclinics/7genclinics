@@ -22,9 +22,11 @@ import {
 import { useDoctorSlotAvailability } from "@/lib/hooks/useDoctorSlotAvailability";
 import type { DoctorWithProfile } from "@/lib/patient/types";
 import type { AppointmentType } from "@/types";
+import { useLocale } from "@/contexts/LocaleContext";
 
 export default function PatientDoctorsPage() {
   const router = useRouter();
+  const { t } = useLocale();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedSpecialty, setSelectedSpecialty] = useState("All");
   const [doctors, setDoctors] = useState<DoctorWithProfile[]>([]);
@@ -192,18 +194,18 @@ export default function PatientDoctorsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-xl font-bold tracking-tight">Browse Verified Doctors</h2>
+        <h2 className="text-xl font-bold tracking-tight">{t("doctors.title")}</h2>
         <p className="text-sm text-muted-foreground">
-          Consult online with approved mental health professionals. Appointments sync with your doctor&apos;s dashboard.
+          {t("doctors.subtitle")}
         </p>
       </div>
 
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+          <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground rtl:left-auto rtl:right-3" />
           <input
             type="text"
-            placeholder="Search by doctor name or specialty..."
+            placeholder={t("doctors.searchPlaceholder")}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full h-10 pl-9 pr-4 rounded-lg border border-border bg-card text-sm focus:outline-none focus:ring-1 focus:ring-primary"

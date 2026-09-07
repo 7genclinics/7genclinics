@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { AccountStatus, DoctorStatus, Profile, UserRole } from "@/types";
+import { BRAND } from "@/lib/brand/site";
 
 export interface AccountAccessResult {
   profile: Profile | null;
@@ -41,7 +42,7 @@ export function evaluateAccountAccess(
       rejected: true,
       message:
         profile.rejection_reason ??
-        "Your account application was not approved. Please contact support@apnaclinic.pk for help.",
+        `Your account application was not approved. Please contact ${BRAND.supportEmail} for help.`,
     };
   }
 
@@ -55,7 +56,7 @@ export function evaluateAccountAccess(
       message:
         profile.role === "doctor"
           ? "Your doctor application is pending review. An administrator will verify your credentials before you can access the dashboard."
-          : "Your account is not active yet. If this continues, contact support@apnaclinic.pk.",
+          : `Your account is not active yet. If this continues, contact ${BRAND.supportEmail}.`,
     };
   }
 
@@ -66,7 +67,7 @@ export function evaluateAccountAccess(
       canAccessDashboard: false,
       pendingReview: false,
       rejected: true,
-      message: "Your account has been deactivated. Please contact support@apnaclinic.pk.",
+      message: `Your account has been deactivated. Please contact ${BRAND.supportEmail}.`,
     };
   }
 
@@ -79,7 +80,7 @@ export function evaluateAccountAccess(
         pendingReview: false,
         rejected: true,
         message:
-          "Your doctor application was not approved. Please contact support@apnaclinic.pk for more information.",
+          `Your doctor application was not approved. Please contact ${BRAND.supportEmail} for more information.`,
       };
     }
 

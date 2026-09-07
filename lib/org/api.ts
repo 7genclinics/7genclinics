@@ -117,7 +117,7 @@ export async function listOrganizationMembers(organizationId: string): Promise<O
 export async function listPendingInvites(organizationId: string): Promise<OrganizationInvite[]> {
   const { data, error } = await db()
     .from("organization_invites")
-    .select("id, organization_id, email, member_role, status, expires_at, invited_by, created_at")
+    .select("id, organization_id, email, member_role, token, status, expires_at, invited_by, created_at")
     .eq("organization_id", organizationId)
     .eq("status", "pending")
     .order("created_at", { ascending: false });

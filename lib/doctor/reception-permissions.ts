@@ -3,6 +3,7 @@ export const RECEPTION_ACCESS_KEYS = [
   "queue",
   "walk_in",
   "patients",
+  "chat",
   "billing",
   "medicines",
   "subscription",
@@ -23,6 +24,7 @@ export const RECEPTION_ACCESS_LABELS: Record<ReceptionAccessKey, string> = {
   queue: "Queue",
   walk_in: "Walk-in registration",
   patients: "Patients",
+  chat: "Messages / chat",
   billing: "Billing",
   medicines: "Medicines",
   subscription: "Subscription",
@@ -33,6 +35,7 @@ export const RECEPTION_ACCESS_HREFS: Record<ReceptionAccessKey, string> = {
   queue: "/reception/queue",
   walk_in: "/reception/walk-in",
   patients: "/reception/patients",
+  chat: "/reception/chat",
   billing: "/reception/billing",
   medicines: "/reception/medicines",
   subscription: "/reception/subscription",
@@ -43,6 +46,7 @@ export const ALL_RECEPTION_MODULES: ReceptionModuleMap = {
   queue: true,
   walk_in: true,
   patients: true,
+  chat: true,
   billing: true,
   medicines: true,
   subscription: true,
@@ -53,6 +57,7 @@ export const NO_RECEPTION_MODULES: ReceptionModuleMap = {
   queue: false,
   walk_in: false,
   patients: false,
+  chat: false,
   billing: false,
   medicines: false,
   subscription: false,
@@ -125,6 +130,7 @@ export function hasAnyReceptionModule(permissions: ReceptionPermissions): boolea
 export function receptionKeyForPath(path: string): ReceptionAccessKey | null {
   if (path.includes("/walk-in")) return "walk_in";
   if (path.includes("/queue")) return "queue";
+  if (path.includes("/chat")) return "chat";
   if (path.includes("/patients")) return "patients";
   if (path.includes("/billing")) return "billing";
   if (path.includes("/medicines")) return "medicines";

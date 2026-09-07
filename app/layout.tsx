@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Syne, Manrope, Poppins, Playfair_Display } from "next/font/google";
+import { Syne, Manrope, Poppins, Playfair_Display, Noto_Nastaliq_Urdu } from "next/font/google";
 import { ServiceWorkerRegistration } from "@/components/pwa/ServiceWorkerRegistration";
 import { BRAND } from "@/lib/brand/site";
 import { SITE_ORIGIN, SITE_URL } from "@/lib/seo/site";
@@ -27,6 +27,13 @@ const poppins = Poppins({
 const playfair = Playfair_Display({
   subsets: ["latin"],
   variable: "--font-serif",
+  display: "swap",
+});
+
+const notoNastaliq = Noto_Nastaliq_Urdu({
+  subsets: ["arabic"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-urdu",
   display: "swap",
 });
 
@@ -88,7 +95,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${manrope.variable} ${syne.variable} ${poppins.variable} ${playfair.variable}`}>
+    <html lang="en" className={`${manrope.variable} ${syne.variable} ${poppins.variable} ${playfair.variable} ${notoNastaliq.variable}`}>
       <body className="font-sans antialiased">
         <ServiceWorkerRegistration />
         {children}

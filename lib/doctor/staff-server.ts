@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import type { Profile } from "@/types";
 import type { Json } from "@/types/database";
 import { BRAND } from "@/lib/brand/site";
+import { sendStaffCredentialsEmail } from "@/lib/org/invite-email";
 import {
   normalizeReceptionPermissions,
   receptionPermissionsPayload,
@@ -116,68 +117,15 @@ export async function sendClinicStaffInviteEmail(input: {
   email: string;
   password: string;
 }): Promise<{ sent: boolean; reason?: string }> {
-  const resendKey = process.env.RESEND_API_KEY;
-  if (!resendKey) {
-    return { sent: false, reason: "RESEND_API_KEY not configured" };
-  }
-
-  const siteUrl = (process.env.NEXT_PUBLIC_APP_URL ?? "https://apnaclinic.pk").replace(/\/$/, "");
-  const loginUrl = `${siteUrl}/login?role=receptionist&redirect=/reception/dashboard`;
-  const from =
-    process.env.RESEND_FROM ?? "Apna Clinic <noreply@stresssaviors.pk>";
-
-  const html = `
-    <div style="font-family:Inter,sans-serif;max-width:600px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden;border:1px solid #e2e8f0">
-      <div style="background:linear-gradient(135deg,#0d9488,#0284c7);padding:28px 32px">
-        <p style="margin:0;color:#fff;font-size:13px;letter-spacing:.12em;text-transform:uppercase">${BRAND.name}</p>
-        <h1 style="margin:8px 0 0;color:#fff;font-size:22px">Reception desk access</h1>
-      </div>
-      <div style="padding:28px 32px;color:#334155;line-height:1.6">
-        <p>Hi ${escapeHtml(input.staffName)},</p>
-        <p>
-          <strong>${escapeHtml(input.doctorName)}</strong> created a reception / staff login for you
-          on ${BRAND.name}. Use these details to sign in to the front desk.
-        </p>
-        <div style="margin:20px 0;padding:16px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px">
-          <p style="margin:0 0 8px"><strong>Email:</strong> ${escapeHtml(input.email)}</p>
-          <p style="margin:0"><strong>Temporary password:</strong> ${escapeHtml(input.password)}</p>
-        </div>
-        <p>Please change this password after your first login if your clinic requires it.</p>
-        <a href="${loginUrl}"
-           style="display:inline-block;margin-top:8px;padding:12px 24px;background:#0d9488;color:#fff;border-radius:8px;text-decoration:none;font-weight:600">
-          Open reception login
-        </a>
-        <p style="color:#94a3b8;font-size:12px;margin-top:28px">${BRAND.name} · Front desk access</p>
-      </div>
-    </div>
-  `;
-
-  const res = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${resendKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      from,
-      to: [input.to],
-      subject: `Your ${BRAND.name} reception login`,
-      html,
-    }),
+  return sendStaffCredentialsEmail({
+    to: input.to,
+    name: input.staffName,
+    email: input.email,
+    password: input.password,
+    invitedByName: input.doctorName,
+    roleLabel: "reception / staff",
+    loginPath: "/login?role=receptionist&redirect=/reception/dashboard",
+    subject: `Your ${BRAND.name} reception login`,
+    heading: "Reception desk access",
   });
-
-  if (!res.ok) {
-    const reason = await res.text();
-    return { sent: false, reason };
-  }
-
-  return { sent: true };
-}
-
-function escapeHtml(value: string) {
-  return value
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
 }

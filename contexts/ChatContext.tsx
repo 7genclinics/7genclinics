@@ -31,6 +31,7 @@ import type {
   MessageReaction,
   MessageRead,
   ChatParticipant,
+  ChatUserRole,
 } from "@/types/chat";
 import { createChatNotification } from "@/lib/notifications/api";
 import { playNotificationSound } from "@/lib/notifications/sound";
@@ -63,7 +64,7 @@ interface ChatContextValue {
   setReplyTo: (msg: ChatMessage | null) => void;
   refreshConversations: () => Promise<void>;
   broadcastTyping: (isTyping: boolean) => void;
-  searchUsers: (query: string, roles: Array<"patient" | "doctor" | "admin" | "super_admin">) => Promise<ChatParticipant[]>;
+  searchUsers: (query: string, roles: ChatUserRole[]) => Promise<ChatParticipant[]>;
   clearActiveChat: () => Promise<void>;
   deleteActiveChat: () => Promise<void>;
 }
@@ -260,7 +261,7 @@ export function ChatProvider({
   const searchUsers = useCallback(
     async (
       query: string,
-      roles: Array<"patient" | "doctor" | "admin" | "super_admin">,
+      roles: ChatUserRole[],
     ) => {
       const params = new URLSearchParams({
         q: query,

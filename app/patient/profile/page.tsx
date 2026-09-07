@@ -11,9 +11,11 @@ import { updateUserProfile } from "@/lib/patient/api";
 import { formatDate } from "@/lib/patient/mappers";
 import type { Gender } from "@/types";
 import { getErrorMessage } from "@/lib/errors";
+import { useLocale } from "@/contexts/LocaleContext";
 
 export default function PatientProfilePage() {
   const { profile, setProfile } = usePatient();
+  const { t } = useLocale();
   const [profileForm, setProfileForm] = useState({
     fullName: profile.full_name,
     email: profile.email,
@@ -69,9 +71,9 @@ export default function PatientProfilePage() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-xl font-bold tracking-tight">Profile Settings</h2>
+        <h2 className="text-xl font-bold tracking-tight">{t("profile.title")}</h2>
         <p className="text-sm text-muted-foreground">
-          Update your personal details, contact coordinates, and location settings.
+          {t("profile.subtitle")}
         </p>
       </div>
 

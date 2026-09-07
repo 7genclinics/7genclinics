@@ -35,6 +35,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { getErrorMessage } from "@/lib/errors";
+import { useLocale } from "@/contexts/LocaleContext";
 
 const FILTER_TABS: { id: PrescriptionFilterType; label: string }[] = [
   { id: "all", label: "All" },
@@ -59,6 +60,7 @@ const DATE_RANGE_OPTIONS: { id: PrescriptionDateRange; label: string }[] = [
 
 export default function PatientPrescriptionsPage() {
   const { profile } = usePatient();
+  const { t } = useLocale();
   const [prescriptions, setPrescriptions] = useState<PatientPrescription[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -158,9 +160,9 @@ export default function PatientPrescriptionsPage() {
     <div className="space-y-6 max-w-6xl mx-auto">
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight">Prescriptions Directory</h2>
+          <h2 className="text-2xl font-bold tracking-tight">{t("prescriptions.title")}</h2>
           <p className="text-sm text-muted-foreground mt-1">
-            View clinical notes and prescriptions from your completed consultations.
+            {t("prescriptions.subtitle")}
           </p>
         </div>
         <div className="flex gap-2">

@@ -51,8 +51,7 @@ Redeploy the app after setting them. Never expose `JITSI_APP_SECRET` through a
 
 1. The join API verifies the Supabase user, appointment participant, payment,
    status, and time window.
-2. It issues a fresh HS256 JWT for at most 15 minutes, never beyond the
-   scheduled appointment end.
+2. It issues a JWT valid through the appointment end plus a short grace period.
 3. Doctor tokens contain `moderator: true`; patient tokens contain
    `moderator: false`.
 4. The doctor creates the conference and enables Jitsi lobby mode.

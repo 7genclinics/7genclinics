@@ -6,7 +6,7 @@ import { ChatLayout } from "@/components/chat/ChatLayout";
 export default function AdminChatPage() {
   return (
     <Suspense fallback={<ChatPageFallback />}>
-      <ChatLayout allowedRoles={["doctor", "patient", "super_admin"]} />
+      <ChatLayout allowedRoles={["doctor", "patient", "super_admin", "receptionist"]} />
     </Suspense>
   );
 }

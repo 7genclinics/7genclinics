@@ -9,6 +9,7 @@ import {
   Clock, Star, TrendingUp, Shield, CheckCircle, DollarSign, Loader2,
 } from "lucide-react";
 import { usePatient } from "@/contexts/PatientContext";
+import { useLocale } from "@/contexts/LocaleContext";
 import { UserAvatar } from "@/components/shared/UserAvatar";
 import { DashboardWelcomeBanner } from "@/components/shared/DashboardWelcomeBanner";
 import { DashboardBrandDecoration } from "@/components/shared/DashboardBrandDecoration";
@@ -32,6 +33,7 @@ import {
 
 export default function PatientDashboardPage() {
   const { profile } = usePatient();
+  const { t, locale } = useLocale();
   const [loading, setLoading] = useState(true);
   const [appointments, setAppointments] = useState<ReturnType<typeof mapToPatientAppointment>[]>([]);
   const [dashboardStats, setDashboardStats] = useState<ReturnType<typeof buildPatientDashboardStats> | null>(null);
@@ -74,26 +76,29 @@ export default function PatientDashboardPage() {
   const recentDoctorsList = useMemo(() => getRecentDoctors(rawAppointments), [rawAppointments]);
 
   const spentDescription = useMemo(() => {
-    if (!dashboardStats) return "Loading…";
+    if (!dashboardStats) return t("common.loading");
     const { netSpent, paidSessionCount, avgPerSession, pendingRefundCount, pendingRefundAmount } =
       dashboardStats;
     if (netSpent === 0 && paidSessionCount === 0) {
       if (pendingRefundCount > 0) {
-        return `${formatCurrency(pendingRefundAmount)} refund pending`;
+        return t("dashboard.refundPending", { amount: formatCurrency(pendingRefundAmount) });
       }
-      return "No payments yet";
+      return t("dashboard.noPaymentsYet");
     }
     const avg =
       paidSessionCount > 0
-        ? `Avg ${formatCurrency(avgPerSession)}/session · ${paidSessionCount} paid`
+        ? t("dashboard.avgPerSession", {
+            amount: formatCurrency(avgPerSession),
+            count: paidSessionCount,
+          })
         : "";
     if (pendingRefundCount > 0) {
-      return [avg, `${formatCurrency(pendingRefundAmount)} refund pending`]
+      return [avg, t("dashboard.refundPending", { amount: formatCurrency(pendingRefundAmount) })]
         .filter(Boolean)
         .join(" · ");
     }
-    return avg || "Net spend after refunds";
-  }, [dashboardStats]);
+    return avg || t("dashboard.netSpendAfterRefunds");
+  }, [dashboardStats, t]);
 
   const nextAptDoctorAvatar = useMemo(() => {
     if (!nextApt) return null;
@@ -103,41 +108,45 @@ export default function PatientDashboardPage() {
 
   const stats = [
     {
-      title: "Upcoming Appointments",
+      title: t("dashboard.upcomingAppointments"),
       value: String(upcoming.length),
-      subtitle: "Scheduled",
+      subtitle: t("dashboard.scheduled"),
       description: nextApt
-        ? `Next: ${formatRelativeDate(nextApt.scheduledAt)} at ${nextApt.time}`
-        : "No upcoming sessions",
+        ? t("dashboard.nextAt", {
+            when: formatRelativeDate(nextApt.scheduledAt),
+            time: nextApt.time,
+          })
+        : t("dashboard.noUpcomingSessions"),
       icon: Calendar,
       color: "text-brand-500 bg-brand-50",
       href: "/patient/appointments",
     },
     {
-      title: "Active Prescriptions",
+      title: t("dashboard.activePrescriptions"),
       value: String(prescriptionCount),
-      subtitle: "Available",
-      description: prescriptionCount > 0 ? "From completed consultations" : "None yet",
+      subtitle: t("dashboard.available"),
+      description:
+        prescriptionCount > 0 ? t("dashboard.fromCompleted") : t("dashboard.noneYet"),
       icon: FileText,
       color: "text-emerald-600 bg-emerald-50",
       href: "/patient/prescriptions",
     },
     {
-      title: "Total Sessions",
+      title: t("dashboard.totalSessions"),
       value: String(completedCount),
-      subtitle: "Completed",
+      subtitle: t("dashboard.completed"),
       description:
         dashboardStats && dashboardStats.activeBookings > completedCount
-          ? `${dashboardStats.activeBookings} total bookings`
-          : "Consultations held",
+          ? t("dashboard.totalBookings", { count: dashboardStats.activeBookings })
+          : t("dashboard.consultationsHeld"),
       icon: Activity,
       color: "text-purple-600 bg-purple-50",
       href: "/patient/appointments",
     },
     {
-      title: "Total Spent",
+      title: t("dashboard.totalSpent"),
       value: formatCurrency(dashboardStats?.netSpent ?? 0),
-      subtitle: "Net",
+      subtitle: t("dashboard.net"),
       description: spentDescription,
       icon: DollarSign,
       color: "text-amber-600 bg-amber-50",
@@ -150,14 +159,14 @@ export default function PatientDashboardPage() {
     for (const apt of appointments.slice(0, 5)) {
       if (apt.status === "Completed") {
         items.push({
-          action: `Completed session with ${apt.doctorName}`,
+          action: t("dashboard.completedSessionWith", { doctor: apt.doctorName }),
           time: timeAgo(apt.scheduledAt),
           icon: CheckCircle,
           color: "text-green-600",
         });
       } else if (["Confirmed", "Ready", "Pending"].includes(apt.status)) {
         items.push({
-          action: `Upcoming appointment with ${apt.doctorName}`,
+          action: t("dashboard.upcomingWith", { doctor: apt.doctorName }),
           time: timeAgo(apt.createdAt),
           icon: Calendar,
           color: "text-amber-600",
@@ -165,26 +174,57 @@ export default function PatientDashboardPage() {
       }
     }
     return items.slice(0, 4);
-  }, [appointments]);
+  }, [appointments, t]);
 
   const healthMetrics = [
     {
-      label: "Sessions Attended",
+      label: t("dashboard.sessionsAttended"),
       value: `${completedCount}/${Math.max(completedCount, 1)}`,
       percentage: completedCount > 0 ? 100 : 0,
       color: "bg-green-500",
     },
     {
-      label: "Upcoming Care",
-      value: `${upcoming.length} booked`,
+      label: t("dashboard.upcomingCare"),
+      value: t("dashboard.booked", { count: upcoming.length }),
       percentage: Math.min(upcoming.length * 25, 100),
       color: "bg-brand-500",
     },
     {
-      label: "Consultation Goal",
+      label: t("dashboard.consultationGoal"),
       value: `${completedCount}/5`,
       percentage: Math.min((completedCount / 5) * 100, 100),
       color: "bg-purple-500",
+    },
+  ];
+
+  const quickActions = [
+    {
+      title: t("dashboard.findDoctor"),
+      description: t("dashboard.findDoctorDesc"),
+      href: "/patient/doctors",
+      icon: Search,
+      color: "bg-brand-50 text-brand-500",
+    },
+    {
+      title: t("dashboard.bookAppointment"),
+      description: t("dashboard.bookAppointmentDesc"),
+      href: "/patient/doctors",
+      icon: Plus,
+      color: "bg-green-50 text-green-600",
+    },
+    {
+      title: t("dashboard.viewPrescriptions"),
+      description: t("dashboard.viewPrescriptionsDesc"),
+      href: "/patient/prescriptions",
+      icon: FileText,
+      color: "bg-purple-50 text-purple-600",
+    },
+    {
+      title: t("dashboard.paymentHistory"),
+      description: t("dashboard.paymentHistoryDesc"),
+      href: "/patient/payments",
+      icon: CreditCard,
+      color: "bg-amber-50 text-amber-600",
     },
   ];
 
@@ -197,21 +237,24 @@ export default function PatientDashboardPage() {
   }
 
   return (
-    <div className="p-4 sm:p-6 space-y-4 sm:space-y-6 max-w-[1600px] mx-auto">
+    <div key={locale} className="p-4 sm:p-6 space-y-4 sm:space-y-6 max-w-[1600px] mx-auto">
       <DashboardWelcomeBanner
         name={profile.full_name}
         avatarUrl={profile.avatar_url}
         badge={
           <span className="inline-flex items-center gap-1 rounded-full bg-white/20 px-2 py-0.5 text-[10px] font-medium backdrop-blur-md sm:gap-1.5 sm:px-3 sm:py-1 sm:text-xs">
             <Heart className="h-3 w-3 animate-pulse fill-white" />
-            Pakistan&apos;s Premier Telehealth
+            {t("dashboard.badge")}
           </span>
         }
-        title={`Assalam-o-Alaikum, ${getFirstName(profile.full_name)}!`}
+        title={t("dashboard.greeting", { name: getFirstName(profile.full_name) })}
         description={
           nextApt
-            ? `Welcome back. You have an upcoming ${nextApt.type.toLowerCase()} consultation with ${nextApt.doctorName}.`
-            : "Welcome back to your Apna Clinic portal. Book a consultation when you're ready."
+            ? t("dashboard.welcomeWithApt", {
+                type: nextApt.type.toLowerCase(),
+                doctor: nextApt.doctorName,
+              })
+            : t("dashboard.welcomeDefault")
         }
         decoration={<DashboardBrandDecoration />}
       />
@@ -251,8 +294,8 @@ export default function PatientDashboardPage() {
         <div className="lg:col-span-7 space-y-4 sm:space-y-6">
           <Card>
             <CardHeader className="pb-3 sm:pb-6">
-              <CardTitle className="text-base sm:text-lg">Next Appointment</CardTitle>
-              <CardDescription className="text-xs sm:text-sm">Your next scheduled mental health consultation</CardDescription>
+              <CardTitle className="text-base sm:text-lg">{t("dashboard.nextAppointment")}</CardTitle>
+              <CardDescription className="text-xs sm:text-sm">{t("dashboard.nextAppointmentDesc")}</CardDescription>
             </CardHeader>
             <CardContent className="px-4 sm:px-6">
               {nextApt ? (
@@ -281,11 +324,11 @@ export default function PatientDashboardPage() {
                     </div>
                     <div className="flex items-center gap-2 text-slate-600">
                       <Video className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-brand-500 flex-shrink-0" />
-                      <span className="truncate">{nextApt.type} Consultation</span>
+                      <span className="truncate">{t("dashboard.consultation", { type: nextApt.type })}</span>
                     </div>
                     <div className="flex items-center gap-2 text-slate-600">
                       <DollarSign className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-brand-500 flex-shrink-0" />
-                      <span>Fee: {formatCurrency(nextApt.consultationFee)}</span>
+                      <span>{t("dashboard.fee", { amount: formatCurrency(nextApt.consultationFee) })}</span>
                     </div>
                     <div className="flex items-center gap-2 text-slate-600">
                       <Clock className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-brand-500 flex-shrink-0" />
@@ -300,14 +343,14 @@ export default function PatientDashboardPage() {
                         <Link href={nextApt.roomUrl} className="flex-1">
                           <Button className="w-full bg-brand-500 hover:bg-brand-600 text-white gap-2 h-9 sm:h-10 text-xs sm:text-sm shadow-lg shadow-brand-400/20">
                             <Video className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                            <span>Join Consultation</span>
+                            <span>{t("dashboard.joinConsultation")}</span>
                           </Button>
                         </Link>
                       ) : (
                         <div className="flex-1">
                           <Button disabled className="w-full h-9 sm:h-10 text-xs sm:text-sm opacity-60">
                             <Video className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-2" />
-                            Not available yet
+                            {t("dashboard.notAvailableYet")}
                           </Button>
                         </div>
                       )
@@ -315,23 +358,23 @@ export default function PatientDashboardPage() {
                       <div className="flex-1">
                         <Button disabled className="w-full h-9 sm:h-10 text-xs sm:text-sm opacity-60">
                           <Video className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-2" />
-                          Join unavailable
+                          {t("dashboard.joinUnavailable")}
                         </Button>
                       </div>
                     )}
                     <Link href="/patient/appointments" className="flex-1 xs:flex-none">
                       <Button variant="outline" className="w-full h-9 sm:h-10 text-xs sm:text-sm">
-                        View All
+                        {t("common.viewAll")}
                       </Button>
                     </Link>
                   </div>
                 </div>
               ) : (
                 <div className="text-center py-8 text-sm text-muted-foreground">
-                  <p>No upcoming appointments.</p>
+                  <p>{t("dashboard.noUpcomingAppointments")}</p>
                   <Link href="/patient/doctors">
                     <Button className="mt-4 bg-brand-500 hover:bg-brand-600 text-white" size="sm">
-                      Book a Doctor
+                      {t("dashboard.bookADoctor")}
                     </Button>
                   </Link>
                 </div>
@@ -343,8 +386,8 @@ export default function PatientDashboardPage() {
             <CardHeader className="pb-3 sm:pb-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <CardTitle className="text-base sm:text-lg">Your Health Journey</CardTitle>
-                  <CardDescription className="text-xs sm:text-sm">Track your progress and achievements</CardDescription>
+                  <CardTitle className="text-base sm:text-lg">{t("dashboard.healthJourney")}</CardTitle>
+                  <CardDescription className="text-xs sm:text-sm">{t("dashboard.healthJourneyDesc")}</CardDescription>
                 </div>
                 <TrendingUp className="h-5 w-5 text-green-600" />
               </div>
@@ -371,16 +414,11 @@ export default function PatientDashboardPage() {
         <div className="lg:col-span-5 space-y-4 sm:space-y-6">
           <Card>
             <CardHeader className="pb-3 sm:pb-4">
-              <CardTitle className="text-base sm:text-lg">Quick Services</CardTitle>
-              <CardDescription className="text-xs sm:text-sm">Instant actions to manage your health portal</CardDescription>
+              <CardTitle className="text-base sm:text-lg">{t("dashboard.quickServices")}</CardTitle>
+              <CardDescription className="text-xs sm:text-sm">{t("dashboard.quickServicesDesc")}</CardDescription>
             </CardHeader>
             <CardContent className="grid gap-2 sm:gap-3 px-4 sm:px-6">
-              {[
-                { title: "Find a Doctor", description: "Search verified specialists", href: "/patient/doctors", icon: Search, color: "bg-brand-50 text-brand-500" },
-                { title: "Book Appointment", description: "Schedule new session", href: "/patient/doctors", icon: Plus, color: "bg-green-50 text-green-600" },
-                { title: "View Prescriptions", description: "Download documents", href: "/patient/prescriptions", icon: FileText, color: "bg-purple-50 text-purple-600" },
-                { title: "Payment History", description: "Track transactions", href: "/patient/payments", icon: CreditCard, color: "bg-amber-50 text-amber-600" },
-              ].map((action, i) => {
+              {quickActions.map((action, i) => {
                 const Icon = action.icon;
                 return (
                   <Link key={i} href={action.href} className="group">
@@ -394,7 +432,7 @@ export default function PatientDashboardPage() {
                           <p className="text-[10px] sm:text-xs text-slate-600 mt-1 truncate">{action.description}</p>
                         </div>
                       </div>
-                      <ArrowRight className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-slate-400 group-hover:text-brand-500 flex-shrink-0" />
+                      <ArrowRight className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-slate-400 group-hover:text-brand-500 flex-shrink-0 rtl:rotate-180" />
                     </div>
                   </Link>
                 );
@@ -406,11 +444,11 @@ export default function PatientDashboardPage() {
             <CardHeader className="pb-3 sm:pb-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <CardTitle className="text-base sm:text-lg">Recent Doctors</CardTitle>
-                  <CardDescription className="text-xs sm:text-sm">Your previous consultants</CardDescription>
+                  <CardTitle className="text-base sm:text-lg">{t("dashboard.recentDoctors")}</CardTitle>
+                  <CardDescription className="text-xs sm:text-sm">{t("dashboard.recentDoctorsDesc")}</CardDescription>
                 </div>
                 <Link href="/patient/doctors">
-                  <Button variant="ghost" size="sm" className="text-xs">View All</Button>
+                  <Button variant="ghost" size="sm" className="text-xs">{t("common.viewAll")}</Button>
                 </Link>
               </div>
             </CardHeader>
@@ -441,16 +479,18 @@ export default function PatientDashboardPage() {
                         )}
                       </div>
                       <p className="text-[10px] sm:text-xs text-slate-500 mt-0.5">
-                        {doc.sessions} sessions • {timeAgo(doc.lastVisit)}
+                        {t("dashboard.sessionsCount", { count: doc.sessions })} • {timeAgo(doc.lastVisit)}
                       </p>
                     </div>
                   </div>
                   <Link href="/patient/doctors">
-                    <Button variant="outline" size="sm" className="h-7 sm:h-8 px-2 sm:px-3 text-[10px] sm:text-xs">Book</Button>
+                    <Button variant="outline" size="sm" className="h-7 sm:h-8 px-2 sm:px-3 text-[10px] sm:text-xs">
+                      {t("common.book")}
+                    </Button>
                   </Link>
                 </div>
               )) : (
-                <p className="text-sm text-muted-foreground text-center py-4">No doctors yet. Browse specialists to book.</p>
+                <p className="text-sm text-muted-foreground text-center py-4">{t("dashboard.noDoctorsYet")}</p>
               )}
             </CardContent>
           </Card>
@@ -458,7 +498,7 @@ export default function PatientDashboardPage() {
           {recentActivity.length > 0 && (
             <Card>
               <CardHeader className="pb-3 sm:pb-4">
-                <CardTitle className="text-base sm:text-lg">Recent Activity</CardTitle>
+                <CardTitle className="text-base sm:text-lg">{t("dashboard.recentActivity")}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3 px-4 sm:px-6">
                 {recentActivity.map((activity, i) => {
@@ -486,9 +526,9 @@ export default function PatientDashboardPage() {
                   <Shield className="h-4 w-4 sm:h-5 sm:w-5 text-purple-600" />
                 </div>
                 <div>
-                  <h4 className="text-sm sm:text-base font-semibold text-purple-900 mb-1">Daily Wellness Tip</h4>
+                  <h4 className="text-sm sm:text-base font-semibold text-purple-900 mb-1">{t("dashboard.wellnessTip")}</h4>
                   <p className="text-xs sm:text-sm text-purple-800 leading-relaxed">
-                    Practice deep breathing for 5 minutes daily. It helps reduce stress and improves focus.
+                    {t("dashboard.wellnessTipBody")}
                   </p>
                 </div>
               </div>

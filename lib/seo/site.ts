@@ -63,7 +63,7 @@ export function organizationJsonLd() {
     "@id": `${SITE_URL}#clinic`,
     name: "Apna Clinic",
     url: SITE_URL,
-    email: "support@apnaclinic.pk",
+    email: "7genclinics@gmail.com",
     telephone: "+92 300 1234567",
     address: {
       "@type": "PostalAddress",

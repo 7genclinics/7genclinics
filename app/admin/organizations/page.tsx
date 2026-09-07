@@ -10,12 +10,12 @@ import {
   updateOrganization,
   createOrganization,
   inviteJoinPath,
-  inviteOrganizationMember,
   listOrganizationMembers,
   listOrganizations,
   listPendingInvites,
   revokeOrganizationInvite,
 } from "@/lib/org/api";
+import { resendOrganizationInvite, sendOrganizationInvite } from "@/lib/org/invite-client";
 import type {
   Organization,
   OrganizationInvite,
@@ -109,16 +109,24 @@ export default function AdminOrganizationsPage() {
     setError(null);
     setMessage(null);
     try {
-      const result = await inviteOrganizationMember({
+      const result = await sendOrganizationInvite({
         organizationId: selectedId,
         email: inviteEmail,
         role: inviteRole,
       });
       if (result.status === "added") {
-        setMessage(`${inviteEmail} was added immediately.`);
+        setMessage(
+          result.emailSent
+            ? `${inviteEmail} was added and emailed login details.`
+            : `${inviteEmail} was added.${result.temporaryPassword ? ` Temporary password: ${result.temporaryPassword}` : result.emailError ? ` Email was not sent: ${result.emailError}` : ""}`,
+        );
       } else {
         const path = inviteJoinPath(result.token);
-        setMessage(`Invite created. Share ${window.location.origin}${path}`);
+        setMessage(
+          result.emailSent
+            ? `Invite emailed to ${inviteEmail}.`
+            : `Invite created but email was not sent${result.emailError ? `: ${result.emailError}` : ""}. Share ${window.location.origin}${path}`,
+        );
       }
       setInviteEmail("");
       await loadDetail(selectedId);
@@ -144,7 +152,7 @@ export default function AdminOrganizationsPage() {
       <div>
         <h2 className="text-xl font-semibold">Clinics & hospitals</h2>
         <p className="text-sm text-muted-foreground">
-          Create a tenant and invite doctors or reception staff. Billing is per clinic.
+          Create a tenant and email invites to doctors or reception staff. Billing is per clinic.
         </p>
       </div>
 
@@ -312,22 +320,45 @@ export default function AdminOrganizationsPage() {
                 <p className="mb-2 text-sm font-medium">Pending invites</p>
                 <div className="space-y-2">
                   {invites.map((invite) => (
-                    <div key={invite.id} className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
+                    <div key={invite.id} className="flex flex-wrap items-center justify-between gap-2 rounded-md border px-3 py-2 text-sm">
                       <span>
                         {invite.email} · {invite.member_role}
                       </span>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          void (async () => {
-                            await revokeOrganizationInvite(invite.id);
-                            if (selectedId) await loadDetail(selectedId);
-                          })();
-                        }}
-                      >
-                        Revoke
-                      </Button>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            void (async () => {
+                              try {
+                                const result = await resendOrganizationInvite(invite.id);
+                                setMessage(
+                                  result.emailSent
+                                    ? `Invite resent to ${invite.email}.`
+                                    : `Could not email ${invite.email}${result.emailError ? `: ${result.emailError}` : ""}${result.status === "invited" && result.token ? `. Share ${window.location.origin}${inviteJoinPath(result.token)}` : ""}`,
+                                );
+                                if (selectedId) await loadDetail(selectedId);
+                              } catch (err) {
+                                setError(getErrorMessage(err, "Could not resend invite"));
+                              }
+                            })();
+                          }}
+                        >
+                          Resend email
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            void (async () => {
+                              await revokeOrganizationInvite(invite.id);
+                              if (selectedId) await loadDetail(selectedId);
+                            })();
+                          }}
+                        >
+                          Revoke
+                        </Button>
+                      </div>
                     </div>
                   ))}
                 </div>

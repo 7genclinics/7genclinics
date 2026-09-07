@@ -3,6 +3,7 @@ import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { getSupabaseUrl, getSupabaseKey } from "@/lib/supabase/env";
 import { getErrorMessage } from "@/lib/errors";
+import { appPublicUrl, resendFromAddress, resendReplyTo } from "@/lib/email/resend";
 
 // Sends an approval/rejection email to a doctor via Resend (if configured).
 // Falls back gracefully when RESEND_API_KEY is absent.
@@ -42,9 +43,7 @@ export async function POST(request: Request) {
       rejectionReason?: string;
     };
 
-    const siteUrl =
-      process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ??
-      "https://stress-saviour.vercel.app";
+    const siteUrl = appPublicUrl();
 
     const resendKey = process.env.RESEND_API_KEY;
     if (!resendKey) {
@@ -86,8 +85,9 @@ export async function POST(request: Request) {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        from: "Apna Clinic <noreply@apnaclinic.pk>",
+        from: resendFromAddress(),
         to: [doctorEmail],
+        reply_to: resendReplyTo(),
         subject: isApproved
           ? "✅ Your doctor profile has been approved — Apna Clinic"
           : "Your doctor application — Apna Clinic",

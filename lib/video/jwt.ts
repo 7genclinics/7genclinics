@@ -60,6 +60,26 @@ export function isSelfHostedJitsiConfigured(): boolean {
   );
 }
 
+/**
+ * Token must last the whole consultation. A 15-minute cap expired mid-call and
+ * Jitsi then showed its own login screen.
+ */
+export function consultationJwtExpiryUnix(params: {
+  nowMs: number;
+  windowClosesMs: number;
+  isAdmin: boolean;
+}): number {
+  const now = params.nowMs;
+  const afterCallGraceMs = 45 * 60_000;
+  const minTtlMs = 20 * 60_000;
+  const maxTtlMs = 4 * 60 * 60_000;
+  const target = params.isAdmin
+    ? now + 2 * 60 * 60_000
+    : params.windowClosesMs + afterCallGraceMs;
+  const clamped = Math.min(Math.max(target, now + minTtlMs), now + maxTtlMs);
+  return Math.floor(clamped / 1000);
+}
+
 export interface JitsiTokenInput {
   room: string;
   userId: string;

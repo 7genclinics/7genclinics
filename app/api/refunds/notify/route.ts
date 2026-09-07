@@ -3,9 +3,9 @@ import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { getSupabaseUrl, getSupabaseKey } from "@/lib/supabase/env";
 import { getErrorMessage } from "@/lib/errors";
+import { appPublicUrl, resendFromAddress, resendReplyTo } from "@/lib/email/resend";
 
-const SITE_URL =
-  (process.env.NEXT_PUBLIC_APP_URL ?? "https://stress-saviour.vercel.app").replace(/\/$/, "");
+const SITE_URL = appPublicUrl();
 
 function fmtPKR(amount: number) {
   return `PKR ${Math.round(amount).toLocaleString("en-PK")}`;
@@ -16,8 +16,9 @@ async function sendEmail(to: string, subject: string, html: string, resendKey: s
     method: "POST",
     headers: { Authorization: `Bearer ${resendKey}`, "Content-Type": "application/json" },
     body: JSON.stringify({
-      from: "Apna Clinic <noreply@apnaclinic.pk>",
+      from: resendFromAddress(),
       to: [to],
+      reply_to: resendReplyTo(),
       subject,
       html,
     }),

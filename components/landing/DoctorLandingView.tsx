@@ -82,7 +82,7 @@ export function DoctorLandingView({
     <div
       className={cn(
         "landing-page bg-white text-brand-900",
-        preview && "pointer-events-none select-none",
+        preview && "pointer-events-none max-w-full select-none overflow-x-hidden",
       )}
     >
       {data.isPreview && !preview && (

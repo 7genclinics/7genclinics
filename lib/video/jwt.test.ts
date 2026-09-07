@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { createHmac } from "node:crypto";
 import { after, before, describe, it } from "node:test";
 import {
+  consultationJwtExpiryUnix,
   isSelfHostedJitsiConfigured,
   signJitsiJwt,
 } from "./jwt.ts";
@@ -70,5 +71,17 @@ describe("self-hosted Jitsi JWT", () => {
     assert.equal(payload.context.user.affiliation, "owner");
     assert.ok(payload.jti);
     assert.equal(signature, expectedSignature);
+  });
+
+  it("keeps the token valid through the consultation instead of 15 minutes", () => {
+    const now = Date.parse("2026-09-07T10:00:00.000Z");
+    const windowCloses = Date.parse("2026-09-07T10:30:00.000Z");
+    const exp = consultationJwtExpiryUnix({
+      nowMs: now,
+      windowClosesMs: windowCloses,
+      isAdmin: false,
+    });
+    assert.ok(exp * 1000 >= windowCloses + 40 * 60_000);
+    assert.ok(exp * 1000 <= now + 4 * 60 * 60_000);
   });
 });

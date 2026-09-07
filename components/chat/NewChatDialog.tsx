@@ -4,14 +4,14 @@ import { useState, useEffect } from "react";
 import { useChat } from "@/contexts/ChatContext";
 import { UserAvatar } from "@/components/shared/UserAvatar";
 import { X, Search, MessageSquare, AlertCircle } from "lucide-react";
-import type { ChatParticipant } from "@/types/chat";
+import type { ChatParticipant, ChatUserRole } from "@/types/chat";
 import { getErrorMessage } from "@/lib/errors";
 
 interface NewChatDialogProps {
   open: boolean;
   onClose: () => void;
   onStarted?: () => void;
-  allowedRoles: Array<"patient" | "doctor" | "admin" | "super_admin">;
+  allowedRoles: ChatUserRole[];
 }
 
 export function NewChatDialog({

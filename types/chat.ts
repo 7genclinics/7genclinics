@@ -1,10 +1,17 @@
 // Application-level chat types (rich, UI-facing)
 
+export type ChatUserRole =
+  | "patient"
+  | "doctor"
+  | "admin"
+  | "super_admin"
+  | "receptionist";
+
 export interface ChatParticipant {
   id: string;
   full_name: string;
   avatar_url: string | null;
-  role: "patient" | "doctor" | "admin" | "super_admin";
+  role: ChatUserRole;
 }
 
 export interface MessageReaction {
