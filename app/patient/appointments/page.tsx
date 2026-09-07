@@ -16,11 +16,19 @@ import {
   submitPaymentProof,
 } from "@/lib/patient/api";
 import {
-  formatDate,
   formatCurrency,
   mapToPatientAppointment,
   type PatientUIAppointment,
 } from "@/lib/patient/mappers";
+import {
+  formatDoctorDisplayName,
+  formatDurationMinutes,
+  formatLocalizedDate,
+  formatLocalizedTimeRange,
+  statusMessageKey,
+  translateSpecialty,
+  typeMessageKey,
+} from "@/lib/i18n/format";
 import { AppointmentSessionAlert } from "@/components/shared/AppointmentSessionAlert";
 import { useAppointmentSessionSync } from "@/lib/hooks/useAppointmentSessionSync";
 import { matchesAnyFlexibleText } from "@/lib/search/flexible-match";
@@ -35,7 +43,7 @@ import { useLocale } from "@/contexts/LocaleContext";
 export default function PatientAppointmentsPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   const [activeTab, setActiveTab] = useState<"Upcoming" | "Completed" | "Cancelled" | "Expired" | "All">("Upcoming");
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
@@ -339,7 +347,7 @@ export default function PatientAppointmentsPage() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <input
             type="text"
-            placeholder="Search doctor, specialty, or reason..."
+            placeholder={t("appointments.searchPlaceholder")}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full h-10 pl-9 pr-4 rounded-lg border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
@@ -358,7 +366,15 @@ export default function PatientAppointmentsPage() {
                     : "bg-muted text-muted-foreground hover:bg-muted/80"
                 }`}
               >
-                {tab}
+                {tab === "Upcoming"
+                  ? t("appointments.upcoming")
+                  : tab === "Completed"
+                    ? t("appointments.completedTab")
+                    : tab === "Cancelled"
+                      ? t("appointments.cancelledTab")
+                      : tab === "Expired"
+                        ? t("appointments.expiredTab")
+                        : t("common.all")}
               </button>
             ))}
           </div>
@@ -372,23 +388,27 @@ export default function PatientAppointmentsPage() {
               <CardContent className="p-5">
                 <div className="flex flex-col lg:flex-row lg:items-center gap-5">
                   {/* Doctor & appointment info */}
-                  <div className="flex gap-4 flex-1 min-w-0">
+                    <div className="flex gap-4 flex-1 min-w-0">
+                    <div dir="ltr" className="shrink-0">
                     <UserAvatar
                       name={apt.doctorName}
                       avatarUrl={apt.doctorAvatarUrl}
                       size="md"
                       className="shrink-0"
                     />
+                    </div>
                     <div className="flex-1 min-w-0 space-y-3">
                       <div className="flex flex-wrap items-center gap-2">
-                        <h3 className="font-semibold text-base text-foreground">{apt.doctorName}</h3>
+                        <h3 className="font-semibold text-base text-foreground">
+                          {formatDoctorDisplayName(apt.doctorName, locale)}
+                        </h3>
                         <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${getStatusBadgeClass(apt.status)}`}>
-                          {apt.status}
+                          {t(statusMessageKey(apt.status))}
                         </span>
                         {apt.isPaid && (
                           <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium bg-emerald-100 text-emerald-800">
                             <BadgeCheck className="h-3 w-3" />
-                            Paid
+                            {t("common.paid")}
                           </span>
                         )}
                         {apt.rating ? (
@@ -404,23 +424,23 @@ export default function PatientAppointmentsPage() {
                       </div>
 
                       <p className="text-sm text-muted-foreground">
-                        {apt.doctorSpecialization} · {apt.type} · {apt.duration}
+                        {translateSpecialty(apt.doctorSpecialization, locale)} · {t(typeMessageKey(apt.type))} · {formatDurationMinutes(parseInt(apt.duration, 10) || 30, t)}
                       </p>
 
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1.5 text-sm">
                         <div className="flex items-center gap-2 text-muted-foreground">
                           <Calendar className="h-4 w-4 shrink-0" />
-                          <span>{formatDate(apt.date, { year: "numeric", month: "long", day: "numeric" })}</span>
+                          <span>{formatLocalizedDate(apt.scheduledAt, locale, { year: "numeric", month: "long", day: "numeric" })}</span>
                         </div>
                         <div className="flex items-center gap-2 text-muted-foreground">
                           <Clock className="h-4 w-4 shrink-0" />
-                          <span>{apt.timeRange}</span>
+                          <span>{formatLocalizedTimeRange(apt.scheduledAt, parseInt(apt.duration, 10) || 30, locale)}</span>
                         </div>
                       </div>
 
                       {apt.reason && (
                         <p className="text-sm">
-                          <span className="text-muted-foreground">Reason: </span>
+                          <span className="text-muted-foreground">{t("appointments.reason")}: </span>
                           <span className="text-foreground">{apt.reason}</span>
                         </p>
                       )}
@@ -433,12 +453,12 @@ export default function PatientAppointmentsPage() {
                       )}
                       {apt.status === "Payment Review" && (
                         <p className="inline-flex w-fit max-w-full text-xs text-violet-700 bg-violet-50 border border-violet-200 rounded-lg px-3 py-1.5">
-                          Payment proof submitted. Waiting for admin approval to confirm your booking.
+                          {t("appointments.paymentReviewHint")}
                         </p>
                       )}
                       {apt.status === "Awaiting Payment" && (
                         <p className="inline-flex w-fit max-w-full text-xs text-orange-700 bg-orange-50 border border-orange-200 rounded-lg px-3 py-1.5">
-                          Please pay the consultation fee and upload your payment screenshot to confirm this booking.
+                          {t("appointments.awaitingPaymentHint")}
                         </p>
                       )}
                       <AppointmentSessionAlert timing={apt.timing} />
@@ -452,26 +472,26 @@ export default function PatientAppointmentsPage() {
                         className="bg-orange-600 hover:bg-orange-700 text-white flex-1 lg:flex-none lg:w-full"
                         onClick={() => openUploadForAppointment(apt)}
                       >
-                        <Upload className="h-4 w-4 mr-2" />
-                        Add Screenshot
+                        <Upload className="h-4 w-4 me-2" />
+                        {t("appointments.addScreenshot")}
                       </Button>
                     )}
                     {apt.isPaid && ["Confirmed", "Ready", "Starting Soon"].includes(apt.status) && (
                       apt.canJoin ? (
                         <Link href={apt.roomUrl} className="flex-1 lg:flex-none lg:w-full">
                           <Button className="bg-brand-500 hover:bg-brand-600 text-white w-full">
-                            <Video className="h-4 w-4 mr-2" />
-                            Join Consultation
+                            <Video className="h-4 w-4 me-2" />
+                            {t("appointments.joinConsultation")}
                           </Button>
                         </Link>
                       ) : (
                         <Button
                           disabled
-                          title="Joining opens 10 minutes before your scheduled time"
+                          title={t("appointments.joinSoonHint")}
                           className="flex-1 lg:flex-none lg:w-full bg-muted text-muted-foreground cursor-not-allowed"
                         >
-                          <Video className="h-4 w-4 mr-2" />
-                          Not available yet
+                          <Video className="h-4 w-4 me-2" />
+                          {t("dashboard.notAvailableYet")}
                         </Button>
                       )
                     )}
@@ -482,13 +502,13 @@ export default function PatientAppointmentsPage() {
                         className="flex-1"
                         onClick={() => { setSelectedAppointment(apt); setUploadProofFile(null); setShowDetailsModal(true); }}
                       >
-                        Details
+                        {t("common.details")}
                       </Button>
                       <div className="relative group">
                         <Button variant="outline" size="icon" className="h-9 w-9 shrink-0">
                           <MoreHorizontal className="h-4 w-4" />
                         </Button>
-                        <div className="absolute right-0 mt-2 w-48 bg-card border border-border rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
+                        <div className="absolute end-0 mt-2 w-48 bg-card border border-border rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
                           <div className="p-2 space-y-1">
                             {apt.status === "Awaiting Payment" && apt.paymentId && (
                               <button
@@ -496,7 +516,7 @@ export default function PatientAppointmentsPage() {
                                 onClick={() => openUploadForAppointment(apt)}
                               >
                                 <Upload className="h-4 w-4" />
-                                Add Payment Screenshot
+                                {t("appointments.addPaymentScreenshot")}
                               </button>
                             )}
                             {["Confirmed", "Pending", "Ready", "Starting Soon", "Awaiting Payment", "Payment Review"].includes(apt.status) && (
@@ -505,7 +525,7 @@ export default function PatientAppointmentsPage() {
                                 onClick={() => { setSelectedAppointment(apt); setShowCancelModal(true); }}
                               >
                                 <XCircle className="h-4 w-4" />
-                                Cancel Appointment
+                                {t("appointments.cancelAppointment")}
                               </button>
                             )}
                             {apt.status === "Completed" && (
@@ -519,7 +539,7 @@ export default function PatientAppointmentsPage() {
                                 }}
                               >
                                 <Star className="h-4 w-4" />
-                                {apt.rating ? "Edit Review" : "Leave Review"}
+                                {apt.rating ? t("appointments.editReview") : t("appointments.leaveReview")}
                               </button>
                             )}
                           </div>
@@ -534,13 +554,13 @@ export default function PatientAppointmentsPage() {
         ) : (
           <div className="py-16 text-center border border-dashed rounded-xl bg-card">
             <Calendar className="h-12 w-12 text-muted-foreground/60 mx-auto mb-3" />
-            <h4 className="font-semibold text-lg">No appointments found</h4>
+            <h4 className="font-semibold text-lg">{t("appointments.noneFound")}</h4>
             <p className="text-sm text-muted-foreground mt-1 max-w-sm mx-auto">
-              {searchQuery ? "No appointments match your search." : "You have no appointments in this category."}
+              {searchQuery ? t("appointments.noMatch") : t("appointments.noneInCategory")}
             </p>
             <Link href="/patient/doctors">
               <Button className="mt-4 bg-brand-500 hover:bg-brand-600 text-white" size="sm">
-                Browse Doctors
+                {t("appointments.browseDoctors")}
               </Button>
             </Link>
           </div>
@@ -553,7 +573,7 @@ export default function PatientAppointmentsPage() {
             <ChevronLeft className="h-4 w-4" />
           </Button>
           <span className="text-sm text-muted-foreground">
-            Page <strong>{currentPage}</strong> of <strong>{totalPages}</strong>
+            {t("common.pageOf", { current: currentPage, total: totalPages })}
           </span>
           <Button variant="outline" size="sm" className="h-9 w-9 p-0" onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))} disabled={currentPage === totalPages}>
             <ChevronRight className="h-4 w-4" />
@@ -566,8 +586,10 @@ export default function PatientAppointmentsPage() {
           <div className="bg-card rounded-2xl max-w-2xl w-full max-h-[85vh] overflow-y-auto shadow-2xl">
             <div className="p-6 border-b flex items-center justify-between sticky top-0 bg-card z-10">
               <div>
-                <h3 className="text-lg font-bold">Appointment Details</h3>
-                <p className="text-xs text-muted-foreground">{selectedAppointment.doctorSpecialization}</p>
+                <h3 className="text-lg font-bold">{t("appointments.detailsTitle")}</h3>
+                <p className="text-xs text-muted-foreground">
+                  {translateSpecialty(selectedAppointment.doctorSpecialization, locale)}
+                </p>
               </div>
               <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => setShowDetailsModal(false)}>
                 <XCircle className="h-4 w-4" />
@@ -576,30 +598,34 @@ export default function PatientAppointmentsPage() {
             <div className="p-6 space-y-6">
               <div className="grid gap-4 md:grid-cols-2">
                 <div>
-                  <p className="text-xs text-muted-foreground mb-1">Doctor</p>
-                  <p className="font-semibold">{selectedAppointment.doctorName}</p>
-                  <p className="text-xs text-muted-foreground">{selectedAppointment.doctorSpecialization}</p>
+                  <p className="text-xs text-muted-foreground mb-1">{t("appointments.doctor")}</p>
+                  <p className="font-semibold">{formatDoctorDisplayName(selectedAppointment.doctorName, locale)}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {translateSpecialty(selectedAppointment.doctorSpecialization, locale)}
+                  </p>
                   <p className="text-xs text-muted-foreground">{selectedAppointment.doctorPhone}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-muted-foreground mb-1">Appointment</p>
+                  <p className="text-xs text-muted-foreground mb-1">{t("appointments.appointment")}</p>
                   <p className="font-medium">
-                    {formatDate(selectedAppointment.date, { year: "numeric", month: "long", day: "numeric" })} at {selectedAppointment.timeRange}
+                    {formatLocalizedDate(selectedAppointment.scheduledAt, locale, { year: "numeric", month: "long", day: "numeric" })} {t("appointments.at")} {formatLocalizedTimeRange(selectedAppointment.scheduledAt, parseInt(selectedAppointment.duration, 10) || 30, locale)}
                   </p>
-                  <p className="text-sm">{selectedAppointment.type} • {selectedAppointment.duration}</p>
+                  <p className="text-sm">
+                    {t(typeMessageKey(selectedAppointment.type))} • {formatDurationMinutes(parseInt(selectedAppointment.duration, 10) || 30, t)}
+                  </p>
                   <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold mt-2 ${getStatusBadgeClass(selectedAppointment.status)}`}>
-                    {selectedAppointment.status}
+                    {t(statusMessageKey(selectedAppointment.status))}
                   </span>
                   {selectedAppointment.isPaid && (
-                    <span className="inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold mt-2 ml-2 bg-emerald-600 text-white">
+                    <span className="inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold mt-2 ms-2 bg-emerald-600 text-white">
                       <BadgeCheck className="h-3 w-3" />
-                      Paid
+                      {t("common.paid")}
                     </span>
                   )}
                 </div>
               </div>
               <div>
-                <p className="text-xs text-muted-foreground mb-1">Reason</p>
+                <p className="text-xs text-muted-foreground mb-1">{t("appointments.reason")}</p>
                 <p className="text-sm">{selectedAppointment.reason}</p>
               </div>
 
@@ -695,18 +721,18 @@ export default function PatientAppointmentsPage() {
                 (selectedAppointment.canJoin ? (
                   <Link href={selectedAppointment.roomUrl}>
                     <Button className="w-full bg-brand-500 hover:bg-brand-600 text-white">
-                      <Video className="h-4 w-4 mr-2" />
-                      Join Consultation
+                      <Video className="h-4 w-4 me-2" />
+                      {t("appointments.joinConsultation")}
                     </Button>
                   </Link>
                 ) : (
                   <Button
                     disabled
-                    title="Joining opens 10 minutes before your scheduled time"
+                    title={t("appointments.joinSoonHint")}
                     className="w-full bg-muted text-muted-foreground cursor-not-allowed"
                   >
-                    <Video className="h-4 w-4 mr-2" />
-                    Not available yet
+                    <Video className="h-4 w-4 me-2" />
+                    {t("dashboard.notAvailableYet")}
                   </Button>
                 ))}
             </div>
@@ -718,7 +744,7 @@ export default function PatientAppointmentsPage() {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
           <div className="bg-card rounded-2xl max-w-sm w-full shadow-2xl">
             <div className="p-6 border-b flex items-center justify-between">
-              <h3 className="text-lg font-bold">Cancel Appointment</h3>
+              <h3 className="text-lg font-bold">{t("appointments.cancelAppointment")}</h3>
               <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => setShowCancelModal(false)}>
                 <XCircle className="h-4 w-4" />
               </Button>

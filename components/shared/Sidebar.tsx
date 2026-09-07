@@ -130,7 +130,7 @@ export function Sidebar({ role, isOpen = false, onClose, allowedHrefs }: Sidebar
   };
 
   const sidebarContent = (
-    <div className="flex h-full flex-col overflow-y-auto border-r border-border bg-card px-4 py-6">
+    <div className="flex h-full flex-col overflow-y-auto border-e border-border bg-card px-4 py-6">
       {/* Brand */}
       <div className="mb-8 flex items-center justify-between px-2">
         <BrandMark size="sm" />

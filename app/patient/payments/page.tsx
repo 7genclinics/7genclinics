@@ -148,6 +148,22 @@ const ITEMS_PER_PAGE = 8;
 export default function PatientPaymentsPage() {
   const { profile } = usePatient();
   const { t } = useLocale();
+  const statusLabel = (key: StatusFilter) =>
+    ({
+      all: t("payments.all"),
+      completed: t("payments.completed"),
+      pending: t("payments.pending"),
+      failed: t("payments.failed"),
+      refunded: t("payments.refunded"),
+    })[key];
+  const methodLabel = (key: "all" | PaymentMethod) =>
+    ({
+      all: t("payments.allMethods"),
+      jazzcash: "JazzCash",
+      easypaisa: "EasyPaisa",
+      stripe: t("payments.card"),
+      bank_transfer: t("payments.bankTransfer"),
+    })[key];
   const [transactions, setTransactions] = useState<PatientPaymentRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -424,7 +440,7 @@ export default function PatientPaymentsPage() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <input
               type="text"
-              placeholder="Search transaction ID, doctor, or method..."
+              placeholder={t("payments.searchPlaceholder")}
               value={searchQuery}
               onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
               className="w-full h-10 pl-9 pr-4 rounded-lg border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
@@ -437,7 +453,7 @@ export default function PatientPaymentsPage() {
               className="h-10 px-3 rounded-lg border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20"
             >
               {METHOD_OPTIONS.map((opt) => (
-                <option key={opt.key} value={opt.key}>{opt.label}</option>
+                <option key={opt.key} value={opt.key}>{methodLabel(opt.key)}</option>
               ))}
             </select>
             <input
@@ -445,14 +461,14 @@ export default function PatientPaymentsPage() {
               value={dateFrom}
               onChange={(e) => { setDateFrom(e.target.value); setCurrentPage(1); }}
               className="h-10 px-3 rounded-lg border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-              title="From date"
+              title={t("payments.fromDate")}
             />
             <input
               type="date"
               value={dateTo}
               onChange={(e) => { setDateTo(e.target.value); setCurrentPage(1); }}
               className="h-10 px-3 rounded-lg border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-              title="To date"
+              title={t("payments.toDate")}
             />
             {hasActiveFilters && (
               <Button variant="ghost" size="sm" onClick={clearFilters} className="h-10">
@@ -475,7 +491,7 @@ export default function PatientPaymentsPage() {
                     : "bg-muted text-muted-foreground hover:bg-muted/80"
                 }`}
               >
-                {tab.label}
+                {statusLabel(tab.key)}
               </button>
             ))}
           </div>
@@ -582,8 +598,8 @@ export default function PatientPaymentsPage() {
                         <FileText className="h-10 w-10 text-muted-foreground/50 mx-auto mb-3" />
                         <p className="font-medium text-muted-foreground">
                           {hasActiveFilters
-                            ? "No transactions match your filters."
-                            : "No payment transactions found."}
+                            ? t("payments.noMatch")
+                            : t("payments.noneFound")}
                         </p>
                         <p className="text-sm text-muted-foreground mt-1">
                           Payments appear after booking consultations.

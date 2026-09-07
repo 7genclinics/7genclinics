@@ -38,7 +38,7 @@ export function DashboardWelcomeBanner({
         className
       )}
     >
-      <div className="relative z-10 flex items-start gap-3 sm:gap-4 md:gap-5">
+      <div className="relative z-10 flex items-start gap-3 sm:gap-4 md:gap-5 sm:max-w-[62%] lg:max-w-[58%]">
         <UserAvatar
           name={name}
           avatarUrl={avatarUrl}
@@ -64,12 +64,12 @@ export function DashboardWelcomeBanner({
       </div>
 
       {decoration ? (
-        <div className="pointer-events-none absolute inset-y-0 right-0 hidden w-[42%] items-center justify-end pr-4 opacity-45 sm:flex sm:pr-6 lg:w-1/2 lg:pr-10 lg:opacity-55">
+        <div className="pointer-events-none absolute inset-y-0 end-0 hidden w-[40%] items-center justify-end pe-3 opacity-40 sm:flex sm:pe-5 lg:w-[44%] lg:pe-8 lg:opacity-50">
           {decoration}
         </div>
       ) : (
         <div
-          className="pointer-events-none absolute -right-8 -top-10 h-40 w-40 rounded-full opacity-30 blur-2xl sm:h-56 sm:w-56"
+          className="pointer-events-none absolute -end-8 -top-10 h-40 w-40 rounded-full opacity-30 blur-2xl sm:h-56 sm:w-56"
           style={{
             background:
               "conic-gradient(from 200deg, #47AFA0, #4066AE, #0F142A, #4E9A9F, #406198, #1A3856, #0B1023, #47AFA0)",

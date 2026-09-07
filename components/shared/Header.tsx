@@ -16,6 +16,7 @@ import { notificationHref } from "@/lib/notifications/links";
 import { ENABLE_PUSH_EVENT } from "@/components/pwa/PushNotificationManager";
 import { LanguageToggle } from "@/components/shared/LanguageToggle";
 import { useOptionalLocale } from "@/contexts/LocaleContext";
+import { formatTimeAgo, roleMessageKey } from "@/lib/i18n/format";
 
 function isStandalonePwa(): boolean {
   if (typeof window === "undefined") return false;
@@ -229,7 +230,7 @@ export function Header({ title, user, onMenuClick }: HeaderProps) {
           >
             <Menu className="h-5 w-5" />
           </button>
-          <h1 className="font-display text-lg font-semibold tracking-tight md:text-xl capitalize">
+          <h1 className="font-display text-lg font-semibold tracking-tight md:text-xl">
             {title}
           </h1>
         </div>
@@ -312,7 +313,7 @@ export function Header({ title, user, onMenuClick }: HeaderProps) {
                         <button
                           key={n.id}
                           onClick={() => handleNotifClick(n)}
-                          className={`w-full flex items-start gap-3 px-4 py-3 text-left transition-colors border-b border-border/50 last:border-0 cursor-pointer ${
+                          className={`w-full flex items-start gap-3 px-4 py-3 text-start transition-colors border-b border-border/50 last:border-0 cursor-pointer ${
                             n.is_read
                               ? "hover:bg-accent/50"
                               : "bg-brand-50/60 dark:bg-brand-900/10 hover:bg-brand-100/60 dark:hover:bg-brand-900/20"
@@ -329,7 +330,9 @@ export function Header({ title, user, onMenuClick }: HeaderProps) {
                               {n.message}
                             </p>
                             <p className="text-[10px] text-muted-foreground/70 mt-1">
-                              {timeAgo(n.created_at)}
+                              {t
+                                ? formatTimeAgo(n.created_at, locale?.locale ?? "en", t)
+                                : timeAgo(n.created_at)}
                             </p>
                           </div>
                           {!n.is_read && (
@@ -365,12 +368,12 @@ export function Header({ title, user, onMenuClick }: HeaderProps) {
                 size="xs"
                 className="border-primary/20"
               />
-              <div className="hidden sm:flex flex-col items-start text-left">
+              <div className="hidden sm:flex flex-col items-start text-start">
                 <span className="font-medium text-xs leading-none">
                   {displayUser.name}
                 </span>
                 <span className="text-[10px] text-muted-foreground mt-0.5 capitalize">
-                  {roleLabel}
+                  {t?.(roleMessageKey(displayUser.role)) ?? roleLabel}
                 </span>
               </div>
               <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
@@ -382,7 +385,7 @@ export function Header({ title, user, onMenuClick }: HeaderProps) {
                   className="fixed inset-0 z-30"
                   onClick={() => setShowProfileDropdown(false)}
                 />
-                <div className="absolute right-0 mt-2 w-56 origin-top-right rounded-xl border border-border bg-popover p-1 shadow-lg ring-1 ring-black/5 focus:outline-none z-40 transition-all duration-200">
+                <div className="absolute end-0 mt-2 w-56 origin-top-right rounded-xl border border-border bg-popover p-1 shadow-lg ring-1 ring-black/5 focus:outline-none z-40 transition-all duration-200">
                   <div className="px-3 py-2 border-b border-border">
                     <p className="font-semibold text-sm truncate">{displayUser.name}</p>
                     <p className="text-xs text-muted-foreground truncate">{displayUser.email}</p>

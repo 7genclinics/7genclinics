@@ -23,13 +23,22 @@ import {
 } from "@/lib/patient/api";
 import { buildPatientDashboardStats } from "@/lib/patient/stats";
 import {
-  formatCurrency,
-  formatRelativeDate,
   getFirstName,
   getUpcomingAppointments,
   mapToPatientAppointment,
-  timeAgo,
 } from "@/lib/patient/mappers";
+import {
+  formatDoctorDisplayName,
+  formatDurationMinutes,
+  formatLocalizedCurrency,
+  formatLocalizedTime,
+  formatLocalizedTimeRange,
+  formatRelativeDay,
+  formatTimeAgo,
+  statusMessageKey,
+  translateSpecialty,
+  typeMessageKey,
+} from "@/lib/i18n/format";
 
 export default function PatientDashboardPage() {
   const { profile } = usePatient();
@@ -81,24 +90,24 @@ export default function PatientDashboardPage() {
       dashboardStats;
     if (netSpent === 0 && paidSessionCount === 0) {
       if (pendingRefundCount > 0) {
-        return t("dashboard.refundPending", { amount: formatCurrency(pendingRefundAmount) });
+        return t("dashboard.refundPending", { amount: formatLocalizedCurrency(pendingRefundAmount, locale) });
       }
       return t("dashboard.noPaymentsYet");
     }
     const avg =
       paidSessionCount > 0
         ? t("dashboard.avgPerSession", {
-            amount: formatCurrency(avgPerSession),
+            amount: formatLocalizedCurrency(avgPerSession, locale),
             count: paidSessionCount,
           })
         : "";
     if (pendingRefundCount > 0) {
-      return [avg, t("dashboard.refundPending", { amount: formatCurrency(pendingRefundAmount) })]
+      return [avg, t("dashboard.refundPending", { amount: formatLocalizedCurrency(pendingRefundAmount, locale) })]
         .filter(Boolean)
         .join(" · ");
     }
     return avg || t("dashboard.netSpendAfterRefunds");
-  }, [dashboardStats, t]);
+  }, [dashboardStats, t, locale]);
 
   const nextAptDoctorAvatar = useMemo(() => {
     if (!nextApt) return null;
@@ -113,8 +122,8 @@ export default function PatientDashboardPage() {
       subtitle: t("dashboard.scheduled"),
       description: nextApt
         ? t("dashboard.nextAt", {
-            when: formatRelativeDate(nextApt.scheduledAt),
-            time: nextApt.time,
+            when: formatRelativeDay(nextApt.scheduledAt, locale, t),
+            time: formatLocalizedTime(nextApt.scheduledAt, locale),
           })
         : t("dashboard.noUpcomingSessions"),
       icon: Calendar,
@@ -145,7 +154,7 @@ export default function PatientDashboardPage() {
     },
     {
       title: t("dashboard.totalSpent"),
-      value: formatCurrency(dashboardStats?.netSpent ?? 0),
+      value: formatLocalizedCurrency(dashboardStats?.netSpent ?? 0, locale),
       subtitle: t("dashboard.net"),
       description: spentDescription,
       icon: DollarSign,
@@ -159,22 +168,26 @@ export default function PatientDashboardPage() {
     for (const apt of appointments.slice(0, 5)) {
       if (apt.status === "Completed") {
         items.push({
-          action: t("dashboard.completedSessionWith", { doctor: apt.doctorName }),
-          time: timeAgo(apt.scheduledAt),
+          action: t("dashboard.completedSessionWith", {
+            doctor: formatDoctorDisplayName(apt.doctorName, locale),
+          }),
+          time: formatTimeAgo(apt.scheduledAt, locale, t),
           icon: CheckCircle,
           color: "text-green-600",
         });
       } else if (["Confirmed", "Ready", "Pending"].includes(apt.status)) {
         items.push({
-          action: t("dashboard.upcomingWith", { doctor: apt.doctorName }),
-          time: timeAgo(apt.createdAt),
+          action: t("dashboard.upcomingWith", {
+            doctor: formatDoctorDisplayName(apt.doctorName, locale),
+          }),
+          time: formatTimeAgo(apt.createdAt, locale, t),
           icon: Calendar,
           color: "text-amber-600",
         });
       }
     }
     return items.slice(0, 4);
-  }, [appointments, t]);
+  }, [appointments, t, locale]);
 
   const healthMetrics = [
     {
@@ -251,8 +264,8 @@ export default function PatientDashboardPage() {
         description={
           nextApt
             ? t("dashboard.welcomeWithApt", {
-                type: nextApt.type.toLowerCase(),
-                doctor: nextApt.doctorName,
+                type: t(typeMessageKey(nextApt.type)),
+                doctor: formatDoctorDisplayName(nextApt.doctorName, locale),
               })
             : t("dashboard.welcomeDefault")
         }
@@ -301,38 +314,47 @@ export default function PatientDashboardPage() {
               {nextApt ? (
                 <div className="rounded-lg sm:rounded-xl border border-brand-100 bg-brand-50/50 p-4 sm:p-5 md:p-6 space-y-3 sm:space-y-4">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3" dir="ltr">
                       <UserAvatar
                         name={nextApt.doctorName}
                         avatarUrl={nextAptDoctorAvatar}
                         size="md"
                         className="bg-brand-500 text-white border-brand-300/50"
                       />
-                      <div className="min-w-0 flex-1">
-                        <h4 className="font-semibold text-sm sm:text-base truncate">{nextApt.doctorName}</h4>
-                        <p className="text-xs sm:text-sm text-slate-600 truncate">{nextApt.doctorSpecialization}</p>
+                      <div className="min-w-0 flex-1 text-start">
+                        <h4 className="font-semibold text-sm sm:text-base truncate">
+                          {formatDoctorDisplayName(nextApt.doctorName, locale)}
+                        </h4>
+                        <p className="text-xs sm:text-sm text-slate-600 truncate">
+                          {translateSpecialty(nextApt.doctorSpecialization, locale)}
+                        </p>
                       </div>
                     </div>
                     <span className="inline-flex items-center rounded-full bg-green-100 px-2 sm:px-2.5 py-0.5 text-[10px] sm:text-xs font-semibold text-green-700 w-fit">
-                      {nextApt.status}
+                      {t(statusMessageKey(nextApt.status))}
                     </span>
                   </div>
                   <div className="grid gap-2 sm:gap-3 border-t border-b border-brand-100 py-3 sm:py-4 text-xs sm:text-sm grid-cols-1 xs:grid-cols-2">
                     <div className="flex items-center gap-2 text-slate-600">
                       <Calendar className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-brand-500 flex-shrink-0" />
-                      <span className="truncate">{formatRelativeDate(nextApt.scheduledAt)}, {nextApt.timeRange}</span>
+                      <span className="truncate">
+                        {formatRelativeDay(nextApt.scheduledAt, locale, t)},{" "}
+                        {formatLocalizedTimeRange(nextApt.scheduledAt, parseInt(nextApt.duration, 10) || 30, locale)}
+                      </span>
                     </div>
                     <div className="flex items-center gap-2 text-slate-600">
                       <Video className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-brand-500 flex-shrink-0" />
-                      <span className="truncate">{t("dashboard.consultation", { type: nextApt.type })}</span>
+                      <span className="truncate">
+                        {t("dashboard.consultation", { type: t(typeMessageKey(nextApt.type)) })}
+                      </span>
                     </div>
                     <div className="flex items-center gap-2 text-slate-600">
                       <DollarSign className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-brand-500 flex-shrink-0" />
-                      <span>{t("dashboard.fee", { amount: formatCurrency(nextApt.consultationFee) })}</span>
+                      <span>{t("dashboard.fee", { amount: formatLocalizedCurrency(nextApt.consultationFee, locale) })}</span>
                     </div>
                     <div className="flex items-center gap-2 text-slate-600">
                       <Clock className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-brand-500 flex-shrink-0" />
-                      <span>{nextApt.duration}</span>
+                      <span>{formatDurationMinutes(parseInt(nextApt.duration, 10) || 30, t)}</span>
                     </div>
                   </div>
                   <AppointmentSessionAlert timing={nextApt.timing} className="mb-3" />
@@ -349,7 +371,7 @@ export default function PatientDashboardPage() {
                       ) : (
                         <div className="flex-1">
                           <Button disabled className="w-full h-9 sm:h-10 text-xs sm:text-sm opacity-60">
-                            <Video className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-2" />
+                            <Video className="h-3.5 w-3.5 sm:h-4 sm:w-4 ms-0 me-2" />
                             {t("dashboard.notAvailableYet")}
                           </Button>
                         </div>
@@ -357,7 +379,7 @@ export default function PatientDashboardPage() {
                     ) : (
                       <div className="flex-1">
                         <Button disabled className="w-full h-9 sm:h-10 text-xs sm:text-sm opacity-60">
-                          <Video className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-2" />
+                          <Video className="h-3.5 w-3.5 sm:h-4 sm:w-4 me-2" />
                           {t("dashboard.joinUnavailable")}
                         </Button>
                       </div>
@@ -427,7 +449,7 @@ export default function PatientDashboardPage() {
                         <div className={`rounded-lg p-1.5 sm:p-2 ${action.color} flex-shrink-0`}>
                           <Icon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                         </div>
-                        <div className="text-left min-w-0 flex-1">
+                        <div className="text-start min-w-0 flex-1">
                           <p className="text-xs sm:text-sm font-semibold leading-none truncate">{action.title}</p>
                           <p className="text-[10px] sm:text-xs text-slate-600 mt-1 truncate">{action.description}</p>
                         </div>
@@ -455,7 +477,7 @@ export default function PatientDashboardPage() {
             <CardContent className="space-y-3 sm:space-y-4 px-4 sm:px-6">
               {recentDoctorsList.length > 0 ? recentDoctorsList.slice(0, 3).map((doc) => (
                 <div key={doc.doctorProfileId} className="flex items-center justify-between gap-3 border-b border-slate-200 pb-3 last:border-0 last:pb-0">
-                  <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
+                  <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1" dir="ltr">
                     <div className="flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center flex-shrink-0">
                       <UserAvatar
                         name={doc.name}
@@ -465,9 +487,13 @@ export default function PatientDashboardPage() {
                       />
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="text-xs sm:text-sm font-medium truncate">{doc.name}</p>
+                      <p className="text-xs sm:text-sm font-medium truncate">
+                        {formatDoctorDisplayName(doc.name, locale)}
+                      </p>
                       <div className="flex items-center gap-2 mt-0.5">
-                        <p className="text-[10px] sm:text-xs text-slate-600 truncate">{doc.specialization}</p>
+                        <p className="text-[10px] sm:text-xs text-slate-600 truncate">
+                          {translateSpecialty(doc.specialization, locale)}
+                        </p>
                         {doc.rating > 0 && (
                           <>
                             <span className="text-slate-300">•</span>
@@ -479,7 +505,7 @@ export default function PatientDashboardPage() {
                         )}
                       </div>
                       <p className="text-[10px] sm:text-xs text-slate-500 mt-0.5">
-                        {t("dashboard.sessionsCount", { count: doc.sessions })} • {timeAgo(doc.lastVisit)}
+                        {t("dashboard.sessionsCount", { count: doc.sessions })} • {formatTimeAgo(doc.lastVisit, locale, t)}
                       </p>
                     </div>
                   </div>

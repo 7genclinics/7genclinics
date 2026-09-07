@@ -8,14 +8,14 @@ import { usePatient } from "@/contexts/PatientContext";
 import { AvatarUpload } from "@/components/shared/AvatarUpload";
 import { uploadAndSetAvatar } from "@/lib/auth/profile";
 import { updateUserProfile } from "@/lib/patient/api";
-import { formatDate } from "@/lib/patient/mappers";
+import { formatLocalizedDate } from "@/lib/i18n/format";
 import type { Gender } from "@/types";
 import { getErrorMessage } from "@/lib/errors";
 import { useLocale } from "@/contexts/LocaleContext";
 
 export default function PatientProfilePage() {
   const { profile, setProfile } = usePatient();
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   const [profileForm, setProfileForm] = useState({
     fullName: profile.full_name,
     email: profile.email,
@@ -42,7 +42,7 @@ export default function PatientProfilePage() {
   const handleAvatarUpload = async (file: File) => {
     const updated = await uploadAndSetAvatar(profile.id, file);
     setProfile(updated);
-    setMessage("Profile photo updated.");
+    setMessage(t("profile.photoUpdated"));
     setError(null);
   };
 
@@ -60,7 +60,7 @@ export default function PatientProfilePage() {
         gender: profileForm.gender as Gender,
       });
       setProfile(updated);
-      setMessage("Profile updated successfully.");
+      setMessage(t("profile.updated"));
     } catch (err) {
       setError(getErrorMessage(err, "Failed to update profile"));
     } finally {
@@ -87,16 +87,19 @@ export default function PatientProfilePage() {
                 onUpload={handleAvatarUpload}
                 onError={(msg) => setError(msg)}
                 size="lg"
-                hint="JPG, PNG or WebP · max 2MB"
+                hint={t("profile.photoHint")}
               />
               <div>
                 <h3 className="font-bold text-lg">{profile.full_name}</h3>
                 <p className="text-xs text-muted-foreground">{profile.email}</p>
               </div>
-              <div className="border-t border-border pt-4 text-xs text-muted-foreground text-left space-y-2">
-                <p><strong>Role:</strong> Patient</p>
-                <p><strong>City:</strong> {profile.city ?? "Not set"}</p>
-                <p><strong>Member Since:</strong> {formatDate(profile.created_at, { month: "long", year: "numeric" })}</p>
+              <div className="border-t border-border pt-4 text-xs text-muted-foreground text-start space-y-2">
+                <p><strong>{t("profile.role")}:</strong> {t("roles.patient")}</p>
+                <p><strong>{t("profile.city")}:</strong> {profile.city ?? t("common.notSet")}</p>
+                <p>
+                  <strong>{t("profile.memberSince")}:</strong>{" "}
+                  {formatLocalizedDate(profile.created_at, locale, { month: "long", year: "numeric" })}
+                </p>
               </div>
             </CardContent>
           </Card>
@@ -105,15 +108,15 @@ export default function PatientProfilePage() {
         <div className="md:col-span-2">
           <Card>
             <CardHeader>
-              <CardTitle>Personal Details</CardTitle>
-              <CardDescription>Keep your profile current to help doctors coordinate with you.</CardDescription>
+              <CardTitle>{t("profile.personalDetails")}</CardTitle>
+              <CardDescription>{t("profile.personalDetailsDesc")}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               {message && <p className="text-sm text-green-600">{message}</p>}
               {error && <p className="text-sm text-red-600">{error}</p>}
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-muted-foreground">Full Name</label>
+                  <label className="text-xs font-semibold text-muted-foreground">{t("profile.fullName")}</label>
                   <div className="relative">
                     <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                     <input
@@ -126,7 +129,7 @@ export default function PatientProfilePage() {
                   </div>
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-muted-foreground">Email Address</label>
+                  <label className="text-xs font-semibold text-muted-foreground">{t("profile.email")}</label>
                   <div className="relative">
                     <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                     <input
@@ -136,10 +139,10 @@ export default function PatientProfilePage() {
                       className="w-full h-10 pl-9 pr-4 rounded-lg border border-border bg-muted/50 text-muted-foreground text-sm cursor-not-allowed"
                     />
                   </div>
-                  <p className="text-[10px] text-muted-foreground">Synced from your login account</p>
+                  <p className="text-[10px] text-muted-foreground">{t("profile.emailSynced")}</p>
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-muted-foreground">Phone Number</label>
+                  <label className="text-xs font-semibold text-muted-foreground">{t("profile.phone")}</label>
                   <div className="relative">
                     <Phone className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                     <input
@@ -151,7 +154,7 @@ export default function PatientProfilePage() {
                   </div>
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-muted-foreground">City</label>
+                  <label className="text-xs font-semibold text-muted-foreground">{t("profile.city")}</label>
                   <div className="relative">
                     <MapPin className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                     <input
@@ -163,7 +166,7 @@ export default function PatientProfilePage() {
                   </div>
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-muted-foreground">Date of Birth</label>
+                  <label className="text-xs font-semibold text-muted-foreground">{t("profile.dob")}</label>
                   <div className="relative">
                     <Calendar className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                     <input
@@ -175,7 +178,7 @@ export default function PatientProfilePage() {
                   </div>
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-muted-foreground">Gender</label>
+                  <label className="text-xs font-semibold text-muted-foreground">{t("profile.gender")}</label>
                   <div className="relative">
                     <Heart className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                     <select
@@ -183,9 +186,9 @@ export default function PatientProfilePage() {
                       onChange={(e) => setProfileForm({ ...profileForm, gender: e.target.value as Gender })}
                       className="w-full h-10 pl-9 pr-4 rounded-lg border border-border bg-card text-sm focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer"
                     >
-                      <option value="male">Male</option>
-                      <option value="female">Female</option>
-                      <option value="other">Other</option>
+                      <option value="male">{t("profile.male")}</option>
+                      <option value="female">{t("profile.female")}</option>
+                      <option value="other">{t("profile.other")}</option>
                     </select>
                   </div>
                 </div>
@@ -195,11 +198,11 @@ export default function PatientProfilePage() {
               <Button type="submit" disabled={isSaving}>
                 {isSaving ? (
                   <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Saving...
+                    <Loader2 className="h-4 w-4 me-2 animate-spin" />
+                    {t("common.saving")}
                   </>
                 ) : (
-                  "Save Changes"
+                  t("common.saveChanges")
                 )}
               </Button>
             </CardFooter>

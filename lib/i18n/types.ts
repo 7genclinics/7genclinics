@@ -23,7 +23,7 @@ export function getMessage(
   let text = typeof node === "string" ? node : path;
   if (vars) {
     for (const [key, value] of Object.entries(vars)) {
-      text = text.replaceAll(`{${key}}`, String(value));
+      text = text.replace(new RegExp(`\\{${key}\\}`, "g"), String(value));
     }
   }
   return text;

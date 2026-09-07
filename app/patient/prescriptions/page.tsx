@@ -37,30 +37,34 @@ import {
 import { getErrorMessage } from "@/lib/errors";
 import { useLocale } from "@/contexts/LocaleContext";
 
-const FILTER_TABS: { id: PrescriptionFilterType; label: string }[] = [
-  { id: "all", label: "All" },
-  { id: "medication", label: "Medication" },
-  { id: "treatment", label: "Treatment" },
-  { id: "with_file", label: "With file" },
-];
-
-const SORT_OPTIONS: { id: PrescriptionSortOption; label: string }[] = [
-  { id: "newest", label: "Most recent" },
-  { id: "oldest", label: "Oldest first" },
-  { id: "doctor_asc", label: "Doctor A–Z" },
-  { id: "doctor_desc", label: "Doctor Z–A" },
-];
-
-const DATE_RANGE_OPTIONS: { id: PrescriptionDateRange; label: string }[] = [
-  { id: "all", label: "All time" },
-  { id: "30d", label: "Last 30 days" },
-  { id: "90d", label: "Last 3 months" },
-  { id: "1y", label: "Last year" },
-];
+const FILTER_TAB_IDS: PrescriptionFilterType[] = ["all", "medication", "treatment", "with_file"];
+const SORT_OPTION_IDS: PrescriptionSortOption[] = ["newest", "oldest", "doctor_asc", "doctor_desc"];
+const DATE_RANGE_IDS: PrescriptionDateRange[] = ["all", "30d", "90d", "1y"];
 
 export default function PatientPrescriptionsPage() {
   const { profile } = usePatient();
   const { t } = useLocale();
+  const filterLabel = (id: PrescriptionFilterType) =>
+    ({
+      all: t("prescriptions.all"),
+      medication: t("prescriptions.medication"),
+      treatment: t("prescriptions.treatment"),
+      with_file: t("prescriptions.withFile"),
+    })[id];
+  const sortLabel = (id: PrescriptionSortOption) =>
+    ({
+      newest: t("prescriptions.mostRecent"),
+      oldest: t("prescriptions.oldestFirst"),
+      doctor_asc: t("prescriptions.doctorAz"),
+      doctor_desc: t("prescriptions.doctorZa"),
+    })[id];
+  const dateRangeLabel = (id: PrescriptionDateRange) =>
+    ({
+      all: t("prescriptions.allTime"),
+      "30d": t("prescriptions.last30"),
+      "90d": t("prescriptions.last3Months"),
+      "1y": t("prescriptions.lastYear"),
+    })[id];
   const [prescriptions, setPrescriptions] = useState<PatientPrescription[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -191,10 +195,10 @@ export default function PatientPrescriptionsPage() {
       {prescriptions.length > 0 && (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {[
-            { label: "Total records", value: stats.total, icon: FileText, color: "text-brand-500 bg-brand-50" },
-            { label: "With medication", value: stats.withMedication, icon: Activity, color: "text-emerald-600 bg-emerald-50" },
-            { label: "Downloadable files", value: stats.withFile, icon: Download, color: "text-purple-600 bg-purple-50" },
-            { label: "New this week", value: stats.recent, icon: Calendar, color: "text-violet-600 bg-violet-50" },
+            { label: t("prescriptions.totalRecords"), value: stats.total, icon: FileText, color: "text-brand-500 bg-brand-50" },
+            { label: t("prescriptions.withMedication"), value: stats.withMedication, icon: Activity, color: "text-emerald-600 bg-emerald-50" },
+            { label: t("prescriptions.downloadableFiles"), value: stats.withFile, icon: Download, color: "text-purple-600 bg-purple-50" },
+            { label: t("prescriptions.newThisWeek"), value: stats.recent, icon: Calendar, color: "text-violet-600 bg-violet-50" },
           ].map((stat) => (
             <div
               key={stat.label}
@@ -218,7 +222,7 @@ export default function PatientPrescriptionsPage() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <input
               type="text"
-              placeholder="Search doctor, specialty, medication, or notes..."
+              placeholder={t("prescriptions.searchPlaceholder")}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full h-10 pl-9 pr-4 rounded-lg border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
@@ -231,9 +235,9 @@ export default function PatientPrescriptionsPage() {
               className="h-10 rounded-lg border border-border bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20"
               aria-label="Sort prescriptions"
             >
-              {SORT_OPTIONS.map((opt) => (
-                <option key={opt.id} value={opt.id}>
-                  {opt.label}
+              {SORT_OPTION_IDS.map((id) => (
+                <option key={id} value={id}>
+                  {sortLabel(id)}
                 </option>
               ))}
             </select>
@@ -244,7 +248,7 @@ export default function PatientPrescriptionsPage() {
                 className="h-10 rounded-lg border border-border bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20"
                 aria-label="Filter by specialty"
               >
-                <option value="all">All specialties</option>
+                <option value="all">{t("doctors.all")}</option>
                 {specializations.map((spec) => (
                   <option key={spec} value={spec}>
                     {spec}
@@ -258,9 +262,9 @@ export default function PatientPrescriptionsPage() {
               className="h-10 rounded-lg border border-border bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20"
               aria-label="Filter by date range"
             >
-              {DATE_RANGE_OPTIONS.map((opt) => (
-                <option key={opt.id} value={opt.id}>
-                  {opt.label}
+              {DATE_RANGE_IDS.map((id) => (
+                <option key={id} value={id}>
+                  {dateRangeLabel(id)}
                 </option>
               ))}
             </select>
@@ -271,17 +275,17 @@ export default function PatientPrescriptionsPage() {
           <div className="flex items-center gap-2">
             <Filter className="h-4 w-4 text-muted-foreground hidden sm:block" />
             <div className="flex gap-1 overflow-x-auto pb-1 sm:pb-0">
-              {FILTER_TABS.map((tab) => (
+              {FILTER_TAB_IDS.map((id) => (
                 <button
-                  key={tab.id}
-                  onClick={() => setFilterType(tab.id)}
+                  key={id}
+                  onClick={() => setFilterType(id)}
                   className={`px-4 py-2 text-sm font-medium rounded-full transition-all whitespace-nowrap ${
-                    filterType === tab.id
+                    filterType === id
                       ? "bg-brand-500 text-white shadow-sm"
                       : "bg-muted text-muted-foreground hover:bg-muted/80"
                   }`}
                 >
-                  {tab.label}
+                  {filterLabel(id)}
                 </button>
               ))}
             </div>
@@ -432,7 +436,7 @@ export default function PatientPrescriptionsPage() {
               {selectedPrescription.clinicalNote && (
                 <div>
                   <p className="text-xs text-muted-foreground mb-2 uppercase font-semibold tracking-wider">
-                    {selectedPrescription.prescription ? "Clinical Notes" : "Treatment Plan"}
+                    {selectedPrescription.prescription ? t("prescriptions.clinicalNotes") : t("prescriptions.treatmentPlan")}
                   </p>
                   <div className="p-4 rounded-xl border bg-muted/30 text-sm whitespace-pre-wrap">
                     {selectedPrescription.clinicalNote}

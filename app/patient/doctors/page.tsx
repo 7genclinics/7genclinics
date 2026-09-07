@@ -23,10 +23,14 @@ import { useDoctorSlotAvailability } from "@/lib/hooks/useDoctorSlotAvailability
 import type { DoctorWithProfile } from "@/lib/patient/types";
 import type { AppointmentType } from "@/types";
 import { useLocale } from "@/contexts/LocaleContext";
+import {
+  formatDoctorDisplayName,
+  translateSpecialty,
+} from "@/lib/i18n/format";
 
 export default function PatientDoctorsPage() {
   const router = useRouter();
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedSpecialty, setSelectedSpecialty] = useState("All");
   const [doctors, setDoctors] = useState<DoctorWithProfile[]>([]);
@@ -123,14 +127,14 @@ export default function PatientDoctorsPage() {
     setError(null);
 
     if (!hasAvailabilityConfigured || timeOptions.length === 0) {
-      setError("This doctor has no bookable slots for the selected date.");
+      setError(t("doctors.noSlots"));
       return;
     }
     if (
       isSlotInPast(bookDate, bookTime) ||
       !isSlotSelectable(bookTime, bookedSlots, blockedSlots)
     ) {
-      setError("This slot is no longer available. Please choose a different time.");
+      setError(t("doctors.slotGone"));
       return;
     }
 
@@ -148,7 +152,7 @@ export default function PatientDoctorsPage() {
       isSlotInPast(bookDate, bookTime) ||
       !isSlotSelectable(bookTime, latest.booked, latest.blocked)
     ) {
-      setError("This slot is no longer available. Please choose a different time.");
+      setError(t("doctors.slotGone"));
       setBooking(false);
       return;
     }
@@ -213,7 +217,7 @@ export default function PatientDoctorsPage() {
         </div>
         <Button variant="outline" className="flex items-center gap-1.5 h-10">
           <Filter className="h-4 w-4" />
-          Filters
+          {t("doctors.filters")}
         </Button>
       </div>
 
@@ -228,7 +232,7 @@ export default function PatientDoctorsPage() {
                 : "bg-card border-border text-muted-foreground hover:text-foreground"
             }`}
           >
-            {specialty}
+            {specialty === "All" ? t("doctors.all") : translateSpecialty(specialty, locale)}
           </button>
         ))}
       </div>
@@ -247,10 +251,14 @@ export default function PatientDoctorsPage() {
                   />
                   <div>
                     <div className="flex items-center gap-1.5">
-                      <h3 className="font-bold text-base leading-none">{doc.name}</h3>
+                      <h3 className="font-bold text-base leading-none">
+                        {formatDoctorDisplayName(doc.name, locale)}
+                      </h3>
                       <CheckCircle className="h-4 w-4 text-blue-500 fill-blue-500/10 shrink-0" />
                     </div>
-                    <p className="text-xs text-primary font-medium mt-1">{doc.specialization}</p>
+                    <p className="text-xs text-primary font-medium mt-1">
+                      {translateSpecialty(doc.specialization, locale)}
+                    </p>
                     <p className="text-[11px] text-muted-foreground mt-0.5 line-clamp-2">{doc.qualification}</p>
                   </div>
                 </div>
@@ -263,9 +271,9 @@ export default function PatientDoctorsPage() {
                       {doc.rating.toFixed(1)}
                     </span>
                   )}
-                  <span>({doc.reviewsCount} reviews)</span>
+                  <span>({t("doctors.reviews", { count: doc.reviewsCount })})</span>
                   <span>•</span>
-                  <span>{doc.experience}</span>
+                  <span>{t("doctors.yearsExperience", { count: doc.experienceYears })}</span>
                 </div>
                 <div className="flex flex-col gap-1.5 border-t border-border pt-3 text-xs text-muted-foreground">
                   <div className="flex items-center gap-1.5">
@@ -291,18 +299,18 @@ export default function PatientDoctorsPage() {
                   className="bg-primary hover:bg-primary/90 font-semibold px-4"
                   onClick={() => openBooking(doc)}
                 >
-                  Book Slot
+                  {t("common.book")}
                 </Button>
               </CardFooter>
             </Card>
           ))
         ) : (
           <div className="col-span-full py-16 text-center border border-dashed rounded-xl">
-            <h4 className="font-semibold">No doctors found</h4>
+            <h4 className="font-semibold">{t("appointments.browseDoctors")}</h4>
             <p className="text-xs text-muted-foreground mt-1">
               {doctors.length === 0
-                ? "No approved doctors on the platform yet."
-                : "Try adjusting your search or specialty filter."}
+                ? t("doctors.noApproved")
+                : t("doctors.tryAdjust")}
             </p>
           </div>
         )}
@@ -314,7 +322,7 @@ export default function PatientDoctorsPage() {
             <div className="p-6 border-b flex items-center justify-between sticky top-0 bg-card z-10">
               <div>
                 <h3 className="text-lg font-bold">
-                  {bookStep === 1 ? "Book Appointment" : "Pay to Confirm"}
+                  {bookStep === 1 ? t("doctors.bookAppointment") : t("doctors.payToConfirm")}
                 </h3>
                 <p className="text-xs text-muted-foreground">{bookingDoctor.name}</p>
               </div>
@@ -361,9 +369,9 @@ export default function PatientDoctorsPage() {
                     onChange={(e) => setBookType(e.target.value as AppointmentType)}
                     className="w-full h-10 px-4 rounded-lg border border-border text-sm"
                   >
-                    <option value="video">Video</option>
-                    <option value="chat">Chat</option>
-                    <option value="in_person">In-Person</option>
+                    <option value="video">{t("aptType.video")}</option>
+                    <option value="chat">{t("aptType.chat")}</option>
+                    <option value="in_person">{t("aptType.inPerson")}</option>
                   </select>
                 </div>
                 <div>
@@ -372,7 +380,7 @@ export default function PatientDoctorsPage() {
                     rows={3}
                     value={bookNotes}
                     onChange={(e) => setBookNotes(e.target.value)}
-                    placeholder="Briefly describe your concern..."
+                    placeholder={t("doctors.concernPlaceholder")}
                     className="w-full px-3 py-2 rounded-lg border border-border text-sm"
                   />
                 </div>
@@ -439,7 +447,7 @@ export default function PatientDoctorsPage() {
                       disabled={booking}
                     >
                       <ArrowLeft className="h-4 w-4 mr-1" />
-                      Back
+                      {t("common.back")}
                     </Button>
                     <Button
                       type="submit"
@@ -447,10 +455,10 @@ export default function PatientDoctorsPage() {
                       disabled={booking}
                     >
                       {booking
-                        ? "Booking..."
+                        ? t("doctors.booking")
                         : proofFile
-                          ? "Submit & Request Confirmation"
-                          : "Book & Upload Later"}
+                          ? t("doctors.submitConfirm")
+                          : t("doctors.bookUploadLater")}
                     </Button>
                   </div>
                   {!proofFile && (
