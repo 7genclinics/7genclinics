@@ -18,11 +18,22 @@ import {
   type ClinicDoctorOption,
 } from "@/lib/clinic/types";
 import { useClinicQueueRealtime } from "@/lib/realtime/useClinicQueueRealtime";
-import { formatTime } from "@/lib/doctor/mappers";
+import { formatCurrency, formatTime } from "@/lib/doctor/mappers";
 import { getErrorMessage } from "@/lib/errors";
-import { Loader2, RefreshCw, Search, Ticket, Users, Wallet, UserPlus, Activity } from "lucide-react";
+import {
+  Banknote,
+  CheckCircle2,
+  ClipboardList,
+  Loader2,
+  RefreshCw,
+  Search,
+  Stethoscope,
+  UserPlus,
+  Users,
+} from "lucide-react";
 
 export default function ReceptionDashboardPage() {
+  const [todayAppointments, setTodayAppointments] = useState<ClinicAppointment[]>([]);
   const [appointments, setAppointments] = useState<ClinicAppointment[]>([]);
   const [doctors, setDoctors] = useState<ClinicDoctorOption[]>([]);
   const [doctorId, setDoctorId] = useState("");
@@ -41,18 +52,20 @@ export default function ReceptionDashboardPage() {
   const load = useCallback(async () => {
     setError(null);
     try {
-      const [docs, rows] = await Promise.all([
+      const [docs, today] = await Promise.all([
         getClinicDoctors(),
-        debouncedQuery.trim()
-          ? searchClinicAppointments(debouncedQuery)
-          : getTodayClinicAppointments(doctorId || undefined),
+        getTodayClinicAppointments(doctorId || undefined),
       ]);
       setDoctors(docs);
-      setAppointments(
-        doctorId && debouncedQuery.trim()
-          ? rows.filter((row) => row.doctor_id === doctorId)
-          : rows
-      );
+      setTodayAppointments(today);
+      if (debouncedQuery.trim()) {
+        const searched = await searchClinicAppointments(debouncedQuery);
+        setAppointments(
+          doctorId ? searched.filter((row) => row.doctor_id === doctorId) : searched,
+        );
+      } else {
+        setAppointments(today);
+      }
     } catch (err) {
       setError(getErrorMessage(err, "Failed to load today's appointments"));
     } finally {
@@ -67,14 +80,34 @@ export default function ReceptionDashboardPage() {
   useClinicQueueRealtime({ onChange: load, doctorId: doctorId || undefined });
 
   const stats = useMemo(() => {
+    const open = todayAppointments.filter(
+      (a) => !["cancelled", "no_show", "expired_no_show"].includes(a.status),
+    );
+    const deskNeeded = todayAppointments.filter((a) =>
+      ["scheduled", "checked_in", "payment_pending"].includes(a.status),
+    ).length;
+    const onFloor = todayAppointments.filter((a) =>
+      ["waiting", "with_doctor"].includes(a.status),
+    );
+    const completed = todayAppointments.filter((a) => a.status === "completed").length;
+    const walkIns = todayAppointments.filter((a) => a.booking_source === "walk_in").length;
+    const collected = todayAppointments.reduce((sum, a) => {
+      if (a.invoice?.status === "paid") return sum + Number(a.invoice.total ?? 0);
+      if (a.payment?.status === "completed") return sum + Number(a.payment.amount ?? 0);
+      return sum;
+    }, 0);
+    const doctorsOnFloor = new Set(onFloor.map((a) => a.doctor_id)).size;
+
     return {
-      arriving: appointments.filter((a) => a.status === "scheduled" || a.status === "checked_in")
-        .length,
-      waiting: appointments.filter((a) => a.status === "waiting").length,
-      withDoctor: appointments.filter((a) => a.status === "with_doctor").length,
-      payment: appointments.filter((a) => a.status === "payment_pending").length,
+      visits: open.length,
+      deskNeeded,
+      onFloor: onFloor.length,
+      doctorsOnFloor,
+      completed,
+      walkIns,
+      collected,
     };
-  }, [appointments]);
+  }, [todayAppointments]);
 
   const sendToQueue = async (id: string) => {
     setBusyId(id);
@@ -118,23 +151,77 @@ export default function ReceptionDashboardPage() {
         </div>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {[
-          { label: "Arriving at desk", value: stats.arriving, icon: Users },
-          { label: "Collect fee", value: stats.payment, icon: Wallet },
-          { label: "Waiting for doctor", value: stats.waiting, icon: Ticket },
-          { label: "With doctor", value: stats.withDoctor, icon: Activity },
-        ].map((item) => (
-          <Card key={item.label}>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">{item.label}</CardTitle>
-            </CardHeader>
-            <CardContent className="flex items-center justify-between">
-              <p className="text-3xl font-semibold">{item.value}</p>
-              <item.icon className="h-5 w-5 text-brand-500" />
-            </CardContent>
-          </Card>
-        ))}
+          {
+            label: "Today's visits",
+            value: String(stats.visits),
+            hint: "Booked and walk-in, still active",
+            icon: ClipboardList,
+            href: undefined as string | undefined,
+          },
+          {
+            label: "Need desk",
+            value: String(stats.deskNeeded),
+            hint: "Check-in or collect fee",
+            icon: Users,
+            href: "/reception/queue",
+          },
+          {
+            label: "On the floor",
+            value: String(stats.onFloor),
+            hint:
+              stats.doctorsOnFloor > 0
+                ? `${stats.doctorsOnFloor} doctor${stats.doctorsOnFloor === 1 ? "" : "s"} seeing patients`
+                : "Waiting or with a doctor",
+            icon: Stethoscope,
+            href: "/reception/queue",
+          },
+          {
+            label: "Completed today",
+            value: String(stats.completed),
+            hint: "Visits closed at the desk",
+            icon: CheckCircle2,
+            href: undefined,
+          },
+          {
+            label: "Walk-ins",
+            value: String(stats.walkIns),
+            hint: "Registered at reception today",
+            icon: UserPlus,
+            href: "/reception/walk-in",
+          },
+          {
+            label: "Collected today",
+            value: formatCurrency(stats.collected),
+            hint: "Desk and prepaid fees received",
+            icon: Banknote,
+            href: "/reception/billing",
+          },
+        ].map((item) => {
+          const Icon = item.icon;
+          const inner = (
+            <Card className={item.href ? "transition-colors hover:border-brand-300 hover:bg-brand-50/40" : ""}>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">{item.label}</CardTitle>
+              </CardHeader>
+              <CardContent className="flex items-end justify-between gap-3">
+                <div>
+                  <p className="text-2xl font-semibold tabular-nums sm:text-3xl">{item.value}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">{item.hint}</p>
+                </div>
+                <Icon className="h-5 w-5 shrink-0 text-brand-500" />
+              </CardContent>
+            </Card>
+          );
+          return item.href ? (
+            <Link key={item.label} href={item.href}>
+              {inner}
+            </Link>
+          ) : (
+            <div key={item.label}>{inner}</div>
+          );
+        })}
       </div>
 
       <div className="flex flex-col gap-3 sm:flex-row">

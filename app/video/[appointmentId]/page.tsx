@@ -172,6 +172,8 @@ export default function VideoConsultationPage() {
   useEffect(() => {
     if (phase.kind !== "in_call" || !containerRef.current || !window.JitsiMeetExternalAPI) return;
     const { info } = phase;
+    let disposed = false;
+    let joined = false;
 
     leavingRef.current = false;
     const api = new window.JitsiMeetExternalAPI(info.domain, {
@@ -188,6 +190,7 @@ export default function VideoConsultationPage() {
         enableWelcomePage: false,
         requireDisplayName: false,
         hideEmailInSettings: true,
+        analytics: { disabled: true },
       },
       interfaceConfigOverwrite: {
         SHOW_JITSI_WATERMARK: false,
@@ -197,7 +200,13 @@ export default function VideoConsultationPage() {
     });
     apiRef.current = api;
 
+    const failCall = (message: string) => {
+      if (disposed || leavingRef.current) return;
+      setPhase({ kind: "error", message });
+    };
+
     api.addListener("videoConferenceJoined", async () => {
+      joined = true;
       if (info.role !== "moderator") return;
       if (info.jwtConfigured) {
         api.executeCommand("toggleLobby", true);
@@ -211,20 +220,31 @@ export default function VideoConsultationPage() {
     });
     api.addListener(
       "errorOccurred",
-      (error: { type?: string; message?: string }) => {
+      (error: { type?: string; message?: string; isFatal?: boolean }) => {
+        if (disposed || leavingRef.current) return;
+        // Startup noise and React Strict Mode dispose() must not kill the room.
+        if (error?.isFatal === false) return;
         const text = `${error?.type ?? ""} ${error?.message ?? ""}`.toLowerCase();
+        const isDisposeNoise =
+          text.includes("conference.destroyed") ||
+          text.includes("connection.dropped") ||
+          text.includes("conference.left");
+        if (isDisposeNoise) return;
+        if (error?.isFatal !== true && !text.includes("connectionerror") && !text.includes("not-allowed")) {
+          return;
+        }
         const isAuthError =
           text.includes("auth") ||
           text.includes("token") ||
           text.includes("expired") ||
           text.includes("not allowed") ||
+          text.includes("not-allowed") ||
           text.includes("login");
-        setPhase({
-          kind: "error",
-          message: isAuthError
-            ? "The meeting token expired. Use Try again — you should rejoin without a Jitsi login screen."
-            : "The video connection failed. Check your connection and try joining again.",
-        });
+        failCall(
+          isAuthError
+            ? "The meeting room could not authenticate. Ask support to set JITSI_DOMAIN, JITSI_APP_ID, and JITSI_APP_SECRET, then try again."
+            : "The video room could not start. Close other camera apps, allow camera and microphone, then try again.",
+        );
       }
     );
     api.addListener("readyToClose", () => {
@@ -234,8 +254,21 @@ export default function VideoConsultationPage() {
       if (leavingRef.current) leaveToDashboard(info.role);
     });
 
+    const joinWatchdog = window.setTimeout(() => {
+      if (disposed || joined || leavingRef.current) return;
+      failCall(
+        "The video room did not start. Allow camera and microphone, then try again. For clinic launch, configure your own Jitsi server.",
+      );
+    }, 25_000);
+
     return () => {
-      api.dispose();
+      disposed = true;
+      window.clearTimeout(joinWatchdog);
+      try {
+        api.dispose();
+      } catch {
+        /* iframe already gone */
+      }
       apiRef.current = null;
     };
   }, [phase, leaveToDashboard, appointmentId]);
