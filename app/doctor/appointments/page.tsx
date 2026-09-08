@@ -30,6 +30,7 @@ import {
   cancelDoctorAppointment,
   getAvailabilitySlots,
   getDoctorAppointments,
+  rescheduleDoctorAppointment,
   saveClinicalRecords,
   updateAppointment,
 } from "@/lib/doctor/api";
@@ -262,16 +263,13 @@ export default function DoctorAppointmentsPage() {
     setIsRescheduling(true);
     try {
       const scheduledAt = pkDateTimeToUtcIso(newDateInput, newTimeInput);
-      await updateAppointment(selectedAppointment.id, {
-        scheduled_at: scheduledAt,
-        status: "scheduled",
-      });
+      await rescheduleDoctorAppointment(selectedAppointment.id, scheduledAt);
       setShowRescheduleModal(false);
       setNewDateInput("");
       setNewTimeInput("");
       setRescheduleSlots([]);
       setRescheduleSlotsError(null);
-      showToast("Appointment successfully rescheduled.");
+      showToast("Appointment rescheduled. The patient has been notified.");
       await loadAppointments();
     } catch (err) {
       showToast(getErrorMessage(err, "Failed to reschedule appointment."));

@@ -74,21 +74,136 @@ export async function POST(request: Request) {
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const body = await request.json() as {
-      type?: "booked" | "cancelled";
+      type?: "booked" | "cancelled" | "rescheduled" | "payment_approved" | "payment_rejected";
       appointmentId: string;
       patientId: string;
       doctorProfileId?: string;
       scheduledAt: string;
+      previousScheduledAt?: string;
       appointmentType?: AppointmentType;
       consultationFee?: number;
       patientNotes?: string;
       reason?: string;
       cancelledBy?: "patient" | "doctor" | "admin" | "system";
+      rescheduledBy?: "patient" | "doctor" | "admin";
     };
 
     const resendKey = process.env.RESEND_API_KEY;
     if (!resendKey) {
       return NextResponse.json({ sent: false, reason: "RESEND_API_KEY not configured" });
+    }
+
+    // ── Reschedule emails ─────────────────────────────────────────
+    if (body.type === "rescheduled") {
+      const { data: patientRow } = await supabase
+        .from("profiles")
+        .select("full_name, email")
+        .eq("id", body.patientId)
+        .single();
+
+      const { data: aptRow } = await (supabase as any)
+        .from("appointments")
+        .select(
+          `
+          doctor_id,
+          doctor:doctor_profiles!appointments_doctor_id_fkey (
+            profile:profiles!doctor_profiles_user_id_fkey ( full_name, email )
+          )
+        `
+        )
+        .eq("id", body.appointmentId)
+        .maybeSingle();
+
+      if (!patientRow) {
+        return NextResponse.json({ sent: false, reason: "Patient not found" });
+      }
+
+      const patient = patientRow as { full_name: string; email: string };
+      const doctorProfile = (
+        aptRow as {
+          doctor?: { profile?: { full_name: string; email: string } | null } | null;
+        } | null
+      )?.doctor?.profile;
+      const newWhen = fmtDate(body.scheduledAt);
+      const previousWhen = body.previousScheduledAt
+        ? fmtDate(body.previousScheduledAt)
+        : "the previous time";
+      const rescheduledBy = body.rescheduledBy ?? "doctor";
+      const patientDashUrl = `${SITE_URL}/patient/appointments`;
+      const doctorDashUrl = `${SITE_URL}/doctor/appointments`;
+      const actorLabel =
+        rescheduledBy === "admin"
+          ? "an administrator"
+          : rescheduledBy === "patient"
+            ? "the patient"
+            : "your doctor";
+
+      const sends: Promise<void>[] = [];
+
+      if (rescheduledBy !== "patient" && patient.email) {
+        const patientHtml = baseLayout(`
+          <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:16px 20px;margin-bottom:24px">
+            <p style="color:#1d4ed8;font-weight:700;margin:0;font-size:15px">Appointment Rescheduled</p>
+          </div>
+          <p style="color:#334155;font-size:15px">Hi <strong>${patient.full_name}</strong>,</p>
+          <p style="color:#475569;line-height:1.7">
+            Your appointment was moved by ${actorLabel}.
+          </p>
+          <table style="width:100%;border-collapse:collapse;margin:20px 0;font-size:14px">
+            <tr><td style="padding:10px 0;color:#64748b;border-bottom:1px solid #f1f5f9;width:40%">Previous time</td>
+                <td style="padding:10px 0;color:#334155;border-bottom:1px solid #f1f5f9">${previousWhen}</td></tr>
+            <tr><td style="padding:10px 0;color:#64748b">New time</td>
+                <td style="padding:10px 0;font-weight:600;color:#0d9488">${newWhen}</td></tr>
+          </table>
+          <p style="color:#475569;line-height:1.7">Please join at the new time. Open My Appointments for details.</p>
+          <a href="${patientDashUrl}" style="display:inline-block;background:#0d9488;color:#fff;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:600;font-size:14px;margin-top:4px">View My Appointments</a>
+        `);
+        sends.push(
+          sendEmail(
+            patient.email,
+            `Appointment rescheduled — Apna Clinic`,
+            patientHtml,
+            resendKey
+          )
+        );
+      }
+
+      if (rescheduledBy !== "doctor" && doctorProfile?.email) {
+        const doctorHtml = baseLayout(`
+          <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:16px 20px;margin-bottom:24px">
+            <p style="color:#1d4ed8;font-weight:700;margin:0;font-size:15px">Appointment Rescheduled</p>
+          </div>
+          <p style="color:#334155;font-size:15px">Hi <strong>Dr. ${doctorProfile.full_name}</strong>,</p>
+          <p style="color:#475569;line-height:1.7">
+            An appointment with <strong>${patient.full_name}</strong> was moved by ${actorLabel}.
+          </p>
+          <table style="width:100%;border-collapse:collapse;margin:20px 0;font-size:14px">
+            <tr><td style="padding:10px 0;color:#64748b;border-bottom:1px solid #f1f5f9;width:40%">Previous time</td>
+                <td style="padding:10px 0;color:#334155;border-bottom:1px solid #f1f5f9">${previousWhen}</td></tr>
+            <tr><td style="padding:10px 0;color:#64748b">New time</td>
+                <td style="padding:10px 0;font-weight:600;color:#0d9488">${newWhen}</td></tr>
+          </table>
+          <a href="${doctorDashUrl}" style="display:inline-block;background:#0d9488;color:#fff;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:600;font-size:14px;margin-top:4px">View My Appointments</a>
+        `);
+        sends.push(
+          sendEmail(
+            doctorProfile.email,
+            `Appointment rescheduled — Apna Clinic`,
+            doctorHtml,
+            resendKey
+          )
+        );
+      }
+
+      const results = await Promise.allSettled(sends);
+      const errors = results
+        .filter((r): r is PromiseRejectedResult => r.status === "rejected")
+        .map((r) => String(r.reason));
+
+      return NextResponse.json({
+        sent: results.some((r) => r.status === "fulfilled"),
+        errors,
+      });
     }
 
     // ── Cancellation emails ───────────────────────────────────────
@@ -185,6 +300,125 @@ export async function POST(request: Request) {
             doctorHtml,
             resendKey
           )
+        );
+      }
+
+      const results = await Promise.allSettled(sends);
+      const errors = results
+        .filter((r): r is PromiseRejectedResult => r.status === "rejected")
+        .map((r) => String(r.reason));
+
+      return NextResponse.json({
+        sent: results.some((r) => r.status === "fulfilled"),
+        errors,
+      });
+    }
+
+    // ── Payment proof approved / rejected ─────────────────────────
+    if (body.type === "payment_approved" || body.type === "payment_rejected") {
+      const { data: patientRow } = await supabase
+        .from("profiles")
+        .select("full_name, email")
+        .eq("id", body.patientId)
+        .single();
+
+      const { data: aptRow } = await (supabase as any)
+        .from("appointments")
+        .select(
+          `
+          scheduled_at, consultation_fee, appointment_type,
+          doctor:doctor_profiles!appointments_doctor_id_fkey (
+            specialization,
+            profile:profiles!doctor_profiles_user_id_fkey ( full_name, email )
+          )
+        `
+        )
+        .eq("id", body.appointmentId)
+        .maybeSingle();
+
+      if (!patientRow) {
+        return NextResponse.json({ sent: false, reason: "Patient not found" });
+      }
+
+      const patient = patientRow as { full_name: string; email: string };
+      const apt = aptRow as {
+        scheduled_at?: string;
+        consultation_fee?: number;
+        appointment_type?: AppointmentType;
+        doctor?: {
+          specialization?: string;
+          profile?: { full_name: string; email: string } | null;
+        } | null;
+      } | null;
+      const doctorProfile = apt?.doctor?.profile;
+      const dateFormatted = fmtDate(body.scheduledAt || apt?.scheduled_at || new Date().toISOString());
+      const fee = fmtPKR(Number(body.consultationFee ?? apt?.consultation_fee ?? 0));
+      const typeLabel = TYPE_LABELS[apt?.appointment_type ?? "video"] ?? "Consultation";
+      const patientDashUrl = `${SITE_URL}/patient/appointments`;
+      const doctorDashUrl = `${SITE_URL}/doctor/appointments`;
+      const sends: Promise<void>[] = [];
+
+      if (body.type === "payment_approved") {
+        if (patient.email) {
+          const patientHtml = baseLayout(`
+            <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:16px 20px;margin-bottom:24px">
+              <p style="color:#166534;font-weight:700;margin:0;font-size:15px">Payment approved — booking confirmed</p>
+            </div>
+            <p style="color:#334155;font-size:15px">Hi <strong>${patient.full_name}</strong>,</p>
+            <p style="color:#475569;line-height:1.7">
+              Your payment of <strong>${fee}</strong> was verified. Your appointment is confirmed.
+            </p>
+            <table style="width:100%;border-collapse:collapse;margin:20px 0;font-size:14px">
+              <tr><td style="padding:10px 0;color:#64748b;border-bottom:1px solid #f1f5f9;width:40%">Doctor</td>
+                  <td style="padding:10px 0;font-weight:600;color:#1e293b;border-bottom:1px solid #f1f5f9">${doctorProfile ? `Dr. ${doctorProfile.full_name}` : "Your doctor"}</td></tr>
+              <tr><td style="padding:10px 0;color:#64748b;border-bottom:1px solid #f1f5f9">Type</td>
+                  <td style="padding:10px 0;color:#334155;border-bottom:1px solid #f1f5f9">${typeLabel}</td></tr>
+              <tr><td style="padding:10px 0;color:#64748b">Date &amp; Time</td>
+                  <td style="padding:10px 0;font-weight:600;color:#0d9488">${dateFormatted}</td></tr>
+            </table>
+            <p style="color:#475569;line-height:1.7">Join from My Appointments at the scheduled time (the room opens 10 minutes early for video visits).</p>
+            <a href="${patientDashUrl}" style="display:inline-block;background:#0d9488;color:#fff;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:600;font-size:14px;margin-top:4px">View My Appointments</a>
+          `);
+          sends.push(
+            sendEmail(patient.email, `Payment approved — appointment confirmed · Apna Clinic`, patientHtml, resendKey)
+          );
+        }
+        if (doctorProfile?.email) {
+          const doctorHtml = baseLayout(`
+            <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:16px 20px;margin-bottom:24px">
+              <p style="color:#1d4ed8;font-weight:700;margin:0;font-size:15px">Patient payment confirmed</p>
+            </div>
+            <p style="color:#334155;font-size:15px">Hi <strong>Dr. ${doctorProfile.full_name}</strong>,</p>
+            <p style="color:#475569;line-height:1.7">
+              Payment from <strong>${patient.full_name}</strong> was approved. This ${typeLabel.toLowerCase()} is now confirmed.
+            </p>
+            <p style="color:#475569;line-height:1.7"><strong>When:</strong> ${dateFormatted}</p>
+            <a href="${doctorDashUrl}" style="display:inline-block;background:#0d9488;color:#fff;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:600;font-size:14px;margin-top:4px">View My Appointments</a>
+          `);
+          sends.push(
+            sendEmail(
+              doctorProfile.email,
+              `Confirmed: ${patient.full_name} · Apna Clinic`,
+              doctorHtml,
+              resendKey
+            )
+          );
+        }
+      } else if (patient.email) {
+        const reasonText = body.reason?.trim() || "Payment proof could not be verified.";
+        const patientHtml = baseLayout(`
+          <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:16px 20px;margin-bottom:24px">
+            <p style="color:#991b1b;font-weight:700;margin:0;font-size:15px">Payment proof not approved</p>
+          </div>
+          <p style="color:#334155;font-size:15px">Hi <strong>${patient.full_name}</strong>,</p>
+          <p style="color:#475569;line-height:1.7">${reasonText}</p>
+          <p style="color:#475569;line-height:1.7">
+            Your booking is not confirmed yet. Please upload a clear payment screenshot from My Appointments, or contact support.
+          </p>
+          <a href="${patientDashUrl}" style="display:inline-block;background:#0d9488;color:#fff;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:600;font-size:14px;margin-top:4px">Upload new proof</a>
+        `);
+        sends.push(
+          sendEmail(patient.email, `Payment proof not approved — Apna Clinic`, patientHtml, resendKey)
         );
       }
 

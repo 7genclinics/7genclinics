@@ -174,7 +174,7 @@ export default function AdminPaymentsPage() {
     setActionId(paymentId);
     try {
       await approvePatientPayment(paymentId, profile.id);
-      showToast("Payment approved. Booking confirmed.");
+      showToast("Payment approved. Patient and doctor have been notified.");
       setReviewPayment(null);
       await loadData();
     } catch (err) {
@@ -188,7 +188,7 @@ export default function AdminPaymentsPage() {
     setActionId(paymentId);
     try {
       await rejectPatientPayment(paymentId, profile.id, rejectReason);
-      showToast("Payment proof rejected. Patient can re-upload.");
+      showToast("Payment proof rejected. The patient has been notified.");
       setReviewPayment(null);
       setRejectReason("");
       await loadData();

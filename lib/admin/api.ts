@@ -648,11 +648,16 @@ export async function approvePatientPayment(
   // become an expired appointment the moment it is confirmed. Block approval
   // so the admin rejects/refunds instead of charging for a dead session.
   const { data: aptData, error: aptFetchError } = await table("appointments")
-    .select("scheduled_at, status")
+    .select("scheduled_at, status, appointment_type, doctor_id")
     .eq("id", row.appointment_id)
     .maybeSingle();
   if (aptFetchError) throw aptFetchError;
-  const apt = aptData as { scheduled_at: string; status: string } | null;
+  const apt = aptData as {
+    scheduled_at: string;
+    status: string;
+    appointment_type?: string;
+    doctor_id?: string;
+  } | null;
   if (!apt) throw new Error("Appointment for this payment was not found");
   if (apt.status !== "pending_payment") {
     throw new Error("This appointment is no longer awaiting payment confirmation");
@@ -689,17 +694,35 @@ export async function approvePatientPayment(
   if (aptError) throw aptError;
 
   const aptRow = payment as AdminPayment & {
-    doctor?: { user_id?: string; profile?: { full_name?: string } | null };
+    doctor?: { user_id?: string; profile?: { full_name?: string } | null } | { user_id?: string; profile?: { full_name?: string } | null }[] | null;
   };
-  const doctorUserId = aptRow.doctor?.user_id;
-  const doctorName = aptRow.doctor?.profile?.full_name
-    ? `Dr. ${aptRow.doctor.profile.full_name}`
+  const doctorRel = Array.isArray(aptRow.doctor) ? aptRow.doctor[0] : aptRow.doctor;
+  let doctorUserId = doctorRel?.user_id;
+  if (!doctorUserId && apt.doctor_id) {
+    const { data: docRow } = await table("doctor_profiles")
+      .select("user_id")
+      .eq("id", apt.doctor_id)
+      .maybeSingle();
+    doctorUserId = (docRow as { user_id?: string } | null)?.user_id;
+  }
+  const doctorName = doctorRel?.profile?.full_name
+    ? `Dr. ${doctorRel.profile.full_name}`
     : "";
+  const when = new Date(apt.scheduled_at).toLocaleString("en-PK", {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+    timeZone: "Asia/Karachi",
+  });
+  const amountLabel = `PKR ${Math.round(Number(row.amount)).toLocaleString("en-PK")}`;
 
   await notifyPatientPayment(
     row.patient_id,
     "Payment approved",
-    `Your payment of PKR ${Math.round(Number(row.amount)).toLocaleString("en-PK")} was approved. Your appointment${doctorName ? ` with ${doctorName}` : ""} is now confirmed.`,
+    `Your payment of ${amountLabel} was approved. Your appointment${doctorName ? ` with ${doctorName}` : ""} on ${when} is now confirmed.`,
     {
       payment_id: paymentId,
       appointment_id: row.appointment_id,
@@ -710,12 +733,27 @@ export async function approvePatientPayment(
   if (doctorUserId) {
     await safeNotify(() => createNotification(
       doctorUserId,
-      "Payment approved",
-      `A patient's payment was approved. The appointment is now confirmed and scheduled.`,
+      "Payment approved — booking confirmed",
+      `Payment for the ${when} visit is confirmed. The appointment is on your schedule.`,
       "appointment",
       { appointment_id: row.appointment_id, payment_id: paymentId, event: "payment_approved" }
     ));
   }
+
+  await safeNotify(async () => {
+    await fetch("/api/appointments/notify", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        type: "payment_approved",
+        appointmentId: row.appointment_id,
+        patientId: row.patient_id,
+        scheduledAt: apt.scheduled_at,
+        consultationFee: Number(row.amount),
+        appointmentType: apt.appointment_type,
+      }),
+    });
+  });
 
   return payment as AdminPayment;
 }
@@ -727,13 +765,19 @@ export async function rejectPatientPayment(
   reason?: string
 ): Promise<AdminPayment> {
   const { data: existing, error: fetchError } = await table("payments")
-    .select("id, status, patient_id, amount")
+    .select("id, status, patient_id, amount, appointment_id")
     .eq("id", paymentId)
     .maybeSingle();
 
   if (fetchError) throw fetchError;
   if (!existing) throw new Error("Payment not found");
-  const row = existing as { id: string; status: string; patient_id: string; amount: number };
+  const row = existing as {
+    id: string;
+    status: string;
+    patient_id: string;
+    amount: number;
+    appointment_id: string;
+  };
   if (row.status !== "pending") throw new Error("Only pending payments can be rejected");
 
   const rejectionReason =
@@ -754,9 +798,23 @@ export async function rejectPatientPayment(
   await notifyPatientPayment(
     row.patient_id,
     "Payment rejected",
-    `${rejectionReason} You can re-book and submit a new payment proof.`,
-    { payment_id: paymentId }
+    `${rejectionReason} You can upload a new screenshot from My Appointments.`,
+    { payment_id: paymentId, appointment_id: row.appointment_id, event: "payment_rejected" }
   );
+
+  await safeNotify(async () => {
+    await fetch("/api/appointments/notify", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        type: "payment_rejected",
+        appointmentId: row.appointment_id,
+        patientId: row.patient_id,
+        scheduledAt: new Date().toISOString(),
+        reason: rejectionReason,
+      }),
+    });
+  });
 
   return payment as AdminPayment;
 }

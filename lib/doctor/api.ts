@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/client";
 import { getCurrentAuthUser } from "@/lib/auth/current-user";
 import { finalizeAppointmentCancellation } from "@/lib/appointments/cancel";
+import { notifyAppointmentRescheduled } from "@/lib/appointments/reschedule";
 import { sanitizeSelfProfileUpdate } from "@/lib/auth/safe-profile-update";
 import type { DoctorProfile, Profile, AppointmentStatus } from "@/types";
 import type { Database } from "@/types/database";
@@ -202,6 +203,61 @@ export async function updateAppointment(
     .single();
 
   if (error) throw error;
+  return data;
+}
+
+/**
+ * Move an appointment to a new slot and notify the patient (bell, push, email).
+ */
+export async function rescheduleDoctorAppointment(
+  appointmentId: string,
+  scheduledAt: string
+) {
+  const { data: existing, error: fetchError } = await table("appointments")
+    .select(
+      `
+      id, patient_id, scheduled_at, status,
+      doctor:doctor_profiles!appointments_doctor_id_fkey ( user_id )
+    `
+    )
+    .eq("id", appointmentId)
+    .single();
+
+  if (fetchError) throw fetchError;
+  if (!existing) throw new Error("Appointment not found");
+  if (["cancelled", "completed", "expired_no_show", "no_show"].includes(existing.status)) {
+    throw new Error("This appointment can no longer be rescheduled.");
+  }
+
+  const previousScheduledAt = existing.scheduled_at as string;
+  if (previousScheduledAt === scheduledAt) {
+    return existing;
+  }
+
+  const data = await updateAppointment(appointmentId, {
+    scheduled_at: scheduledAt,
+    status: "scheduled",
+  });
+
+  const doctorRel = existing.doctor as
+    | { user_id?: string }
+    | { user_id?: string }[]
+    | null;
+  const doctorUserId = Array.isArray(doctorRel)
+    ? doctorRel[0]?.user_id
+    : doctorRel?.user_id;
+
+  await notifyAppointmentRescheduled({
+    appointmentId,
+    patientId: existing.patient_id as string,
+    doctorUserId: doctorUserId ?? null,
+    previousScheduledAt,
+    scheduledAt,
+    rescheduledBy: "doctor",
+    notifyPatient: true,
+    notifyDoctor: false,
+  });
+
   return data;
 }
 
