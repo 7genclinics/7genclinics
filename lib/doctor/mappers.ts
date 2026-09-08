@@ -351,6 +351,7 @@ export function mapToUIAppointment(appointment: AppointmentWithPatient) {
     roomUrl: `/video/${appointment.id}`,
     prescription: parsed.prescription,
     createdAt: appointment.created_at,
+    scheduledAt: appointment.scheduled_at,
   };
 }
 

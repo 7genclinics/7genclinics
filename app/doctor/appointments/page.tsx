@@ -28,12 +28,23 @@ import { useDoctor } from "@/contexts/DoctorContext";
 import {
   addDocBlockedSlot,
   cancelDoctorAppointment,
+  getAvailabilitySlots,
   getDoctorAppointments,
   saveClinicalRecords,
   updateAppointment,
 } from "@/lib/doctor/api";
+import { getBookedSlotsForDate } from "@/lib/patient/api";
 import { mapStatusToDb, mapToUIAppointment, formatSlotRange } from "@/lib/doctor/mappers";
 import { matchesAnyFlexibleText } from "@/lib/search/flexible-match";
+import { pkDateTimeToUtcIso } from "@/lib/booking/timezone";
+import {
+  filterPastSlotsForToday,
+  formatSlotTime,
+  generateTimeSlotsForDate,
+  getPkTodayDate,
+  normalizeSlotTime,
+} from "@/lib/booking/slots";
+import { getErrorMessage } from "@/lib/errors";
 
 interface Appointment {
   id: string;
@@ -53,6 +64,28 @@ interface Appointment {
   roomUrl: string;
   prescription: any;
   createdAt: string;
+  scheduledAt: string;
+}
+
+function pkPartsFromIso(iso: string): { date: string; time: string } {
+  const date = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Karachi",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date(iso));
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Asia/Karachi",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).formatToParts(new Date(iso));
+  const hour = Number(parts.find((p) => p.type === "hour")?.value ?? 0) % 24;
+  const minute = Number(parts.find((p) => p.type === "minute")?.value ?? 0);
+  return {
+    date,
+    time: `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`,
+  };
 }
 
 export default function DoctorAppointmentsPage() {
@@ -73,7 +106,7 @@ export default function DoctorAppointmentsPage() {
   const [viewMode, setViewMode] = useState<"list" | "calendar">("list");
   const [isLoading, setIsLoading] = useState(true);
   
-  const today = new Date().toISOString().split("T")[0];
+  const today = getPkTodayDate();
   const [selectedCalendarDate, setSelectedCalendarDate] = useState(today);
   const [calendarMonth, setCalendarMonth] = useState(() => {
     const now = new Date();
@@ -82,6 +115,18 @@ export default function DoctorAppointmentsPage() {
 
   const [newDateInput, setNewDateInput] = useState("");
   const [newTimeInput, setNewTimeInput] = useState("");
+  const [rescheduleSlots, setRescheduleSlots] = useState<string[]>([]);
+  const [rescheduleSlotsLoading, setRescheduleSlotsLoading] = useState(false);
+  const [rescheduleSlotsError, setRescheduleSlotsError] = useState<string | null>(null);
+  const [availabilityCache, setAvailabilityCache] = useState<
+    Array<{
+      day_of_week: number;
+      start_time: string;
+      end_time: string;
+      slot_duration_minutes: number;
+    }>
+  >([]);
+  const [isRescheduling, setIsRescheduling] = useState(false);
 
   const [blockTimeForm, setBlockTimeForm] = useState({
     date: today,
@@ -214,8 +259,9 @@ export default function DoctorAppointmentsPage() {
     e.preventDefault();
     if (!selectedAppointment || !newDateInput || !newTimeInput) return;
 
+    setIsRescheduling(true);
     try {
-      const scheduledAt = new Date(`${newDateInput}T${newTimeInput}:00`).toISOString();
+      const scheduledAt = pkDateTimeToUtcIso(newDateInput, newTimeInput);
       await updateAppointment(selectedAppointment.id, {
         scheduled_at: scheduledAt,
         status: "scheduled",
@@ -223,10 +269,82 @@ export default function DoctorAppointmentsPage() {
       setShowRescheduleModal(false);
       setNewDateInput("");
       setNewTimeInput("");
+      setRescheduleSlots([]);
+      setRescheduleSlotsError(null);
       showToast("Appointment successfully rescheduled.");
       await loadAppointments();
-    } catch {
-      showToast("Failed to reschedule appointment.");
+    } catch (err) {
+      showToast(getErrorMessage(err, "Failed to reschedule appointment."));
+    } finally {
+      setIsRescheduling(false);
+    }
+  };
+
+  const openRescheduleModal = async (apt: Appointment) => {
+    setSelectedAppointment(apt);
+    setShowRescheduleModal(true);
+    setRescheduleSlotsError(null);
+    setNewTimeInput("");
+    const current = pkPartsFromIso(apt.scheduledAt);
+    const startDate = current.date >= today ? current.date : today;
+    setNewDateInput(startDate);
+    setRescheduleSlotsLoading(true);
+    try {
+      const slots = await getAvailabilitySlots(doctorProfile.id);
+      const active = (slots as Array<{
+        day_of_week: number;
+        start_time: string;
+        end_time: string;
+        slot_duration_minutes: number | null;
+        is_active?: boolean | null;
+      }>)
+        .filter((s) => s.is_active !== false)
+        .map((s) => ({
+          day_of_week: s.day_of_week,
+          start_time: s.start_time,
+          end_time: s.end_time,
+          slot_duration_minutes: s.slot_duration_minutes ?? 30,
+        }));
+      setAvailabilityCache(active);
+      await loadRescheduleTimes(startDate, apt, active);
+    } catch (err) {
+      setRescheduleSlots([]);
+      setRescheduleSlotsError(getErrorMessage(err, "Could not load available slots."));
+    } finally {
+      setRescheduleSlotsLoading(false);
+    }
+  };
+
+  const loadRescheduleTimes = async (
+    date: string,
+    apt: Appointment,
+    availability = availabilityCache,
+  ) => {
+    setRescheduleSlotsLoading(true);
+    setRescheduleSlotsError(null);
+    try {
+      const duration = Number.parseInt(apt.duration, 10) || 30;
+      let times = generateTimeSlotsForDate(availability, date, duration);
+      times = filterPastSlotsForToday(times, date);
+      const { booked, blocked } = await getBookedSlotsForDate(doctorProfile.id, date);
+      const current = pkPartsFromIso(apt.scheduledAt);
+      const occupied = new Set(
+        [...booked, ...blocked]
+          .map(normalizeSlotTime)
+          .filter((t) => !(date === current.date && t === current.time)),
+      );
+      times = times.filter((t) => !occupied.has(normalizeSlotTime(t)));
+      setRescheduleSlots(times);
+      setNewTimeInput((prev) => (prev && times.includes(prev) ? prev : times[0] ?? ""));
+      if (times.length === 0) {
+        setRescheduleSlotsError("No open slots on this date. Try another day from your schedule.");
+      }
+    } catch (err) {
+      setRescheduleSlots([]);
+      setNewTimeInput("");
+      setRescheduleSlotsError(getErrorMessage(err, "Could not load available slots."));
+    } finally {
+      setRescheduleSlotsLoading(false);
     }
   };
 
@@ -446,7 +564,7 @@ export default function DoctorAppointmentsPage() {
                                   <>
                                     <button
                                       className="flex w-full items-center gap-2 px-3 py-2 text-sm rounded-md hover:bg-muted transition-colors text-amber-600 text-left font-semibold cursor-pointer"
-                                      onClick={() => { setSelectedAppointment(apt); setShowRescheduleModal(true); }}
+                                      onClick={() => { void openRescheduleModal(apt); }}
                                     >
                                       <Clock3 className="h-4 w-4" />
                                       Reschedule
@@ -958,27 +1076,51 @@ export default function DoctorAppointmentsPage() {
               </Button>
             </div>
             <form onSubmit={handleRescheduleSubmit} className="p-6">
-              <p className="text-sm text-muted-foreground mb-4">Select new date and time:</p>
+              <p className="text-sm text-muted-foreground mb-4">
+                Pick a date and an open slot from your published schedule (Pakistan time).
+              </p>
               <div className="space-y-4">
                 <div>
                   <label className="text-xs font-semibold text-muted-foreground mb-1 block">Date</label>
                   <input
                     type="date"
                     required
+                    min={today}
                     value={newDateInput}
-                    onChange={(e) => setNewDateInput(e.target.value)}
+                    onChange={(e) => {
+                      const next = e.target.value;
+                      setNewDateInput(next);
+                      if (selectedAppointment) {
+                        void loadRescheduleTimes(next, selectedAppointment);
+                      }
+                    }}
                     className="w-full h-10 px-3 rounded-lg border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-brand-400/20 focus:border-brand-400 transition-all"
                   />
                 </div>
                 <div>
-                  <label className="text-xs font-semibold text-muted-foreground mb-1 block">Time</label>
-                  <input
-                    type="time"
+                  <label className="text-xs font-semibold text-muted-foreground mb-1 block">Time slot</label>
+                  <select
                     required
                     value={newTimeInput}
+                    disabled={rescheduleSlotsLoading || rescheduleSlots.length === 0}
                     onChange={(e) => setNewTimeInput(e.target.value)}
-                    className="w-full h-10 px-3 rounded-lg border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-brand-400/20 focus:border-brand-400 transition-all"
-                  />
+                    className="w-full h-10 px-3 rounded-lg border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-brand-400/20 focus:border-brand-400 transition-all disabled:opacity-60"
+                  >
+                    {rescheduleSlotsLoading ? (
+                      <option value="">Loading slots…</option>
+                    ) : rescheduleSlots.length === 0 ? (
+                      <option value="">No open slots</option>
+                    ) : (
+                      rescheduleSlots.map((slot) => (
+                        <option key={slot} value={slot}>
+                          {formatSlotTime(slot)}
+                        </option>
+                      ))
+                    )}
+                  </select>
+                  {rescheduleSlotsError && (
+                    <p className="mt-2 text-xs text-amber-700">{rescheduleSlotsError}</p>
+                  )}
                 </div>
               </div>
               <div className="flex gap-3 mt-6">
@@ -993,8 +1135,9 @@ export default function DoctorAppointmentsPage() {
                 <Button
                   type="submit"
                   className="flex-1 bg-brand-500 hover:bg-brand-600 text-white font-semibold"
+                  disabled={isRescheduling || rescheduleSlotsLoading || !newTimeInput}
                 >
-                  Reschedule
+                  {isRescheduling ? "Saving…" : "Reschedule"}
                 </Button>
               </div>
             </form>

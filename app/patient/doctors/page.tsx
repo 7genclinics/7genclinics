@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/Button";
 import { MapPin, Star, Sparkles, Filter, CheckCircle, Search, X, Calendar, Loader2, ShieldCheck, ArrowLeft, CreditCard } from "lucide-react";
 import { bookAppointment, getApprovedDoctors, submitPaymentProof } from "@/lib/patient/api";
 import { mapToDoctorCard } from "@/lib/patient/mappers";
-import { filterDoctors } from "@/lib/public/doctor-filters";
+import { ALL_CITIES_LABEL, filterDoctors, getActiveFilterCount } from "@/lib/public/doctor-filters";
 import { UserAvatar } from "@/components/shared/UserAvatar";
 import { PaymentProofUpload } from "@/components/patient/PaymentProofUpload";
 import { SlotTimePicker } from "@/components/booking/SlotTimePicker";
@@ -25,6 +25,7 @@ import type { AppointmentType } from "@/types";
 import { useLocale } from "@/contexts/LocaleContext";
 import {
   formatDoctorDisplayName,
+  formatLocalizedCurrency,
   translateSpecialty,
 } from "@/lib/i18n/format";
 
@@ -33,6 +34,12 @@ export default function PatientDoctorsPage() {
   const { t, locale } = useLocale();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedSpecialty, setSelectedSpecialty] = useState("All");
+  const [showFilters, setShowFilters] = useState(false);
+  const [selectedCity, setSelectedCity] = useState("");
+  const [maxFee, setMaxFee] = useState<number | undefined>();
+  const [minRating, setMinRating] = useState<number | undefined>();
+  const [availableNow, setAvailableNow] = useState(false);
+  const [topReviewed, setTopReviewed] = useState(false);
   const [doctors, setDoctors] = useState<DoctorWithProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [bookingDoctor, setBookingDoctor] = useState<ReturnType<typeof mapToDoctorCard> | null>(null);
@@ -101,14 +108,51 @@ export default function PatientDoctorsPage() {
     return ["All", ...Array.from(specs).sort()];
   }, [doctors]);
 
-  const filteredDoctors = useMemo(
-    () =>
-      filterDoctors(doctors, {
-        q: searchQuery.trim() || undefined,
-        specialty: selectedSpecialty === "All" ? undefined : selectedSpecialty,
-      }),
-    [doctors, searchQuery, selectedSpecialty]
+  const cities = useMemo(() => {
+    const set = new Set<string>();
+    for (const doc of doctors) {
+      for (const city of doc.cities ?? []) {
+        if (city.trim()) set.add(city.trim());
+      }
+      const profileCity = doc.profile?.city?.trim();
+      if (profileCity) set.add(profileCity);
+    }
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
+  }, [doctors]);
+
+  const doctorFilters = useMemo(
+    () => ({
+      q: searchQuery.trim() || undefined,
+      specialty: selectedSpecialty === "All" ? undefined : selectedSpecialty,
+      city: selectedCity || undefined,
+      maxFee,
+      minRating,
+      availableNow: availableNow || undefined,
+      topReviewed: topReviewed || undefined,
+    }),
+    [searchQuery, selectedSpecialty, selectedCity, maxFee, minRating, availableNow, topReviewed],
   );
+
+  const extraFilterCount = getActiveFilterCount({
+    ...doctorFilters,
+    q: undefined,
+    specialty: undefined,
+  });
+
+  const filteredDoctors = useMemo(
+    () => filterDoctors(doctors, doctorFilters),
+    [doctors, doctorFilters],
+  );
+
+  const clearFilters = () => {
+    setSelectedCity("");
+    setMaxFee(undefined);
+    setMinRating(undefined);
+    setAvailableNow(false);
+    setTopReviewed(false);
+    setSelectedSpecialty("All");
+    setSearchQuery("");
+  };
 
   const openBooking = (doc: ReturnType<typeof mapToDoctorCard>) => {
     setBookDate(getPkTodayDate());
@@ -206,25 +250,130 @@ export default function PatientDoctorsPage() {
 
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground rtl:left-auto rtl:right-3" />
+          <Search className="absolute start-3 top-3 h-4 w-4 text-muted-foreground" />
           <input
             type="text"
             placeholder={t("doctors.searchPlaceholder")}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full h-10 pl-9 pr-4 rounded-lg border border-border bg-card text-sm focus:outline-none focus:ring-1 focus:ring-primary"
+            className="w-full h-10 ps-9 pe-4 rounded-lg border border-border bg-card text-sm focus:outline-none focus:ring-1 focus:ring-primary"
           />
         </div>
-        <Button variant="outline" className="flex items-center gap-1.5 h-10">
+        <Button
+          type="button"
+          variant="outline"
+          className="flex h-10 items-center gap-1.5"
+          onClick={() => setShowFilters((open) => !open)}
+          aria-expanded={showFilters}
+        >
           <Filter className="h-4 w-4" />
           {t("doctors.filters")}
+          {extraFilterCount > 0 ? (
+            <span className="ms-0.5 inline-flex min-w-5 items-center justify-center rounded-full bg-brand-500 px-1.5 text-[11px] font-semibold text-white">
+              {extraFilterCount}
+            </span>
+          ) : null}
         </Button>
       </div>
+
+      {showFilters && (
+        <div className="space-y-4 rounded-xl border border-border bg-card p-4">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            <label className="space-y-1.5 text-sm">
+              <span className="font-medium text-foreground">{t("doctors.city")}</span>
+              <select
+                className="h-10 w-full rounded-lg border border-input bg-background px-3 text-sm"
+                value={selectedCity || ALL_CITIES_LABEL}
+                onChange={(e) =>
+                  setSelectedCity(e.target.value === ALL_CITIES_LABEL ? "" : e.target.value)
+                }
+              >
+                <option value={ALL_CITIES_LABEL}>{t("doctors.allCities")}</option>
+                {cities.map((city) => (
+                  <option key={city} value={city}>
+                    {city}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="space-y-1.5 text-sm">
+              <span className="font-medium text-foreground">{t("doctors.minRating")}</span>
+              <select
+                className="h-10 w-full rounded-lg border border-input bg-background px-3 text-sm"
+                value={minRating ?? ""}
+                onChange={(e) =>
+                  setMinRating(e.target.value ? Number(e.target.value) : undefined)
+                }
+              >
+                <option value="">{t("doctors.anyRating")}</option>
+                <option value="4">{t("doctors.starsPlus", { count: 4 })}</option>
+                <option value="4.5">{t("doctors.starsPlus", { count: 4.5 })}</option>
+              </select>
+            </label>
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => setAvailableNow((v) => !v)}
+              className={`rounded-full border px-3.5 py-1.5 text-xs font-semibold transition-all ${
+                availableNow
+                  ? "border-primary bg-primary text-primary-foreground"
+                  : "border-border bg-background text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {t("doctors.availableNow")}
+            </button>
+            <button
+              type="button"
+              onClick={() => setTopReviewed((v) => !v)}
+              className={`rounded-full border px-3.5 py-1.5 text-xs font-semibold transition-all ${
+                topReviewed
+                  ? "border-primary bg-primary text-primary-foreground"
+                  : "border-border bg-background text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {t("doctors.topReviewed")}
+            </button>
+            {[2000, 5000].map((fee) => (
+              <button
+                key={fee}
+                type="button"
+                onClick={() => setMaxFee((current) => (current === fee ? undefined : fee))}
+                className={`rounded-full border px-3.5 py-1.5 text-xs font-semibold transition-all ${
+                  maxFee === fee
+                    ? "border-primary bg-primary text-primary-foreground"
+                    : "border-border bg-background text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {t("doctors.feeUpTo", { amount: formatLocalizedCurrency(fee, locale) })}
+              </button>
+            ))}
+          </div>
+
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="text-xs text-muted-foreground">
+              {t("doctors.doctorsFound", { count: filteredDoctors.length })}
+            </p>
+            {(extraFilterCount > 0 || searchQuery.trim() || selectedSpecialty !== "All") && (
+              <button
+                type="button"
+                onClick={clearFilters}
+                className="inline-flex items-center gap-1 text-xs font-semibold text-brand-600 hover:underline"
+              >
+                <X className="h-3.5 w-3.5" />
+                {t("doctors.clearFilters")}
+              </button>
+            )}
+          </div>
+        </div>
+      )}
 
       <div className="flex flex-wrap gap-2">
         {specialties.map((specialty) => (
           <button
             key={specialty}
+            type="button"
             onClick={() => setSelectedSpecialty(specialty)}
             className={`px-3.5 py-1.5 rounded-full text-xs font-semibold border transition-all ${
               selectedSpecialty === specialty

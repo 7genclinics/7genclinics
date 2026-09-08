@@ -27,6 +27,17 @@ export function getErrorMessage(
   if (!text || text === "{}" || text === "[object Object]") {
     return fallback;
   }
+
+  if (text.includes("SLOT_OUTSIDE_HOURS")) {
+    return "That time is outside your published schedule, or not on a valid slot (e.g. :00 / :30). Pick an available slot.";
+  }
+  if (text.includes("SLOT_BLOCKED")) {
+    return "That time is blocked on your calendar. Choose another slot.";
+  }
+  if (text.includes("SLOT_IN_PAST")) {
+    return "That time has already passed. Choose an upcoming slot.";
+  }
+
   return text;
 }
 
