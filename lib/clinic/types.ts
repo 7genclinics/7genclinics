@@ -84,6 +84,7 @@ export interface ClinicDoctorOption {
   id: string;
   user_id: string;
   full_name: string;
+  email: string | null;
   specialization: string;
   consultation_fee: number;
   is_available: boolean;

@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/Input";
 import { Label } from "@/components/ui/Label";
 import {
   createWalkIn,
+  formatClinicDoctorLabel,
   getClinicAppointment,
   getClinicDoctors,
   getClinicServices,
@@ -237,7 +238,7 @@ export default function WalkInPage() {
                   ) : (
                     doctors.map((d) => (
                       <option key={d.id} value={d.id}>
-                        {d.full_name} — {d.specialization}
+                        {formatClinicDoctorLabel(d)}
                       </option>
                     ))
                   )}

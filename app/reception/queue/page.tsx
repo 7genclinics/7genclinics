@@ -11,6 +11,7 @@ import {
   collectDeskPayment,
   updateClinicStatus,
   reassignClinicDoctor,
+  formatClinicDoctorLabel,
 } from "@/lib/clinic/api";
 import {
   clinicStatusClass,
@@ -45,6 +46,7 @@ export default function ReceptionQueuePage() {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [reassignTo, setReassignTo] = useState<Record<string, string>>({});
   const [stageId, setStageId] = useState("arriving");
+  const [notice, setNotice] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -81,6 +83,7 @@ export default function ReceptionQueuePage() {
   const run = async (id: string, fn: () => Promise<unknown>) => {
     setBusyId(id);
     setError(null);
+    setNotice(null);
     try {
       await fn();
       await load();
@@ -108,7 +111,7 @@ export default function ReceptionQueuePage() {
           <option value="">All doctors</option>
           {doctors.map((d) => (
             <option key={d.id} value={d.id}>
-              {d.full_name} — {d.specialization}
+              {formatClinicDoctorLabel(d)}
             </option>
           ))}
         </select>
@@ -117,6 +120,11 @@ export default function ReceptionQueuePage() {
       {error && (
         <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
           {error}
+        </p>
+      )}
+      {notice && (
+        <p className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
+          {notice}
         </p>
       )}
 
@@ -191,7 +199,10 @@ export default function ReceptionQueuePage() {
                               </span>
                             </div>
                             <p className="mt-0.5 text-xs text-muted-foreground">
-                              {apt.doctor?.profile?.full_name} · {formatTime(apt.scheduled_at)}
+                              {apt.doctor?.profile?.full_name}
+                              {apt.doctor?.profile?.email ? ` (${apt.doctor.profile.email})` : ""}
+                              {" · "}
+                              {formatTime(apt.scheduled_at)}
                             </p>
                             {apt.patient_id && (
                               <Link
@@ -257,36 +268,56 @@ export default function ReceptionQueuePage() {
                                     </p>
                                   );
                                 }
+                                const selectedId = reassignTo[apt.id] ?? "";
                                 return (
                                   <>
                                     <select
-                                      className="h-9 min-w-[10rem] rounded-md border border-input bg-background px-2 text-xs"
-                                      value={reassignTo[apt.id] ?? ""}
+                                      className="h-9 min-w-[14rem] max-w-full rounded-md border border-input bg-background px-2 text-xs"
+                                      value={selectedId}
                                       onChange={(e) =>
                                         setReassignTo((m) => ({ ...m, [apt.id]: e.target.value }))
                                       }
                                     >
-                                      <option value="">Reassign doctor…</option>
+                                      <option value="">Select doctor to reassign…</option>
                                       {others.map((d) => (
                                         <option key={d.id} value={d.id}>
-                                          {d.full_name}
+                                          {formatClinicDoctorLabel(d)}
                                         </option>
                                       ))}
                                     </select>
                                     <Button
+                                      type="button"
                                       size="sm"
                                       variant="outline"
-                                      disabled={busyId === apt.id || !reassignTo[apt.id]}
-                                      onClick={() =>
+                                      disabled={busyId === apt.id}
+                                      title={
+                                        selectedId
+                                          ? "Confirm doctor reassignment"
+                                          : "Select a doctor first"
+                                      }
+                                      onClick={() => {
+                                        if (!selectedId) {
+                                          setNotice(null);
+                                          setError("Select a doctor from the list, then click Confirm reassign.");
+                                          return;
+                                        }
+                                        const target = others.find((d) => d.id === selectedId);
                                         void run(apt.id, async () => {
-                                          await reassignClinicDoctor(apt.id, reassignTo[apt.id]);
+                                          await reassignClinicDoctor(apt.id, selectedId);
                                           setReassignTo((m) => {
                                             const next = { ...m };
                                             delete next[apt.id];
                                             return next;
                                           });
-                                        })
-                                      }
+                                          setNotice(
+                                            `Reassigned ${apt.patient?.full_name ?? "patient"} to ${
+                                              target
+                                                ? formatClinicDoctorLabel(target)
+                                                : "the selected doctor"
+                                            }.`,
+                                          );
+                                        });
+                                      }}
                                     >
                                       Confirm reassign
                                     </Button>

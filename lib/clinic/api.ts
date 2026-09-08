@@ -197,12 +197,19 @@ export async function deleteClinicService(id: string): Promise<void> {
   if (error) throw new Error(getErrorMessage(error, "Could not delete service"));
 }
 
+export function formatClinicDoctorLabel(
+  doctor: Pick<ClinicDoctorOption, "full_name" | "specialization" | "email">,
+): string {
+  const base = `${doctor.full_name} — ${doctor.specialization}`;
+  return doctor.email ? `${base} (${doctor.email})` : base;
+}
+
 export async function getClinicDoctors(): Promise<ClinicDoctorOption[]> {
   const { data, error } = await table("doctor_profiles")
     .select(
       `
       id, user_id, specialization, consultation_fee, is_available, status, organization_id,
-      profile:profiles!doctor_profiles_user_id_fkey ( full_name )
+      profile:profiles!doctor_profiles_user_id_fkey ( full_name, email )
     `
     )
     .eq("status", "approved")
@@ -217,11 +224,12 @@ export async function getClinicDoctors(): Promise<ClinicDoctorOption[]> {
     consultation_fee: number;
     is_available: boolean | null;
     organization_id: string | null;
-    profile: { full_name: string } | null;
+    profile: { full_name: string; email: string | null } | null;
   }>).map((row) => ({
     id: row.id,
     user_id: row.user_id,
     full_name: row.profile?.full_name ?? "Doctor",
+    email: row.profile?.email ?? null,
     specialization: row.specialization,
     consultation_fee: Number(row.consultation_fee ?? 0),
     is_available: Boolean(row.is_available),
