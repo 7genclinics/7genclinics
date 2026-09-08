@@ -82,7 +82,11 @@ export default function ReceptionDashboardPage() {
     setTokenNotice(null);
     try {
       const result = await checkInAppointment(id);
-      setTokenNotice(`Sent to doctor queue — token ${result.token_number}`);
+      setTokenNotice(
+        result.status === "waiting"
+          ? `Token ${result.token_number} — waiting for the doctor`
+          : `Token ${result.token_number} — collect the fee, then they wait`,
+      );
       await load();
     } catch (err) {
       setError(getErrorMessage(err, "Could not add to queue"));
@@ -97,7 +101,7 @@ export default function ReceptionDashboardPage() {
         <div>
           <h2 className="text-xl font-semibold">Today at the desk</h2>
           <p className="text-sm text-muted-foreground">
-            Record vitals, edit the patient file, then send them to the doctor queue.
+            Check in at the desk, collect the consultation fee, then send them to wait for the doctor.
           </p>
         </div>
         <div className="flex gap-2">
@@ -117,9 +121,9 @@ export default function ReceptionDashboardPage() {
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {[
           { label: "Arriving at desk", value: stats.arriving, icon: Users },
+          { label: "Collect fee", value: stats.payment, icon: Wallet },
           { label: "Waiting for doctor", value: stats.waiting, icon: Ticket },
           { label: "With doctor", value: stats.withDoctor, icon: Activity },
-          { label: "Payment pending", value: stats.payment, icon: Wallet },
         ].map((item) => (
           <Card key={item.label}>
             <CardHeader className="pb-2">
@@ -233,7 +237,7 @@ export default function ReceptionDashboardPage() {
                             disabled={busyId === apt.id}
                             onClick={() => void sendToQueue(apt.id)}
                           >
-                            {busyId === apt.id ? "Sending…" : "Send to queue"}
+                            {busyId === apt.id ? "Checking in…" : "Check in"}
                           </Button>
                         )}
                         {apt.status === "payment_pending" && (

@@ -132,3 +132,110 @@ export function downloadPrescriptionPdf(input: PrescriptionPdfInput, filename: s
   a.click();
   URL.revokeObjectURL(url);
 }
+
+function htmlEscape(value: string) {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+/** Opens a clean A4 sheet (no app header/sidebar) and prints only the Rx. */
+export function printPrescriptionPad(input: PrescriptionPdfInput) {
+  const meds = input.items.filter((i) => i.medicine_name.trim());
+  const medHtml = meds.length
+    ? meds
+        .map((item) => {
+          const detail = [item.dose, item.frequency, item.duration].filter(Boolean).join(" · ");
+          const extra = item.instructions
+            ? `<div style="font-size:12px;color:#475569">${htmlEscape(item.instructions)}</div>`
+            : "";
+          return `<li style="margin-bottom:12px"><strong>${htmlEscape(item.medicine_name)}</strong>${
+            detail ? `<div style="color:#334155">${htmlEscape(detail)}</div>` : ""
+          }${extra}</li>`;
+        })
+        .join("")
+    : `<p style="color:#64748b">No medicines listed.</p>`;
+
+  const html = `<!DOCTYPE html>
+<html>
+  <head>
+    <title>Prescription — ${htmlEscape(input.patientName)}</title>
+    <style>
+      @page { size: A4; margin: 14mm; }
+      * { box-sizing: border-box; }
+      body { margin: 0; font-family: Inter, system-ui, sans-serif; color: #0f172a; }
+      .pad { max-width: 190mm; margin: 0 auto; }
+      h1 { font-size: 26px; margin: 0 0 4px; }
+      .muted { color: #475569; font-size: 12px; }
+      .row { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 24px; font-size: 14px; margin-top: 16px; }
+      ol { padding-left: 22px; }
+      .sign { margin-top: 64px; text-align: right; }
+      .sign span { display: inline-block; width: 220px; border-top: 1px solid #94a3b8; padding-top: 6px; font-size: 12px; color: #475569; text-align: center; }
+      @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
+    </style>
+  </head>
+  <body>
+    <div class="pad">
+      <div style="display:flex;justify-content:space-between;gap:16px;border-bottom:2px solid #0f172a;padding-bottom:12px">
+        <div>
+          <h1>${htmlEscape(BRAND.name)}</h1>
+          <div style="font-weight:600">${htmlEscape(input.doctorName)}</div>
+          <div class="muted">${htmlEscape(
+            [input.specialization, input.pmdcNumber ? `PMDC ${input.pmdcNumber}` : null]
+              .filter(Boolean)
+              .join(" · "),
+          )}</div>
+        </div>
+        <div class="muted" style="text-align:right">
+          <div>${htmlEscape(BRAND.phone)}</div>
+          <div>${htmlEscape(BRAND.supportEmail)}</div>
+        </div>
+      </div>
+      <div class="row">
+        <div><strong>Patient:</strong> ${htmlEscape(input.patientName)}${
+          input.patientCode ? ` (${htmlEscape(input.patientCode)})` : ""
+        }</div>
+        <div><strong>Date:</strong> ${htmlEscape(input.dateLabel)}</div>
+        <div><strong>Age / Gender:</strong> ${htmlEscape(String(input.age ?? "—"))} / ${htmlEscape(
+          input.gender ?? "—",
+        )}</div>
+        <div><strong>Token:</strong> ${htmlEscape(input.token ?? "—")}</div>
+      </div>
+      ${
+        input.diagnosis
+          ? `<p style="margin-top:14px;font-size:14px"><strong>Diagnosis:</strong> ${htmlEscape(input.diagnosis)}</p>`
+          : ""
+      }
+      <p style="font-family:Georgia,serif;font-size:28px;margin:20px 0 8px">℞</p>
+      <ol>${medHtml}</ol>
+      ${
+        input.instructions
+          ? `<p style="font-size:14px"><strong>Instructions:</strong> ${htmlEscape(input.instructions)}</p>`
+          : ""
+      }
+      ${
+        input.notes
+          ? `<p style="font-size:14px"><strong>Notes:</strong> ${htmlEscape(input.notes)}</p>`
+          : ""
+      }
+      ${
+        input.followUp
+          ? `<p style="font-size:14px"><strong>Follow-up:</strong> ${htmlEscape(input.followUp)}</p>`
+          : ""
+      }
+      <div class="sign"><span>Doctor signature</span></div>
+    </div>
+  </body>
+</html>`;
+
+  const printWindow = window.open("", "_blank", "width=820,height=1000");
+  if (!printWindow) return;
+  printWindow.document.write(html);
+  printWindow.document.close();
+  printWindow.focus();
+  window.setTimeout(() => {
+    printWindow.print();
+  }, 250);
+}

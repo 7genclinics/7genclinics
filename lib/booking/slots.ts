@@ -124,7 +124,9 @@ export function slotAvailabilityMessage(reason: SlotAvailabilityReason, noticeHo
     case "all_past":
       return "All slots for today have passed. Pick tomorrow or another date.";
     case "notice_period":
-      return `This doctor requires at least ${noticeHours} hour(s) notice. Choose a later date or time.`;
+      return noticeHours > 0 && noticeHours < 1
+        ? `This doctor requires at least ${Math.round(noticeHours * 60)} minutes notice. Choose a later date or time.`
+        : `This doctor requires at least ${noticeHours} hour(s) notice. Choose a later date or time.`;
     case "all_occupied":
       return "All remaining slots are booked or marked unavailable for this date.";
     default:

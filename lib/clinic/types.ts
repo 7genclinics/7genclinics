@@ -77,6 +77,7 @@ export interface ClinicService {
   default_fee: number;
   is_active: boolean;
   organization_id?: string;
+  organization_name?: string | null;
 }
 
 export interface ClinicDoctorOption {
@@ -86,6 +87,7 @@ export interface ClinicDoctorOption {
   specialization: string;
   consultation_fee: number;
   is_available: boolean;
+  organization_id: string | null;
 }
 
 export interface ClinicAppointment extends Appointment {

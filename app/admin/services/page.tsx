@@ -5,10 +5,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Label } from "@/components/ui/Label";
-import { getClinicServices, upsertClinicService } from "@/lib/clinic/api";
+import { deleteClinicService, getClinicServices, upsertClinicService } from "@/lib/clinic/api";
 import type { ClinicService } from "@/lib/clinic/types";
 import { getErrorMessage } from "@/lib/errors";
-import { Loader2 } from "lucide-react";
+import { Loader2, Trash2 } from "lucide-react";
 
 export default function AdminServicesPage() {
   const [services, setServices] = useState<ClinicService[]>([]);
@@ -19,6 +19,7 @@ export default function AdminServicesPage() {
   const [description, setDescription] = useState("");
   const [fee, setFee] = useState("2000");
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -71,11 +72,30 @@ export default function AdminServicesPage() {
     }
   };
 
+  const remove = async (service: ClinicService) => {
+    const clinic = service.organization_name ? ` for ${service.organization_name}` : "";
+    if (!window.confirm(`Delete “${service.name}”${clinic}? This cannot be undone.`)) return;
+    setDeletingId(service.id);
+    setError(null);
+    try {
+      await deleteClinicService(service.id);
+      if (editingId === service.id) resetForm();
+      await load();
+    } catch (err) {
+      setError(getErrorMessage(err, "Could not delete service"));
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div>
         <h2 className="text-xl font-semibold">Clinic services</h2>
-        <p className="text-sm text-muted-foreground">Fees used for walk-ins and desk invoices. Online booking fees still come from the doctor profile.</p>
+        <p className="text-sm text-muted-foreground">
+          Fees used for walk-ins and desk invoices. Each clinic has its own catalog — same names at
+          different clinics are not duplicates of one shared list.
+        </p>
       </div>
 
       {error && (
@@ -122,22 +142,43 @@ export default function AdminServicesPage() {
           ) : (
             <ul className="divide-y">
               {services.map((s) => (
-                <li key={s.id} className="flex items-center justify-between py-3">
-                  <div>
+                <li key={s.id} className="flex items-center justify-between gap-3 py-3">
+                  <div className="min-w-0">
                     <p className="font-medium">{s.name}</p>
                     <p className="text-xs text-muted-foreground">
                       PKR {s.default_fee} · {s.is_active ? "Active" : "Inactive"}
+                      {s.organization_name ? ` · ${s.organization_name}` : ""}
                     </p>
                   </div>
-                  <div className="flex gap-2">
-                    <Button size="sm" variant="outline" onClick={() => {
-                      setEditingId(s.id);
-                      setName(s.name);
-                      setDescription(s.description ?? "");
-                      setFee(String(s.default_fee));
-                    }}>Edit</Button>
+                  <div className="flex shrink-0 items-center gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        setEditingId(s.id);
+                        setName(s.name);
+                        setDescription(s.description ?? "");
+                        setFee(String(s.default_fee));
+                      }}
+                    >
+                      Edit
+                    </Button>
                     <Button size="sm" variant="ghost" onClick={() => void toggleActive(s)}>
                       {s.is_active ? "Deactivate" : "Activate"}
+                    </Button>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-8 w-8 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                      aria-label={`Delete ${s.name}`}
+                      disabled={deletingId === s.id}
+                      onClick={() => void remove(s)}
+                    >
+                      {deletingId === s.id ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Trash2 className="h-4 w-4" />
+                      )}
                     </Button>
                   </div>
                 </li>

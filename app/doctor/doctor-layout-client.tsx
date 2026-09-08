@@ -59,7 +59,7 @@ function DoctorLayoutShell({ children }: { children: React.ReactNode }) {
           />
 
           <div
-            className={`flex min-w-0 flex-col transition-all duration-200 md:pl-64 ${
+            className={`flex min-w-0 flex-col transition-all duration-200 md:pl-64 print:pl-0 ${
               isChat ? "h-full min-h-0 overflow-hidden" : "min-h-screen"
             }`}
           >

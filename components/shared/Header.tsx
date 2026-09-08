@@ -86,7 +86,7 @@ function LiveToastBanner({ role }: { role: string }) {
           handleClick();
         }
       }}
-      className="fixed top-20 right-4 z-[60] flex items-start gap-3 w-80 rounded-xl border border-border bg-popover shadow-xl p-3 animate-in slide-in-from-right duration-300 cursor-pointer hover:bg-accent/40"
+      className="fixed top-20 right-4 z-[60] flex items-start gap-3 w-80 rounded-xl border border-border bg-popover shadow-xl p-3 animate-in slide-in-from-right duration-300 cursor-pointer hover:bg-accent/40 print:hidden"
     >
       <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-100 dark:bg-brand-900/30">
         {notifIcon(liveToast.type)}
@@ -220,7 +220,7 @@ export function Header({ title, user, onMenuClick }: HeaderProps) {
     <>
       <LiveToastBanner role={displayUser.role} />
 
-      <header className="sticky top-0 z-20 flex h-16 w-full items-center justify-between border-b border-border bg-background/80 px-4 backdrop-blur-md md:px-6">
+      <header className="sticky top-0 z-20 flex h-16 w-full items-center justify-between border-b border-border bg-background/80 px-4 backdrop-blur-md md:px-6 print:hidden">
         {/* Left side */}
         <div className="flex items-center gap-4">
           <button

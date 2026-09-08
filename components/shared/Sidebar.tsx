@@ -199,7 +199,7 @@ export function Sidebar({ role, isOpen = false, onClose, allowedHrefs }: Sidebar
       {/* Desktop Sidebar (Permanent) */}
       <aside
         className={cn(
-          "hidden md:fixed md:inset-y-0 md:z-30 md:flex md:w-64 md:flex-col",
+          "hidden md:fixed md:inset-y-0 md:z-30 md:flex md:w-64 md:flex-col print:hidden",
           isRtl ? "md:right-0" : "md:left-0",
         )}
       >
@@ -209,7 +209,7 @@ export function Sidebar({ role, isOpen = false, onClose, allowedHrefs }: Sidebar
       {/* Mobile Sidebar Slide-out Drawer */}
       <div
         className={cn(
-          "fixed inset-0 z-40 bg-black/40 backdrop-blur-xs transition-opacity duration-300 md:hidden",
+          "fixed inset-0 z-40 bg-black/40 backdrop-blur-xs transition-opacity duration-300 md:hidden print:hidden",
           isOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
         )}
         onClick={onClose}

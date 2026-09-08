@@ -25,7 +25,7 @@ import {
   uploadPatientDocument,
   type ClinicPatientDocument,
 } from "@/lib/clinic/api";
-import { downloadPrescriptionPdf } from "@/lib/clinic/prescription-pdf";
+import { downloadPrescriptionPdf, printPrescriptionPad } from "@/lib/clinic/prescription-pdf";
 import {
   emptyVitals,
   vitalsHaveValues,
@@ -49,6 +49,16 @@ const emptyItem = (sort_order: number): ClinicPrescriptionItem => ({
   instructions: "",
   sort_order,
 });
+
+const FREQUENCY_PRESETS = [
+  "1-0-0",
+  "0-0-1",
+  "1-0-1",
+  "1-1-1",
+  "When needed",
+  "Twice a day",
+];
+const DURATION_PRESETS = ["3 days", "5 days", "7 days", "10 days", "14 days"];
 
 export default function DoctorConsultationPage() {
   const params = useParams<{ appointmentId: string }>();
@@ -259,6 +269,23 @@ export default function DoctorConsultationPage() {
     return <p className="text-sm text-muted-foreground">Appointment not found.</p>;
   }
 
+  const printRx = async () => {
+    const hasMeds = items.some((i) => i.medicine_name.trim());
+    if (
+      !hasMeds &&
+      !window.confirm("No medicines listed yet. Print the prescription pad anyway?")
+    ) {
+      return;
+    }
+    setError(null);
+    try {
+      await persist();
+    } catch (err) {
+      setError(getErrorMessage(err, "Could not save before printing"));
+    }
+    printPrescriptionPad(padProps);
+  };
+
   const age = calcAgeYears(appointment.patient?.date_of_birth);
   const doseOptionsFor = (name: string) =>
     medicines.find((m) => m.name.toLowerCase() === name.trim().toLowerCase())?.dosage_options ?? [];
@@ -280,7 +307,7 @@ export default function DoctorConsultationPage() {
           </Link>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button variant="outline" onClick={() => window.print()}>
+          <Button variant="outline" onClick={() => void printRx()}>
             <Printer className="mr-2 h-4 w-4" />
             Print Rx
           </Button>
@@ -319,10 +346,6 @@ export default function DoctorConsultationPage() {
           {message}
         </p>
       )}
-
-      <div className="hidden print:block">
-        <PrescriptionPad {...padProps} />
-      </div>
 
       <div className="grid gap-4 lg:grid-cols-3 print:hidden">
         <Card className="lg:col-span-2">
@@ -457,27 +480,69 @@ export default function DoctorConsultationPage() {
                     }
                   />
                 )}
-                <Input
-                  className="sm:col-span-2"
-                  placeholder="Frequency"
-                  value={item.frequency}
-                  onChange={(e) =>
-                    setItems((rows) =>
-                      rows.map((r, i) => (i === index ? { ...r, frequency: e.target.value } : r))
-                    )
-                  }
-                />
-                <Input
-                  className="sm:col-span-2"
-                  placeholder="Duration"
-                  value={item.duration}
-                  onChange={(e) =>
-                    setItems((rows) =>
-                      rows.map((r, i) => (i === index ? { ...r, duration: e.target.value } : r))
-                    )
-                  }
-                />
-                <div className="flex gap-2 sm:col-span-3">
+                <div className="sm:col-span-2 space-y-1">
+                  <Input
+                    placeholder="Frequency"
+                    value={item.frequency}
+                    onChange={(e) =>
+                      setItems((rows) =>
+                        rows.map((r, i) => (i === index ? { ...r, frequency: e.target.value } : r))
+                      )
+                    }
+                  />
+                  <div className="flex flex-wrap gap-1">
+                    {FREQUENCY_PRESETS.map((preset) => (
+                      <button
+                        key={preset}
+                        type="button"
+                        className={`rounded-md border px-1.5 py-0.5 text-[10px] ${
+                          item.frequency === preset
+                            ? "border-brand-400 bg-brand-50 text-brand-700"
+                            : "border-border text-muted-foreground hover:bg-muted"
+                        }`}
+                        onClick={() =>
+                          setItems((rows) =>
+                            rows.map((r, i) => (i === index ? { ...r, frequency: preset } : r))
+                          )
+                        }
+                      >
+                        {preset}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div className="sm:col-span-2 space-y-1">
+                  <Input
+                    placeholder="Duration"
+                    value={item.duration}
+                    onChange={(e) =>
+                      setItems((rows) =>
+                        rows.map((r, i) => (i === index ? { ...r, duration: e.target.value } : r))
+                      )
+                    }
+                  />
+                  <div className="flex flex-wrap gap-1">
+                    {DURATION_PRESETS.map((preset) => (
+                      <button
+                        key={preset}
+                        type="button"
+                        className={`rounded-md border px-1.5 py-0.5 text-[10px] ${
+                          item.duration === preset
+                            ? "border-brand-400 bg-brand-50 text-brand-700"
+                            : "border-border text-muted-foreground hover:bg-muted"
+                        }`}
+                        onClick={() =>
+                          setItems((rows) =>
+                            rows.map((r, i) => (i === index ? { ...r, duration: preset } : r))
+                          )
+                        }
+                      >
+                        {preset}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div className="flex gap-2 sm:col-span-3 sm:items-start">
                   <Input
                     placeholder="Instructions"
                     value={item.instructions ?? ""}

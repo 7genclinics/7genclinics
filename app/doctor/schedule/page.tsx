@@ -733,6 +733,7 @@ export default function DoctorSchedulePage() {
                   }}
                   className="w-full h-9 px-3 rounded-lg border border-border bg-card text-xs focus:outline-none focus:ring-1 focus:ring-brand-400/20 focus:border-brand-400"
                 >
+                  <option value={0.5}>30 Minutes in advance</option>
                   <option value={1}>1 Hour in advance</option>
                   <option value={2}>2 Hours in advance</option>
                   <option value={6}>6 Hours in advance</option>
@@ -750,7 +751,7 @@ export default function DoctorSchedulePage() {
                 <input
                   type="range"
                   min="2"
-                  max="20"
+                  max="50"
                   step="1"
                   value={configs.maxPatients}
                   onChange={(e) => {

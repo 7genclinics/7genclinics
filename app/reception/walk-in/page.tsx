@@ -36,15 +36,30 @@ export default function WalkInPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    void Promise.all([getClinicDoctors(), getClinicServices()])
-      .then(([d, s]) => {
+    void getClinicDoctors()
+      .then((d) => {
         setDoctors(d);
-        setServices(s);
         if (d[0]) setDoctorId(d[0].id);
-        if (s[0]) setServiceId(s[0].id);
       })
-      .catch((err) => setError(getErrorMessage(err, "Failed to load doctors/services")));
+      .catch((err) => setError(getErrorMessage(err, "Failed to load doctors")));
   }, []);
+
+  useEffect(() => {
+    if (!doctorId) {
+      setServices([]);
+      setServiceId("");
+      return;
+    }
+    const orgId = doctors.find((d) => d.id === doctorId)?.organization_id ?? null;
+    void getClinicServices(false, orgId)
+      .then((s) => {
+        setServices(s);
+        setServiceId((current) =>
+          s.some((row) => row.id === current) ? current : (s[0]?.id ?? ""),
+        );
+      })
+      .catch((err) => setError(getErrorMessage(err, "Failed to load services")));
+  }, [doctorId, doctors]);
 
   useEffect(() => {
     const t = setTimeout(() => {
@@ -90,9 +105,11 @@ export default function WalkInPage() {
       });
       const apt = await getClinicAppointment(aptId);
       router.push(
-        apt?.patient_id
-          ? `/reception/patients/${apt.patient_id}?visit=${aptId}`
-          : "/reception/queue"
+        apt?.status === "payment_pending"
+          ? "/reception/billing"
+          : apt?.patient_id
+            ? `/reception/patients/${apt.patient_id}?visit=${aptId}`
+            : "/reception/queue",
       );
     } catch (err) {
       setError(getErrorMessage(err, "Could not register walk-in"));
@@ -106,8 +123,8 @@ export default function WalkInPage() {
       <div>
         <h2 className="text-xl font-semibold">Register walk-in</h2>
         <p className="text-sm text-muted-foreground">
-          Search an existing patient by phone or name, or create a new record. You will record
-          vitals next, then add them to the doctor&apos;s queue.
+          Search an existing patient by phone or name, or create a new record. Collect the fee at
+          the desk first; they wait for the doctor after payment.
         </p>
       </div>
 
@@ -267,7 +284,7 @@ export default function WalkInPage() {
               disabled={saving || doctors.length === 0}
               className="w-full bg-brand-500 hover:bg-brand-600 text-white"
             >
-              {saving ? "Adding to queue…" : "Add to waiting queue"}
+              {saving ? "Registering…" : "Register & collect fee"}
             </Button>
           </form>
         </CardContent>

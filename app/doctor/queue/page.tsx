@@ -41,7 +41,7 @@ export default function DoctorQueuePage() {
   const waiting = useMemo(() => appointments.filter((a) => a.status === "waiting"), [appointments]);
   const current = useMemo(() => appointments.find((a) => a.status === "with_doctor"), [appointments]);
   const completed = useMemo(
-    () => appointments.filter((a) => a.status === "completed" || a.status === "payment_pending"),
+    () => appointments.filter((a) => a.status === "completed"),
     [appointments]
   );
   const remaining = useMemo(

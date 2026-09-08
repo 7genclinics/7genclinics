@@ -72,7 +72,7 @@ function ReceptionLayoutShell({ children }: { children: React.ReactNode }) {
             allowedHrefs={allowedHrefs}
           />
           <div
-            className={`flex flex-col md:pl-64 ${
+            className={`flex flex-col md:pl-64 print:pl-0 ${
               isChat ? "h-full min-h-0 overflow-hidden" : "min-h-screen"
             }`}
           >

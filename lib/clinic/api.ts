@@ -133,12 +133,28 @@ export async function getReceptionContext(): Promise<
   };
 }
 
-export async function getClinicServices(includeInactive = false): Promise<ClinicService[]> {
-  let query = table("services").select("*").order("name");
+export async function getClinicServices(
+  includeInactive = false,
+  organizationId?: string | null,
+): Promise<ClinicService[]> {
+  let query = table("services")
+    .select("*, organization:organizations ( name )")
+    .order("name");
   if (!includeInactive) query = query.eq("is_active", true);
+  if (organizationId) query = query.eq("organization_id", organizationId);
   const { data, error } = await query;
   if (error) throw error;
-  return (data ?? []) as ClinicService[];
+  return ((data ?? []) as Array<ClinicService & { organization?: { name: string } | null }>).map(
+    (row) => ({
+      id: row.id,
+      name: row.name,
+      description: row.description,
+      default_fee: Number(row.default_fee),
+      is_active: row.is_active,
+      organization_id: row.organization_id,
+      organization_name: row.organization?.name ?? null,
+    }),
+  );
 }
 
 export async function upsertClinicService(input: {
@@ -176,11 +192,16 @@ export async function upsertClinicService(input: {
   return data as ClinicService;
 }
 
+export async function deleteClinicService(id: string): Promise<void> {
+  const { error } = await rpc("clinic_delete_service", { p_service_id: id });
+  if (error) throw new Error(getErrorMessage(error, "Could not delete service"));
+}
+
 export async function getClinicDoctors(): Promise<ClinicDoctorOption[]> {
   const { data, error } = await table("doctor_profiles")
     .select(
       `
-      id, user_id, specialization, consultation_fee, is_available, status,
+      id, user_id, specialization, consultation_fee, is_available, status, organization_id,
       profile:profiles!doctor_profiles_user_id_fkey ( full_name )
     `
     )
@@ -195,6 +216,7 @@ export async function getClinicDoctors(): Promise<ClinicDoctorOption[]> {
     specialization: string;
     consultation_fee: number;
     is_available: boolean | null;
+    organization_id: string | null;
     profile: { full_name: string } | null;
   }>).map((row) => ({
     id: row.id,
@@ -203,6 +225,7 @@ export async function getClinicDoctors(): Promise<ClinicDoctorOption[]> {
     specialization: row.specialization,
     consultation_fee: Number(row.consultation_fee ?? 0),
     is_available: Boolean(row.is_available),
+    organization_id: row.organization_id,
   }));
 }
 

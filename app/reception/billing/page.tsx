@@ -34,10 +34,8 @@ export default function ReceptionBillingPage() {
       setPending(open);
       setTodayPaid(
         today.filter(
-          (a) =>
-            a.status === "completed" &&
-            (a.invoice?.status === "paid" || a.payment?.status === "completed")
-        )
+          (a) => a.invoice?.status === "paid" || a.payment?.status === "completed",
+        ),
       );
     } catch (err) {
       setError(getErrorMessage(err, "Failed to load billing"));
@@ -86,8 +84,8 @@ export default function ReceptionBillingPage() {
       <div className="print:hidden">
         <h2 className="text-xl font-semibold">Desk billing</h2>
         <p className="text-sm text-muted-foreground">
-          Collect payment after consult. Online prepaid visits are marked paid automatically and are not
-          charged again.
+          Collect the consultation fee when the patient arrives. After payment they join the doctor
+          queue. Online prepaid visits are not charged again.
         </p>
       </div>
 
