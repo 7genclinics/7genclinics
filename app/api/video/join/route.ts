@@ -7,6 +7,7 @@ import {
   getJitsiDomain,
   isJitsiJwtConfigured,
   isSelfHostedJitsiConfigured,
+  PUBLIC_JITSI_DOMAIN,
   signJitsiJwt,
 } from "@/lib/video/jwt";
 
@@ -134,19 +135,9 @@ export async function POST(request: Request) {
       }
     }
 
-    if (!isSelfHostedJitsiConfigured()) {
-      return json(
-        {
-          error: "video_not_configured",
-          message:
-            "Secure video hosting is not configured. Set JITSI_DOMAIN, JITSI_APP_ID, and JITSI_APP_SECRET, then retry.",
-        },
-        { status: 503 }
-      );
-    }
-
     const room = buildRoomName(apt.id);
-    const domain = getJitsiDomain();
+    const selfHosted = isSelfHostedJitsiConfigured();
+    const domain = selfHosted ? getJitsiDomain() : PUBLIC_JITSI_DOMAIN;
     const canonicalUrl = `https://${domain}/${buildRoomPath(room)}`;
     if (apt.video_room_url !== canonicalUrl) {
       await supabase
@@ -162,21 +153,23 @@ export async function POST(request: Request) {
       ? `Dr. ${apt.doctor?.profile?.full_name ?? me.full_name}`
       : me.full_name;
 
-    const jwt = signJitsiJwt({
-      room: buildRoomPath(room),
-      userId: me.id,
-      displayName,
-      email: me.email,
-      avatarUrl: me.avatar_url,
-      moderator: role === "moderator",
-      expiresAt: consultationJwtExpiryUnix({
-        nowMs: now,
-        windowClosesMs: windowCloses,
-        isAdmin,
-      }),
-    });
+    const jwt = selfHosted
+      ? signJitsiJwt({
+          room: buildRoomPath(room),
+          userId: me.id,
+          displayName,
+          email: me.email,
+          avatarUrl: me.avatar_url,
+          moderator: role === "moderator",
+          expiresAt: consultationJwtExpiryUnix({
+            nowMs: now,
+            windowClosesMs: windowCloses,
+            isAdmin,
+          }),
+        })
+      : null;
 
-    if (!jwt) {
+    if (selfHosted && !jwt) {
       return json(
         {
           error: "video_not_configured",

@@ -177,7 +177,7 @@ export default function VideoConsultationPage() {
     const api = new window.JitsiMeetExternalAPI(info.domain, {
       roomName: info.room,
       parentNode: containerRef.current,
-      jwt: info.jwt,
+      ...(info.jwt ? { jwt: info.jwt } : {}),
       userInfo: { displayName: info.displayName },
       configOverwrite: {
         prejoinConfig: { enabled: false },

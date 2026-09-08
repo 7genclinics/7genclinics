@@ -3,19 +3,19 @@ import { createHmac, randomUUID } from "node:crypto";
 /**
  * Jitsi video-consultation token helpers.
  *
- * Production uses free self-hosted Jitsi with Prosody token auth. Set
- * JITSI_DOMAIN, JITSI_APP_ID, and JITSI_APP_SECRET (HS256). Anonymous
- * meet.jit.si is retained only as a local fallback and the join API fails
- * closed unless the self-hosted deployment is configured.
+ * Production should use self-hosted Jitsi with Prosody token auth:
+ * JITSI_DOMAIN, JITSI_APP_ID, and JITSI_APP_SECRET (HS256).
+ * When those are missing, join falls back to public meet.jit.si so
+ * doctor and patient can still connect (rooms are not JWT-locked).
  */
 
-const DEFAULT_DOMAIN = "meet.jit.si";
+export const PUBLIC_JITSI_DOMAIN = "meet.jit.si";
 
 export function getJitsiDomain(): string {
   const raw =
     process.env.JITSI_DOMAIN ||
     process.env.NEXT_PUBLIC_JITSI_DOMAIN ||
-    DEFAULT_DOMAIN;
+    PUBLIC_JITSI_DOMAIN;
   return raw.replace(/^https?:\/\//, "").replace(/\/$/, "");
 }
 
@@ -54,7 +54,7 @@ export function isJitsiJwtConfigured(): boolean {
 export function isSelfHostedJitsiConfigured(): boolean {
   const domain = getJitsiDomain();
   return Boolean(
-    domain !== DEFAULT_DOMAIN &&
+    domain !== PUBLIC_JITSI_DOMAIN &&
       process.env.JITSI_APP_ID &&
       process.env.JITSI_APP_SECRET
   );
