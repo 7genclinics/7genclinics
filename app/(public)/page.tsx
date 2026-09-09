@@ -1,6 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
-import { ArrowRight, BadgeCheck } from "lucide-react";
+import { ArrowRight, BadgeCheck, Headphones, Plus } from "lucide-react";
 import { LandingHeader } from "@/components/public/LandingHeader";
 import { LandingFooter } from "@/components/public/LandingFooter";
 import { DoctorSearchHero } from "@/components/public/DoctorSearchHero";
@@ -241,14 +241,14 @@ export default async function HomePage() {
       <main>
         <section className="relative isolate min-h-[100svh] overflow-hidden text-white">
           <Image
-            src="/landing-hero%20bg.jpg"
-            alt=""
+            src="/clinic-hero-background-clean.jpg"
+            alt="Apna Clinic consultation"
             fill
             priority
             sizes="100vw"
             className="object-cover object-center"
           />
-          <div className="absolute inset-0 bg-gradient-to-r from-brand-950/55 via-brand-950/20 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-r from-brand-950/60 via-brand-950/30 to-brand-950/15" />
           <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-brand-950/50 to-transparent" />
 
           <div className="relative mx-auto flex min-h-[100svh] max-w-6xl flex-col justify-end px-4 pb-10 pt-28 sm:px-6 sm:pb-14 lg:justify-center lg:pb-20 lg:pt-32">
@@ -573,75 +573,138 @@ export default async function HomePage() {
           </div>
         </section>
 
-        <section id="faq" className="bg-white py-20 sm:py-24">
+        <section id="faq" className="bg-[#f8faf9] py-20 sm:py-24">
           <div className="mx-auto max-w-6xl px-4 sm:px-6">
-            <div className="mx-auto max-w-3xl text-center">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-brand-600">
-                Questions
-              </p>
-              <h2 className="mt-3 font-heading text-3xl font-bold tracking-tight sm:text-4xl">
-                Before you book
-              </h2>
-              <p className="mx-auto mt-3 max-w-lg text-slate-600">
-                Pakistan's best platform for online and physical care through {BRAND.name}.
-              </p>
-            </div>
+            <div className="grid items-start gap-10 lg:grid-cols-12 lg:gap-12">
+              {/* Left column: Heading, subtitle & Healthcare square collage */}
+              <div className="lg:col-span-5">
+                <div className="flex items-center gap-2">
+                  <svg
+                    className="h-4 w-4 text-teal-600"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                  >
+                    <path d="M4 18a8 8 0 0 1 16 0" strokeLinecap="round" />
+                  </svg>
+                  <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-teal-700">
+                    Before you visit
+                  </p>
+                </div>
+                <h2 className="mt-3 font-heading text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
+                  Frequently asked questions
+                </h2>
+                <p className="mt-3 text-sm leading-relaxed text-slate-600 sm:text-base">
+                  Find answers about appointments, consultations, payments, prescriptions and more.
+                  If you still have a question, our team is always here to help.
+                </p>
 
-            <div className="mx-auto mt-12 max-w-3xl divide-y divide-brand-900/10">
-              {faqs.map((faq, i) => (
-                <details key={faq.q} className="group py-1">
-                  <summary className="flex cursor-pointer list-none items-baseline gap-6 py-5 marker:content-none [&::-webkit-details-marker]:hidden">
-                    <span className="font-heading w-8 shrink-0 text-sm font-semibold text-brand-400">
-                      {String(i + 1).padStart(2, "0")}
-                    </span>
-                    <span className="flex-1 font-heading text-lg font-semibold tracking-tight text-brand-900">
-                      {faq.q}
-                    </span>
-                    <span className="text-brand-400 transition-transform duration-300 group-open:rotate-45">
-                      +
-                    </span>
-                  </summary>
-                  <p className="pb-5 pl-14 text-sm leading-relaxed text-slate-600">{faq.a}</p>
-                </details>
-              ))}
+                <div className="relative mt-8 aspect-square w-full overflow-hidden rounded-3xl border border-slate-200/80 bg-white shadow-sm">
+                  <Image
+                    src="/healthcare-square-collage.jpg"
+                    alt="Healthcare appointments and verified doctors"
+                    fill
+                    sizes="(max-width: 1024px) 100vw, 42vw"
+                    className="object-cover"
+                  />
+                </div>
+              </div>
+
+              {/* Right column: FAQ accordion list & Contact banner */}
+              <div className="lg:col-span-7">
+                <div className="space-y-3">
+                  {faqs.map((faq, i) => (
+                    <details
+                      key={faq.q}
+                      className="group rounded-2xl border border-slate-200/80 bg-white p-4 shadow-[0_1px_2px_rgba(0,0,0,0.02)] transition-all hover:border-teal-600/30 hover:shadow-xs sm:px-5 sm:py-4"
+                    >
+                      <summary className="flex cursor-pointer list-none items-center justify-between gap-4 marker:content-none [&::-webkit-details-marker]:hidden">
+                        <div className="flex min-w-0 items-center gap-3.5">
+                          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#ebf6f5] text-xs font-bold text-teal-800">
+                            {String(i + 1).padStart(2, "0")}
+                          </span>
+                          <span className="font-heading text-[15px] font-semibold tracking-tight text-slate-900 sm:text-base">
+                            {faq.q}
+                          </span>
+                        </div>
+                        <span className="flex h-7 w-7 shrink-0 items-center justify-center text-slate-400 transition-transform duration-300 group-open:rotate-45 group-hover:text-teal-700">
+                          <Plus className="h-4 w-4" />
+                        </span>
+                      </summary>
+                      <p className="mt-3 pl-[46px] pr-2 text-sm leading-relaxed text-slate-600">
+                        {faq.a}
+                      </p>
+                    </details>
+                  ))}
+                </div>
+
+                {/* Contact help card */}
+                <div className="mt-5 flex flex-col items-start justify-between gap-4 rounded-2xl border border-teal-800/10 bg-[#ebf6f5] p-5 sm:flex-row sm:items-center sm:p-6">
+                  <div className="flex items-center gap-4">
+                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-white text-teal-700 shadow-xs">
+                      <Headphones className="h-6 w-6" />
+                    </div>
+                    <div>
+                      <p className="text-[11px] font-bold uppercase tracking-wider text-teal-700">
+                        Still have a question?
+                      </p>
+                      <h3 className="font-heading text-lg font-bold text-slate-900">
+                        We're here to help
+                      </h3>
+                      <p className="text-xs text-slate-600">
+                        Contact our support team and we'll get back to you.
+                      </p>
+                    </div>
+                  </div>
+                  <a
+                    href={`mailto:${BRAND.supportEmail}`}
+                    className="shrink-0 rounded-full bg-[#1c7b79] px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#15605e]"
+                  >
+                    Contact Us
+                  </a>
+                </div>
+              </div>
             </div>
           </div>
         </section>
 
-        <section className="relative isolate min-h-[360px] overflow-hidden sm:min-h-[420px] lg:min-h-[480px]">
+        <section className="relative isolate min-h-[380px] overflow-hidden bg-[#e8f4f4] sm:min-h-[420px] lg:min-h-[460px]">
           <Image
-            src="/online_consultation.jpg"
-            alt=""
+            src="/landing-page-cta.jpg"
+            alt="Apna Clinic consultation and care"
             fill
             sizes="100vw"
-            className="object-cover object-center"
+            className="object-cover object-right sm:object-center"
           />
-          <div className="absolute inset-0 bg-brand-950/55" />
-          <div className="absolute inset-0 bg-gradient-to-t from-brand-950/70 via-brand-950/35 to-brand-950/40" />
+          <div className="absolute inset-0 bg-gradient-to-r from-white/95 via-white/80 to-transparent sm:from-white/85 sm:via-white/40 sm:to-transparent lg:from-white/70 lg:via-white/10 lg:to-transparent" />
 
-          <div className="relative mx-auto flex h-full max-w-6xl flex-col items-center justify-center px-4 py-24 text-center sm:px-6 sm:py-28 lg:py-32">
-            <div>
-              <p className="font-heading text-3xl font-bold tracking-tight text-white sm:text-4xl lg:text-[2.75rem]">
-                Ready when you are
+          <div className="relative mx-auto flex h-full max-w-6xl flex-col items-start justify-center px-4 py-16 sm:px-6 sm:py-20 lg:py-24">
+            <div className="max-w-md text-left sm:max-w-lg">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-brand-600">
+                Start your care
               </p>
-              <p className="mx-auto mt-4 max-w-md text-sm leading-relaxed text-white/80 sm:text-base">
+              <h2 className="mt-2 font-heading text-3xl font-bold tracking-tight text-brand-950 sm:text-4xl lg:text-[2.75rem] lg:leading-[1.15]">
+                Ready when you are
+              </h2>
+              <p className="mt-4 text-sm leading-relaxed text-slate-700 sm:text-base">
                 Book a secure consult, walk in for same day care, or start with a short assessment.
               </p>
-            </div>
-            <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-              <Link
-                href="/doctors/"
-                className="inline-flex items-center gap-2 rounded-full bg-brand-500 px-6 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-brand-600"
-              >
-                Find a doctor
-                <ArrowRight className="h-4 w-4" />
-              </Link>
-              <Link
-                href="/register/"
-                className="inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/90 px-6 py-3 text-sm font-semibold text-brand-900 backdrop-blur-sm transition-colors hover:border-white/40 hover:bg-white"
-              >
-                Create account
-              </Link>
+              <div className="mt-8 flex flex-wrap items-center gap-3">
+                <Link
+                  href="/doctors/"
+                  className="inline-flex items-center gap-2 rounded-full bg-brand-500 px-6 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-brand-600"
+                >
+                  Find a doctor
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
+                <Link
+                  href="/register/"
+                  className="inline-flex items-center gap-2 rounded-full border border-brand-900/15 bg-white px-6 py-3 text-sm font-semibold text-brand-900 shadow-sm transition-colors hover:border-brand-900/30 hover:bg-slate-50"
+                >
+                  Create account
+                </Link>
+              </div>
             </div>
           </div>
         </section>
