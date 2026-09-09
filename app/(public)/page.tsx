@@ -669,7 +669,7 @@ export default async function HomePage() {
           </div>
         </section>
 
-        <section className="relative isolate min-h-[380px] overflow-hidden bg-[#e8f4f4] sm:min-h-[420px] lg:min-h-[460px]">
+        <section className="relative isolate min-h-[380px] overflow-hidden bg-brand-950 text-white sm:min-h-[420px] lg:min-h-[460px]">
           <Image
             src="/landing-page-cta.jpg"
             alt="Apna Clinic consultation and care"
@@ -677,30 +677,32 @@ export default async function HomePage() {
             sizes="100vw"
             className="object-cover object-right sm:object-center"
           />
-          <div className="absolute inset-0 bg-gradient-to-r from-white/95 via-white/80 to-transparent sm:from-white/85 sm:via-white/40 sm:to-transparent lg:from-white/70 lg:via-white/10 lg:to-transparent" />
+          {/* Dark overlay for prominent text contrast */}
+          <div className="absolute inset-0 bg-brand-950/65" />
+          <div className="absolute inset-0 bg-gradient-to-r from-brand-950/90 via-brand-950/70 to-brand-950/40" />
 
           <div className="relative mx-auto flex h-full max-w-6xl flex-col items-start justify-center px-4 py-16 sm:px-6 sm:py-20 lg:py-24">
             <div className="max-w-md text-left sm:max-w-lg">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-brand-600">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-brand-300">
                 Start your care
               </p>
-              <h2 className="mt-2 font-heading text-3xl font-bold tracking-tight text-brand-950 sm:text-4xl lg:text-[2.75rem] lg:leading-[1.15]">
+              <h2 className="mt-2 font-heading text-3xl font-bold tracking-tight text-white sm:text-4xl lg:text-[2.75rem] lg:leading-[1.15]">
                 Ready when you are
               </h2>
-              <p className="mt-4 text-sm leading-relaxed text-slate-700 sm:text-base">
+              <p className="mt-4 text-sm leading-relaxed text-white/85 sm:text-base">
                 Book a secure consult, walk in for same day care, or start with a short assessment.
               </p>
               <div className="mt-8 flex flex-wrap items-center gap-3">
                 <Link
                   href="/doctors/"
-                  className="inline-flex items-center gap-2 rounded-full bg-brand-500 px-6 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-brand-600"
+                  className="inline-flex items-center gap-2 rounded-full bg-brand-500 px-6 py-3 text-sm font-semibold text-white shadow-md transition-colors hover:bg-brand-600"
                 >
                   Find a doctor
                   <ArrowRight className="h-4 w-4" />
                 </Link>
                 <Link
                   href="/register/"
-                  className="inline-flex items-center gap-2 rounded-full border border-brand-900/15 bg-white px-6 py-3 text-sm font-semibold text-brand-900 shadow-sm transition-colors hover:border-brand-900/30 hover:bg-slate-50"
+                  className="inline-flex items-center gap-2 rounded-full border border-white/30 bg-white/10 px-6 py-3 text-sm font-semibold text-white backdrop-blur-md transition-colors hover:border-white/50 hover:bg-white/20"
                 >
                   Create account
                 </Link>
