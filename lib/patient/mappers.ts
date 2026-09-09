@@ -12,11 +12,11 @@ import {
   formatTime,
   formatTimeRange,
   getInitials,
-  isToday,
   mapAppointmentType,
   timeAgo,
-  toLocalDateKey,
 } from "@/lib/doctor/mappers";
+import { getPkDateKey, pkPartsFromIso } from "@/lib/booking/timezone";
+import { getPkDateWithOffset, getPkTodayDate } from "@/lib/booking/slots";
 import type { AppointmentWithDoctor, DoctorWithProfile, PaymentWithDoctor } from "./types";
 
 export interface PatientUIAppointment {
@@ -87,7 +87,7 @@ export function mapPatientStatus(
 
 export function mapToPatientAppointment(apt: AppointmentWithDoctor): PatientUIAppointment {
   const parsed = parseClinicalNotes(apt.doctor_notes);
-  const scheduled = new Date(apt.scheduled_at);
+  const pk = pkPartsFromIso(apt.scheduled_at);
   const doctorName = apt.doctor?.profile?.full_name ?? "Doctor";
   const review = Array.isArray(apt.review) ? apt.review[0] : apt.review;
   const paymentList = apt.payments ?? (apt.payment ? [apt.payment] : []);
@@ -113,8 +113,8 @@ export function mapToPatientAppointment(apt: AppointmentWithDoctor): PatientUIAp
     doctorSpecialization: apt.doctor?.specialization ?? "Specialist",
     doctorPhone: apt.doctor?.profile?.phone ?? "—",
     doctorAvatarUrl: apt.doctor?.profile?.avatar_url ?? null,
-    date: toLocalDateKey(scheduled),
-    time: formatTime(scheduled),
+    date: pk.date,
+    time: formatTime(apt.scheduled_at),
     timeRange: formatTimeRange(apt.scheduled_at, apt.duration_minutes),
     duration: `${apt.duration_minutes} min`,
     type: mapAppointmentType(apt.appointment_type),
@@ -224,18 +224,13 @@ export function mapToPaymentRow(payment: PaymentWithDoctor) {
 export type PatientPaymentRow = ReturnType<typeof mapToPaymentRow>;
 
 export function formatRelativeDate(date: string): string {
-  if (isToday(date)) return "Today";
-  const value = new Date(date);
-  const tomorrow = new Date();
-  tomorrow.setDate(tomorrow.getDate() + 1);
-  if (
-    value.getFullYear() === tomorrow.getFullYear() &&
-    value.getMonth() === tomorrow.getMonth() &&
-    value.getDate() === tomorrow.getDate()
-  ) {
-    return "Tomorrow";
-  }
-  return formatDate(date, { month: "short", day: "numeric" });
+  const key = /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : getPkDateKey(date);
+  if (key === getPkTodayDate()) return "Today";
+  if (key === getPkDateWithOffset(1)) return "Tomorrow";
+  return formatDate(
+    /^\d{4}-\d{2}-\d{2}$/.test(date) ? `${date}T12:00:00+05:00` : date,
+    { month: "short", day: "numeric" }
+  );
 }
 
 export function getUpcomingAppointments(appointments: PatientUIAppointment[]) {

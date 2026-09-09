@@ -103,6 +103,10 @@ export async function POST(request: Request) {
           : "This appointment is no longer available.";
       return json({ error: label, message: label }, { status: 409 });
     }
+    if (apt.status === "completed") {
+      const label = "This consultation has ended and the meeting room is closed.";
+      return json({ error: label, message: label }, { status: 409 });
+    }
     if (apt.status === "pending_payment") {
       return json(
         { error: "Payment for this appointment has not been confirmed yet." },

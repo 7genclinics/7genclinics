@@ -55,6 +55,8 @@ export default function VideoConsultationPage() {
   const apiRef = useRef<any>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const leavingRef = useRef(false);
+  const joinedRef = useRef(false);
+  const roleRef = useRef<"moderator" | "participant">("participant");
 
   const requestJoin = useCallback(async (): Promise<
     | { ok: true; info: JoinInfo }
@@ -125,8 +127,9 @@ export default function VideoConsultationPage() {
         return;
       }
       const info = result.info;
+      roleRef.current = info.role;
       // Patient waits until the doctor has started the session.
-      if (info.role === "participant" && info.status !== "ongoing" && info.status !== "completed") {
+      if (info.role === "participant" && info.status !== "ongoing") {
         setPhase({ kind: "waiting_for_doctor", info });
       } else {
         enterCall(info);
@@ -161,40 +164,98 @@ export default function VideoConsultationPage() {
     };
   }, [phase.kind, requestJoin, enterCall]);
 
-  const leaveToDashboard = useCallback(
-    (role: "moderator" | "participant") => {
-      router.push(role === "moderator" ? "/doctor/appointments" : "/patient/appointments");
+  const dashboardPath = (role: "moderator" | "participant") =>
+    role === "moderator" ? "/doctor/appointments/" : "/patient/appointments/";
+
+  const leaveToDashboard = useCallback((role: "moderator" | "participant") => {
+    window.location.replace(dashboardPath(role));
+  }, []);
+
+  const recordConsultationEnded = useCallback(async () => {
+    try {
+      await fetch("/api/video/ended", {
+        method: "POST",
+        credentials: "include",
+        keepalive: true,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ appointmentId }),
+      });
+    } catch {
+      /* still leave the room so ads / parent redirects cannot trap the session */
+    }
+  }, [appointmentId]);
+
+  const endCallAndLeave = useCallback(
+    async (role: "moderator" | "participant", recordEnd: boolean) => {
+      if (leavingRef.current) return;
+      leavingRef.current = true;
+      if (recordEnd && role === "moderator") {
+        await recordConsultationEnded();
+      }
+      if (containerRef.current) {
+        containerRef.current.replaceChildren();
+      }
+      try {
+        apiRef.current?.dispose();
+      } catch {
+        /* iframe already gone */
+      }
+      apiRef.current = null;
+      window.location.replace(dashboardPath(role));
     },
-    [router]
+    [recordConsultationEnded]
   );
+
+  useEffect(() => {
+    const onPageHide = () => {
+      if (leavingRef.current) return;
+      if (roleRef.current !== "moderator" || !joinedRef.current) return;
+      navigator.sendBeacon(
+        "/api/video/ended",
+        new Blob([JSON.stringify({ appointmentId })], { type: "application/json" })
+      );
+    };
+    window.addEventListener("pagehide", onPageHide);
+    return () => window.removeEventListener("pagehide", onPageHide);
+  }, [appointmentId]);
 
   // Mount the Jitsi iframe once in-call.
   useEffect(() => {
-    if (phase.kind !== "in_call" || !containerRef.current || !window.JitsiMeetExternalAPI) return;
+    if (phase.kind !== "in_call" || leavingRef.current || !containerRef.current || !window.JitsiMeetExternalAPI) {
+      return;
+    }
     const { info } = phase;
+    roleRef.current = info.role;
     let disposed = false;
     let joined = false;
 
-    leavingRef.current = false;
     const api = new window.JitsiMeetExternalAPI(info.domain, {
       roomName: info.room,
       parentNode: containerRef.current,
       ...(info.jwt ? { jwt: info.jwt } : {}),
       userInfo: { displayName: info.displayName },
+      sandbox:
+        "allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox allow-forms allow-presentation allow-downloads",
       configOverwrite: {
         prejoinConfig: { enabled: false },
         disableDeepLinking: true,
-        startWithAudioMuted: false,
-        subject: `Consultation — ${info.doctorName} / ${info.patientName}`,
-        enableLobbyChat: false,
+        deeplinking: { disabled: true, hideLogo: true },
+        enableClosePage: false,
         enableWelcomePage: false,
+        enableLobbyChat: false,
         requireDisplayName: false,
         hideEmailInSettings: true,
         analytics: { disabled: true },
+        startWithAudioMuted: false,
+        subject: `Consultation — ${info.doctorName} / ${info.patientName}`,
       },
       interfaceConfigOverwrite: {
         SHOW_JITSI_WATERMARK: false,
+        SHOW_BRAND_WATERMARK: false,
+        SHOW_POWERED_BY: false,
+        SHOW_PROMOTIONAL_ICONS: false,
         MOBILE_APP_PROMO: false,
+        HIDE_DEEP_LINKING_LOGO: true,
         AUTHENTICATION_ENABLE: false,
       },
     });
@@ -207,6 +268,7 @@ export default function VideoConsultationPage() {
 
     api.addListener("videoConferenceJoined", async () => {
       joined = true;
+      joinedRef.current = true;
       if (info.role !== "moderator") return;
       if (info.jwtConfigured) {
         api.executeCommand("toggleLobby", true);
@@ -247,12 +309,11 @@ export default function VideoConsultationPage() {
         );
       }
     );
-    api.addListener("readyToClose", () => {
-      if (leavingRef.current) leaveToDashboard(info.role);
-    });
-    api.addListener("videoConferenceLeft", () => {
-      if (leavingRef.current) leaveToDashboard(info.role);
-    });
+    const leaveFromJitsiUi = () => {
+      if (disposed) return;
+      void endCallAndLeave(info.role, info.role === "moderator" && joinedRef.current);
+    };
+    api.addListener("readyToClose", leaveFromJitsiUi);
 
     const joinWatchdog = window.setTimeout(() => {
       if (disposed || joined || leavingRef.current) return;
@@ -271,7 +332,7 @@ export default function VideoConsultationPage() {
       }
       apiRef.current = null;
     };
-  }, [phase, leaveToDashboard, appointmentId]);
+  }, [phase, endCallAndLeave, appointmentId]);
 
   if (phase.kind === "loading") {
     return (
@@ -373,9 +434,7 @@ export default function VideoConsultationPage() {
           size="sm"
           className="bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold h-8"
           onClick={() => {
-            leavingRef.current = true;
-            apiRef.current?.executeCommand("hangup");
-            leaveToDashboard(phase.info.role);
+            void endCallAndLeave(phase.info.role, phase.info.role === "moderator");
           }}
         >
           <PhoneOff className="h-3.5 w-3.5 mr-1.5" />

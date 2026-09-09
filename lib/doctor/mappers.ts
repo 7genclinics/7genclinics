@@ -7,7 +7,12 @@ import {
   mapTimingToDisplayStatus,
   type AppointmentSessionTiming,
 } from "@/lib/appointments/session-timing";
-
+import {
+  CLINIC_TIMEZONE,
+  getPkDateKey,
+  pkPartsFromIso,
+} from "@/lib/booking/timezone";
+import { getPkTodayDate } from "@/lib/booking/slots";
 export interface UIPatient {
   id: string;
   code: string;
@@ -170,16 +175,24 @@ export function formatGender(gender: Gender | null): string {
 
 export function formatDate(date: string | Date, options?: Intl.DateTimeFormatOptions): string {
   const value = typeof date === "string" ? new Date(date) : date;
-  return value.toLocaleDateString("en-PK", options ?? {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
+  return value.toLocaleDateString("en-PK", {
+    timeZone: CLINIC_TIMEZONE,
+    ...(options ?? {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    }),
   });
 }
 
 export function formatTime(date: string | Date): string {
   const value = typeof date === "string" ? new Date(date) : date;
-  return value.toLocaleTimeString("en-PK", { hour: "2-digit", minute: "2-digit", hour12: true });
+  return value.toLocaleTimeString("en-PK", {
+    timeZone: CLINIC_TIMEZONE,
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+  });
 }
 
 export function formatTimeRange(scheduledAt: string, durationMinutes: number): string {
@@ -270,23 +283,11 @@ export function timeAgo(date: string): string {
 }
 
 export function isToday(date: string): boolean {
-  const value = new Date(date);
-  const today = new Date();
-  return (
-    value.getFullYear() === today.getFullYear() &&
-    value.getMonth() === today.getMonth() &&
-    value.getDate() === today.getDate()
-  );
+  return getPkDateKey(date) === getPkTodayDate();
 }
 
 export function isSameDay(a: string, b: string): boolean {
-  const dateA = new Date(a);
-  const dateB = new Date(b);
-  return (
-    dateA.getFullYear() === dateB.getFullYear() &&
-    dateA.getMonth() === dateB.getMonth() &&
-    dateA.getDate() === dateB.getDate()
-  );
+  return getPkDateKey(a) === getPkDateKey(b);
 }
 
 export interface DashboardSession {
@@ -311,17 +312,15 @@ export interface DashboardSession {
   scheduledAt: string;
 }
 
+/** @deprecated Prefer getPkDateKey — kept for callers that pass a Date. */
 export function toLocalDateKey(date: Date): string {
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, "0");
-  const d = String(date.getDate()).padStart(2, "0");
-  return `${y}-${m}-${d}`;
+  return getPkDateKey(date);
 }
 
 export function mapToUIAppointment(appointment: AppointmentWithPatient) {
   const patientName = appointment.patient?.full_name ?? "Unknown Patient";
   const parsed = parseClinicalNotes(appointment.doctor_notes);
-  const scheduled = new Date(appointment.scheduled_at);
+  const pk = pkPartsFromIso(appointment.scheduled_at);
 
   return {
     id: appointment.id,
@@ -331,8 +330,8 @@ export function mapToUIAppointment(appointment: AppointmentWithPatient) {
     patientPhone: appointment.patient?.phone ?? "",
     patientAge: calcAge(appointment.patient?.date_of_birth ?? null)?.toString() ?? "—",
     patientGender: formatGender(appointment.patient?.gender ?? null),
-    date: toLocalDateKey(scheduled),
-    time: `${scheduled.getHours().toString().padStart(2, "0")}:${scheduled.getMinutes().toString().padStart(2, "0")}`,
+    date: pk.date,
+    time: pk.time,
     duration: `${appointment.duration_minutes} min`,
     type: mapAppointmentType(appointment.appointment_type) as "Video" | "Audio" | "Chat",
     status: mapStatusToUI(appointment.status, appointment.scheduled_at, appointment.duration_minutes) as

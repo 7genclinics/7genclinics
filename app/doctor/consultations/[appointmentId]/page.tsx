@@ -58,7 +58,7 @@ const FREQUENCY_PRESETS = [
   "When needed",
   "Twice a day",
 ];
-const DURATION_PRESETS = ["3 days", "5 days", "7 days", "10 days", "14 days"];
+const DURATION_PRESETS = ["3 days", "5 days", "7 days", "10 days", "14 days", "30 days"];
 
 export default function DoctorConsultationPage() {
   const params = useParams<{ appointmentId: string }>();

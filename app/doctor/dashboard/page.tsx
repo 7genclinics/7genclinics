@@ -54,8 +54,9 @@ import {
   isToday,
   mapToDashboardSession,
   timeAgo,
-  toLocalDateKey,
 } from "@/lib/doctor/mappers";
+import { getPkDateKey } from "@/lib/booking/timezone";
+import { getPkDateWithOffset } from "@/lib/booking/slots";
 
 export default function DoctorDashboardPage() {
   const router = useRouter();
@@ -145,29 +146,29 @@ export default function DoctorDashboardPage() {
       const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
       const chartDays: Array<{ name: string; amount: number }> = [];
       for (let i = 6; i >= 0; i--) {
-        const date = new Date();
-        date.setDate(date.getDate() - i);
-        const key = toLocalDateKey(date);
+        const key = getPkDateWithOffset(-i);
         const amount = earnedPayments
-          .filter((p) => p.created_at.split("T")[0] === key)
+          .filter((p) => getPkDateKey(p.created_at) === key)
           .reduce((sum, p) => sum + Number(p.doctor_earning), 0);
-        chartDays.push({ name: dayNames[date.getDay()], amount });
+        const [y, m, d] = key.split("-").map(Number);
+        const weekday = new Date(Date.UTC(y, m - 1, d, 12)).getUTCDay();
+        chartDays.push({ name: dayNames[weekday], amount });
       }
       setEarningsData(chartDays);
 
       const weekDays: Array<{ day: string; date: string; sessions: number }> = [];
       for (let i = 0; i < 5; i++) {
-        const date = new Date();
-        date.setDate(date.getDate() + i);
-        const key = toLocalDateKey(date);
+        const key = getPkDateWithOffset(i);
         const count = appointments.filter(
           (apt) =>
-            toLocalDateKey(new Date(apt.scheduled_at)) === key &&
+            getPkDateKey(apt.scheduled_at) === key &&
             apt.status !== "cancelled"
         ).length;
+        const [y, m, d] = key.split("-").map(Number);
+        const weekday = new Date(Date.UTC(y, m - 1, d, 12)).getUTCDay();
         weekDays.push({
-          day: dayNames[date.getDay()],
-          date: date.getDate().toString().padStart(2, "0"),
+          day: dayNames[weekday],
+          date: String(d).padStart(2, "0"),
           sessions: count,
         });
       }

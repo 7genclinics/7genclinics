@@ -37,7 +37,7 @@ import {
 import { getBookedSlotsForDate } from "@/lib/patient/api";
 import { mapStatusToDb, mapToUIAppointment, formatSlotRange } from "@/lib/doctor/mappers";
 import { matchesAnyFlexibleText } from "@/lib/search/flexible-match";
-import { pkDateTimeToUtcIso } from "@/lib/booking/timezone";
+import { formatPkCalendarDate, pkDateTimeToUtcIso, pkPartsFromIso } from "@/lib/booking/timezone";
 import {
   filterPastSlotsForToday,
   formatSlotTime,
@@ -68,27 +68,6 @@ interface Appointment {
   scheduledAt: string;
 }
 
-function pkPartsFromIso(iso: string): { date: string; time: string } {
-  const date = new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Asia/Karachi",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(new Date(iso));
-  const parts = new Intl.DateTimeFormat("en-GB", {
-    timeZone: "Asia/Karachi",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  }).formatToParts(new Date(iso));
-  const hour = Number(parts.find((p) => p.type === "hour")?.value ?? 0) % 24;
-  const minute = Number(parts.find((p) => p.type === "minute")?.value ?? 0);
-  return {
-    date,
-    time: `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`,
-  };
-}
-
 export default function DoctorAppointmentsPage() {
   const router = useRouter();
   const { doctorProfile } = useDoctor();
@@ -110,8 +89,8 @@ export default function DoctorAppointmentsPage() {
   const today = getPkTodayDate();
   const [selectedCalendarDate, setSelectedCalendarDate] = useState(today);
   const [calendarMonth, setCalendarMonth] = useState(() => {
-    const now = new Date();
-    return new Date(now.getFullYear(), now.getMonth(), 1);
+    const [y, m] = today.split("-").map(Number);
+    return new Date(y, m - 1, 1);
   });
 
   const [newDateInput, setNewDateInput] = useState("");
@@ -370,10 +349,7 @@ export default function DoctorAppointmentsPage() {
     router.push(`/video/${apt.id}`);
   };
 
-  const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr);
-    return date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
-  };
+  const formatDate = (dateStr: string) => formatPkCalendarDate(dateStr);
 
   const getStatusBadgeClass = (status: string) => {
     const classes = {
