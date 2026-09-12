@@ -85,17 +85,17 @@ export async function POST(request: Request) {
         p_user_id: row.patient_id,
         p_title: "Consultation ended",
         p_message:
-          "Your video consultation has ended. You can review this visit from Appointments.",
+          "Your doctor has ended this video consultation. You can review the visit from Appointments.",
         p_type: "appointment",
-        p_metadata: { appointment_id: appointmentId, ended_early: true },
+        p_metadata: { appointment_id: appointmentId, ended_by: "doctor" },
       });
       await sendSystemPushForNotification({
         userId: row.patient_id,
         title: "Consultation ended",
         message:
-          "Your video consultation has ended. You can review this visit from Appointments.",
+          "Your doctor has ended this video consultation. You can review the visit from Appointments.",
         type: "appointment",
-        metadata: { appointment_id: appointmentId, ended_early: true },
+        metadata: { appointment_id: appointmentId, ended_by: "doctor" },
         url: `/patient/appointments?appointment=${appointmentId}`,
         tag: `appointment-ended-${appointmentId}`,
       });

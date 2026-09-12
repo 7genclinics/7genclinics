@@ -55,8 +55,6 @@ export default function VideoConsultationPage() {
   const apiRef = useRef<any>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const leavingRef = useRef(false);
-  const joinedRef = useRef(false);
-  const roleRef = useRef<"moderator" | "participant">("participant");
 
   const requestJoin = useCallback(async (): Promise<
     | { ok: true; info: JoinInfo }
@@ -127,7 +125,6 @@ export default function VideoConsultationPage() {
         return;
       }
       const info = result.info;
-      roleRef.current = info.role;
       // Patient waits until the doctor has started the session.
       if (info.role === "participant" && info.status !== "ongoing") {
         setPhase({ kind: "waiting_for_doctor", info });
@@ -206,26 +203,12 @@ export default function VideoConsultationPage() {
     [recordConsultationEnded]
   );
 
-  useEffect(() => {
-    const onPageHide = () => {
-      if (leavingRef.current) return;
-      if (roleRef.current !== "moderator" || !joinedRef.current) return;
-      navigator.sendBeacon(
-        "/api/video/ended",
-        new Blob([JSON.stringify({ appointmentId })], { type: "application/json" })
-      );
-    };
-    window.addEventListener("pagehide", onPageHide);
-    return () => window.removeEventListener("pagehide", onPageHide);
-  }, [appointmentId]);
-
   // Mount the Jitsi iframe once in-call.
   useEffect(() => {
     if (phase.kind !== "in_call" || leavingRef.current || !containerRef.current || !window.JitsiMeetExternalAPI) {
       return;
     }
     const { info } = phase;
-    roleRef.current = info.role;
     let disposed = false;
     let joined = false;
 
@@ -268,7 +251,6 @@ export default function VideoConsultationPage() {
 
     api.addListener("videoConferenceJoined", async () => {
       joined = true;
-      joinedRef.current = true;
       if (info.role !== "moderator") return;
       if (info.jwtConfigured) {
         api.executeCommand("toggleLobby", true);
@@ -309,11 +291,12 @@ export default function VideoConsultationPage() {
         );
       }
     );
-    const leaveFromJitsiUi = () => {
-      if (disposed) return;
-      void endCallAndLeave(info.role, info.role === "moderator" && joinedRef.current);
-    };
-    api.addListener("readyToClose", leaveFromJitsiUi);
+    // Jitsi may fire readyToClose on refresh/dispose/network blips — leave the room
+    // but do NOT mark the visit completed unless the doctor pressed End consultation.
+    api.addListener("readyToClose", () => {
+      if (disposed || leavingRef.current) return;
+      void endCallAndLeave(info.role, false);
+    });
 
     const joinWatchdog = window.setTimeout(() => {
       if (disposed || joined || leavingRef.current) return;
