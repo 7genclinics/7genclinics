@@ -1,18 +1,22 @@
 import { createRouteHandlerClient } from "@/lib/supabase/route-handler";
 import { getErrorMessage } from "@/lib/errors";
 import {
+  allowPublicJitsiFallback,
   buildRoomName,
-  buildRoomPath,
   consultationJwtExpiryUnix,
-  getJitsiDomain,
-  isJitsiJwtConfigured,
-  isSelfHostedJitsiConfigured,
-  PUBLIC_JITSI_DOMAIN,
+  getVideoJoinConfig,
+  resolveVideoProvider,
   signJitsiJwt,
 } from "@/lib/video/jwt";
 
 /** Patients/doctors may join from this many minutes before the scheduled start. */
 const JOIN_EARLY_MINUTES = 10;
+
+function doctorDisplayName(fullName: string): string {
+  const trimmed = fullName.trim();
+  if (!trimmed) return "Doctor";
+  return /^dr\.?\s/i.test(trimmed) ? trimmed : `Dr. ${trimmed}`;
+}
 
 export async function POST(request: Request) {
   const { supabase, json } = await createRouteHandlerClient();
@@ -139,10 +143,21 @@ export async function POST(request: Request) {
       }
     }
 
+    const provider = resolveVideoProvider();
+    if (provider === "public" && !allowPublicJitsiFallback()) {
+      return json(
+        {
+          error: "video_not_configured",
+          message:
+            "Video hosting is not configured for production. Add 8x8 JaaS keys (JAAS_APP_ID, JAAS_API_KEY_ID, JAAS_PRIVATE_KEY) on the server, then redeploy.",
+        },
+        { status: 503 }
+      );
+    }
+
     const room = buildRoomName(apt.id);
-    const selfHosted = isSelfHostedJitsiConfigured();
-    const domain = selfHosted ? getJitsiDomain() : PUBLIC_JITSI_DOMAIN;
-    const canonicalUrl = `https://${domain}/${buildRoomPath(room)}`;
+    const join = getVideoJoinConfig(room);
+    const canonicalUrl = `https://${join.domain}/${join.room}`;
     if (apt.video_room_url !== canonicalUrl) {
       await supabase
         .from("appointments")
@@ -154,26 +169,27 @@ export async function POST(request: Request) {
     const role: "moderator" | "participant" = isDoctor || isAdmin ? "moderator" : "participant";
 
     const displayName = isDoctor
-      ? `Dr. ${apt.doctor?.profile?.full_name ?? me.full_name}`
+      ? doctorDisplayName(apt.doctor?.profile?.full_name ?? me.full_name)
       : me.full_name;
 
-    const jwt = selfHosted
-      ? signJitsiJwt({
-          room: buildRoomPath(room),
-          userId: me.id,
-          displayName,
-          email: me.email,
-          avatarUrl: me.avatar_url,
-          moderator: role === "moderator",
-          expiresAt: consultationJwtExpiryUnix({
-            nowMs: now,
-            windowClosesMs: windowCloses,
-            isAdmin,
-          }),
-        })
-      : null;
+    const jwt =
+      provider === "public"
+        ? null
+        : signJitsiJwt({
+            room: join.room,
+            userId: me.id,
+            displayName,
+            email: me.email,
+            avatarUrl: me.avatar_url,
+            moderator: role === "moderator",
+            expiresAt: consultationJwtExpiryUnix({
+              nowMs: now,
+              windowClosesMs: windowCloses,
+              isAdmin,
+            }),
+          });
 
-    if (selfHosted && !jwt) {
+    if (provider !== "public" && !jwt) {
       return json(
         {
           error: "video_not_configured",
@@ -184,10 +200,12 @@ export async function POST(request: Request) {
     }
 
     return json({
-      domain,
-      room: buildRoomPath(room),
+      domain: join.domain,
+      room: join.room,
+      scriptUrl: join.scriptUrl,
+      provider: join.provider,
       jwt,
-      jwtConfigured: isJitsiJwtConfigured(),
+      jwtConfigured: join.jwtConfigured,
       role,
       displayName,
       status: apt.status,

@@ -9,6 +9,8 @@ import { getCurrentAuthUser } from "@/lib/auth/current-user";
 interface JoinInfo {
   domain: string;
   room: string;
+  scriptUrl?: string;
+  provider?: "jaas" | "self_hosted" | "public";
   jwt: string | null;
   jwtConfigured: boolean;
   role: "moderator" | "participant";
@@ -34,11 +36,11 @@ declare global {
   }
 }
 
-function loadJitsiScript(domain: string): Promise<void> {
+function loadJitsiScript(info: Pick<JoinInfo, "domain" | "scriptUrl">): Promise<void> {
   return new Promise((resolve, reject) => {
     if (window.JitsiMeetExternalAPI) return resolve();
     const script = document.createElement("script");
-    script.src = `https://${domain}/external_api.js`;
+    script.src = info.scriptUrl ?? `https://${info.domain}/external_api.js`;
     script.async = true;
     script.onload = () => resolve();
     script.onerror = () => reject(new Error("Failed to load the video library."));
@@ -92,7 +94,7 @@ export default function VideoConsultationPage() {
   const enterCall = useCallback(
     async (info: JoinInfo) => {
       try {
-        await loadJitsiScript(info.domain);
+        await loadJitsiScript(info);
       } catch {
         setPhase({ kind: "error", message: "Could not load the video client. Check your connection and retry." });
         return;
@@ -186,9 +188,17 @@ export default function VideoConsultationPage() {
     async (role: "moderator" | "participant", recordEnd: boolean) => {
       if (leavingRef.current) return;
       leavingRef.current = true;
+
+      // Doctor End consultation: close the visit in our DB, then end the room for everyone.
       if (recordEnd && role === "moderator") {
         await recordConsultationEnded();
+        try {
+          apiRef.current?.executeCommand("endConference");
+        } catch {
+          /* older embeds may not support endConference */
+        }
       }
+
       if (containerRef.current) {
         containerRef.current.replaceChildren();
       }
@@ -252,7 +262,7 @@ export default function VideoConsultationPage() {
     api.addListener("videoConferenceJoined", async () => {
       joined = true;
       if (info.role !== "moderator") return;
-      if (info.jwtConfigured) {
+      if (info.jwtConfigured && info.provider !== "jaas") {
         api.executeCommand("toggleLobby", true);
       }
       await fetch("/api/video/started", {
@@ -409,7 +419,7 @@ export default function VideoConsultationPage() {
           </span>
           {!phase.info.jwtConfigured && (
             <span className="hidden sm:inline rounded border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-[10px] font-medium text-amber-300">
-              Host login may appear — configure Jitsi JWT for seamless join
+              Demo video host — embedded calls disconnect after 5 minutes. Configure 8x8 JaaS for full sessions.
             </span>
           )}
         </div>
