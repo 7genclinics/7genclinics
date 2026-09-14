@@ -36,15 +36,30 @@ describe("getAppointmentSessionTiming", () => {
     assert.equal(timing.shouldAutoExpire, true);
   });
 
-  it("ongoing sessions stay joinable", () => {
+  it("ongoing sessions stay joinable during the booked window", () => {
     const timing = getAppointmentSessionTiming({
       scheduledAt: "2026-07-13T10:00:00.000Z",
       durationMinutes: DURATION,
       status: "ongoing",
-      now: Date.parse("2026-07-13T11:00:00.000Z"),
+      now: Date.parse("2026-07-13T10:10:00.000Z"),
     });
     assert.equal(timing.phase, "ongoing");
     assert.equal(timing.canJoin, true);
+    assert.equal(timing.shouldAutoComplete, false);
+  });
+
+  it("blocks rejoin after booked end even if status stayed ongoing", () => {
+    const timing = getAppointmentSessionTiming({
+      scheduledAt: "2026-07-13T10:00:00.000Z",
+      durationMinutes: DURATION,
+      status: "ongoing",
+      now: Date.parse("2026-07-13T10:43:00.000Z"),
+    });
+    assert.equal(timing.phase, "ongoing_ended");
+    assert.equal(timing.canJoin, false);
+    assert.equal(timing.canStartCall, false);
+    assert.equal(timing.shouldAutoComplete, true);
+    assert.match(timing.countdownLabel ?? "", /ended/i);
   });
 
   it("allows doctor to start during the 10-minute early window", () => {

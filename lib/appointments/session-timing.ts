@@ -12,6 +12,7 @@ export type SessionPhase =
   | "grace_warning"
   | "expired_pending"
   | "ongoing"
+  | "ongoing_ended"
   | "expired_no_show"
   | "terminal";
 
@@ -30,6 +31,8 @@ export interface AppointmentSessionTiming {
   scheduledEndAt: string;
   graceEndsAt: string;
   shouldAutoExpire: boolean;
+  /** Stale ongoing past booked end — close as completed. */
+  shouldAutoComplete: boolean;
   shouldSendReminder: boolean;
 }
 
@@ -66,6 +69,7 @@ export function getAppointmentSessionTiming(params: {
     scheduledEndAt: new Date(endMs).toISOString(),
     graceEndsAt: new Date(graceEndMs).toISOString(),
     shouldAutoExpire: false,
+    shouldAutoComplete: false,
     shouldSendReminder: false,
   };
 
@@ -88,6 +92,20 @@ export function getAppointmentSessionTiming(params: {
   }
 
   if (effectiveStatus === "ongoing") {
+    // Match /api/video/join: room closes at scheduled end even if status stayed ongoing.
+    if (now >= endMs) {
+      return {
+        ...base,
+        phase: "ongoing_ended",
+        canJoin: false,
+        canStartCall: false,
+        showWarning: true,
+        warningMessage:
+          "The booked time has ended and the call can no longer be rejoined. This visit will be marked completed.",
+        countdownLabel: "Session window ended",
+        shouldAutoComplete: true,
+      };
+    }
     return {
       ...base,
       phase: "ongoing",
@@ -205,6 +223,7 @@ export function mapTimingToDisplayStatus(
   if (status === "with_doctor") return "With Doctor";
   if (status === "payment_pending") return "Payment Pending";
   if (timing.phase === "ongoing") return "Ready";
+  if (timing.phase === "ongoing_ended") return "Ended";
 
   if (timing.phase === "expired_pending") return "Expired";
   if (timing.phase === "grace_warning" || timing.phase === "joinable") return "Ready";

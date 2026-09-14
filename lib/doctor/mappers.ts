@@ -339,6 +339,7 @@ export function mapToUIAppointment(appointment: AppointmentWithPatient) {
       | "Pending"
       | "Ready"
       | "Starting Soon"
+      | "Ended"
       | "Completed"
       | "Cancelled"
       | "No Show"

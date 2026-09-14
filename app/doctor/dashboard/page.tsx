@@ -464,7 +464,9 @@ export default function DoctorDashboardPage() {
                 filteredSessions.map((session) => {
                   const isExpired =
                     session.status === "Expired" ||
-                    session.status === "Expired / No Show";
+                    session.status === "Expired / No Show" ||
+                    session.status === "Ended" ||
+                    session.timing.phase === "ongoing_ended";
 
                   return (
                 <div
@@ -547,10 +549,12 @@ export default function DoctorDashboardPage() {
                       )}
                       {!session.completed &&
                         !session.canStartCall &&
-                        session.rawStatus === "scheduled" &&
-                        session.timing.phase === "expired_pending" && (
+                        (session.timing.phase === "expired_pending" ||
+                          session.timing.phase === "ongoing_ended") && (
                         <span className="rounded-md border border-rose-200 bg-rose-50 px-2.5 py-1 text-[10px] font-semibold text-rose-700">
-                          Join window closed
+                          {session.timing.phase === "ongoing_ended"
+                            ? "Session window ended"
+                            : "Join window closed"}
                         </span>
                       )}
                       {session.completed && (

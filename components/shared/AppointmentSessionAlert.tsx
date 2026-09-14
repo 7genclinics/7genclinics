@@ -14,6 +14,7 @@ const ACTIONABLE_PHASES = new Set([
   "joinable",
   "grace_warning",
   "ongoing",
+  "ongoing_ended",
   "expired_pending",
   "expired_no_show",
 ]);
@@ -29,7 +30,8 @@ export function AppointmentSessionAlert({ timing, className = "" }: Props) {
   const isUrgent =
     timing.phase === "grace_warning" ||
     timing.phase === "expired_pending" ||
-    timing.phase === "expired_no_show";
+    timing.phase === "expired_no_show" ||
+    timing.phase === "ongoing_ended";
 
   return (
     <div

@@ -132,16 +132,98 @@ async function applyExpiryRefund(
   );
 }
 
+async function completeStaleOngoingSessions(
+  supabase: ReturnType<typeof createServiceRoleClient>,
+  result: ProcessSessionsResult
+) {
+  const { data: rows, error } = await supabase
+    .from("appointments")
+    .select(
+      `
+      id, patient_id, doctor_id, status, scheduled_at, duration_minutes, appointment_type,
+      patient:profiles!appointments_patient_id_fkey ( full_name ),
+      doctor:doctor_profiles!appointments_doctor_id_fkey (
+        user_id,
+        profile:profiles!doctor_profiles_user_id_fkey ( full_name )
+      )
+    `
+    )
+    .eq("status", "ongoing")
+    .in("appointment_type", ["video", "chat"])
+    .order("scheduled_at", { ascending: true })
+    .limit(100);
+
+  if (error) {
+    result.errors.push(error.message);
+    return;
+  }
+
+  const now = Date.now();
+  for (const row of (rows ?? []) as unknown as AppointmentRow[]) {
+    try {
+      const timing = getAppointmentSessionTiming({
+        scheduledAt: row.scheduled_at,
+        durationMinutes: row.duration_minutes,
+        status: "ongoing",
+        now,
+      });
+      if (!timing.shouldAutoComplete) continue;
+
+      const completedAt = new Date().toISOString();
+      const { error: updateError } = await supabase
+        .from("appointments")
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        .update({
+          status: "completed",
+          completed_at: completedAt,
+          video_room_url: null,
+        } as any)
+        .eq("id", row.id)
+        .eq("status", "ongoing");
+
+      if (updateError) {
+        result.errors.push(`${row.id}: ${updateError.message}`);
+        continue;
+      }
+
+      result.completedStale += 1;
+
+      await createNotification(
+        supabase,
+        row.patient_id,
+        "Consultation ended",
+        "Your video consultation window has ended. You can review this visit from Appointments.",
+        "appointment",
+        { appointment_id: row.id, ended_by: "system_window" },
+        {
+          url: `/patient/appointments?appointment=${row.id}`,
+          tag: `appointment-ended-${row.id}`,
+        }
+      );
+    } catch (err) {
+      result.errors.push(`${row.id}: ${getErrorMessage(err, "Stale ongoing close failed")}`);
+    }
+  }
+}
+
 export interface ProcessSessionsResult {
   remindersSent: number;
   expired: number;
+  completedStale: number;
   errors: string[];
 }
 
 /** Batch-process reminders + auto-expiry for all due scheduled appointments. */
 export async function processAppointmentSessions(): Promise<ProcessSessionsResult> {
   const supabase = createServiceRoleClient();
-  const result: ProcessSessionsResult = { remindersSent: 0, expired: 0, errors: [] };
+  const result: ProcessSessionsResult = {
+    remindersSent: 0,
+    expired: 0,
+    completedStale: 0,
+    errors: [],
+  };
+
+  await completeStaleOngoingSessions(supabase, result);
 
   const { data: rows, error } = await supabase
     .from("appointments")

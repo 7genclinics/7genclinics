@@ -31,7 +31,7 @@ export interface PatientUIAppointment {
   timeRange: string;
   duration: string;
   type: string;
-  status: "Confirmed" | "Pending" | "Completed" | "Cancelled" | "No Show" | "Expired / No Show" | "Ready" | "Starting Soon" | "Expired" | "Awaiting Payment" | "Payment Review";
+  status: "Confirmed" | "Pending" | "Completed" | "Cancelled" | "No Show" | "Expired / No Show" | "Ready" | "Starting Soon" | "Ended" | "Expired" | "Awaiting Payment" | "Payment Review";
   paymentStatus: PaymentStatus | null;
   paymentId: string | null;
   paymentMethod: PaymentMethod | null;

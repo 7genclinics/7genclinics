@@ -59,7 +59,7 @@ interface Appointment {
   time: string;
   duration: string;
   type: "Video" | "Audio" | "Chat";
-  status: "Confirmed" | "Pending" | "Ready" | "Starting Soon" | "Completed" | "Cancelled" | "No Show" | "Expired / No Show" | "Expired";
+  status: "Confirmed" | "Pending" | "Ready" | "Starting Soon" | "Ended" | "Completed" | "Cancelled" | "No Show" | "Expired / No Show" | "Expired";
   reason: string;
   notes: string;
   roomUrl: string;
@@ -145,7 +145,7 @@ export default function DoctorAppointmentsPage() {
     
     if (activeTab !== "All") {
       filtered = filtered.filter(apt => apt.status === activeTab || 
-        (activeTab === "Upcoming" && ["Confirmed", "Pending", "Ready", "Starting Soon"].includes(apt.status)) ||
+        (activeTab === "Upcoming" && ["Confirmed", "Pending", "Ready", "Starting Soon", "Ended"].includes(apt.status)) ||
         (activeTab === "Cancelled" && ["Cancelled", "No Show", "Expired / No Show", "Expired"].includes(apt.status)));
     }
 
