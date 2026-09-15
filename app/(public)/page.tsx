@@ -239,7 +239,7 @@ export default async function HomePage() {
       <LandingHeader overlay />
 
       <main>
-        <section className="relative isolate min-h-[100svh] overflow-hidden text-white">
+        <section className="relative z-20 min-h-[100svh] overflow-x-clip text-white">
           <Image
             src="/clinic-hero-background-clean.jpg"
             alt="Apna Clinic consultation"
@@ -251,7 +251,7 @@ export default async function HomePage() {
           <div className="absolute inset-0 bg-gradient-to-r from-brand-950/60 via-brand-950/30 to-brand-950/15" />
           <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-brand-950/50 to-transparent" />
 
-          <div className="relative mx-auto flex min-h-[100svh] max-w-6xl flex-col justify-end px-4 pb-10 pt-28 sm:px-6 sm:pb-14 lg:justify-center lg:pb-20 lg:pt-32">
+          <div className="relative z-10 mx-auto flex min-h-[100svh] max-w-6xl flex-col justify-end px-4 pb-10 pt-28 sm:px-6 sm:pb-14 lg:justify-center lg:pb-20 lg:pt-32">
             <p className="animate-wasl-fade-up text-[11px] font-semibold uppercase tracking-[0.28em] text-brand-300">
               Pakistan's best platform · Online plus physical
             </p>
