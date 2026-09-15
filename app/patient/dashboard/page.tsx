@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import {
-  FileText, CreditCard, Video, ArrowRight, Plus, Activity, Heart, Search, Calendar,
+  FileText, CreditCard, Video, MessageSquare, ArrowRight, Plus, Activity, Heart, Search, Calendar,
   Clock, Star, TrendingUp, Shield, CheckCircle, DollarSign, Loader2,
 } from "lucide-react";
 import { usePatient } from "@/contexts/PatientContext";
@@ -364,14 +364,26 @@ export default function PatientDashboardPage() {
                       nextApt.canJoin ? (
                         <Link href={nextApt.roomUrl} className="flex-1">
                           <Button className="w-full bg-brand-500 hover:bg-brand-600 text-white gap-2 h-9 sm:h-10 text-xs sm:text-sm shadow-lg shadow-brand-400/20">
-                            <Video className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                            <span>{t("dashboard.joinConsultation")}</span>
+                            {nextApt.type === "Chat" ? (
+                              <MessageSquare className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                            ) : (
+                              <Video className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                            )}
+                            <span>
+                              {nextApt.type === "Chat"
+                                ? t("appointments.joinChat")
+                                : t("dashboard.joinConsultation")}
+                            </span>
                           </Button>
                         </Link>
                       ) : (
                         <div className="flex-1">
                           <Button disabled className="w-full h-9 sm:h-10 text-xs sm:text-sm opacity-60">
-                            <Video className="h-3.5 w-3.5 sm:h-4 sm:w-4 ms-0 me-2" />
+                            {nextApt.type === "Chat" ? (
+                              <MessageSquare className="h-3.5 w-3.5 sm:h-4 sm:w-4 ms-0 me-2" />
+                            ) : (
+                              <Video className="h-3.5 w-3.5 sm:h-4 sm:w-4 ms-0 me-2" />
+                            )}
                             {t("dashboard.notAvailableYet")}
                           </Button>
                         </div>

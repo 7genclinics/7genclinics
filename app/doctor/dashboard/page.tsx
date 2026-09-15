@@ -43,6 +43,7 @@ import {
   getDoctorAppointments,
   getDoctorPayments,
   saveClinicalRecords,
+  updateAppointment,
   updateDoctorDocuments,
 } from "@/lib/doctor/api";
 import { isDoctorNetEarning } from "@/lib/doctor/stats";
@@ -284,8 +285,19 @@ export default function DoctorDashboardPage() {
     setTimeout(() => setToastMessage(""), 3000);
   };
 
-  const startConsultation = (session: DashboardSession, e: React.MouseEvent) => {
+  const startConsultation = async (session: DashboardSession, e: React.MouseEvent) => {
     e.stopPropagation();
+    if (session.appointmentType === "chat") {
+      try {
+        if (session.rawStatus === "scheduled") {
+          await updateAppointment(session.id, { status: "ongoing" });
+        }
+      } catch {
+        // Still open chat even if status update fails.
+      }
+      router.push("/doctor/chat");
+      return;
+    }
     // The secure video page marks the appointment ongoing and joins as host.
     router.push(`/video/${session.id}`);
   };
@@ -531,9 +543,19 @@ export default function DoctorDashboardPage() {
                             className="flex items-center gap-1 bg-brand-500 text-xs font-semibold text-white hover:bg-brand-600"
                             onClick={(e) => startConsultation(session, e)}
                           >
-                            <Video className="h-3.5 w-3.5" />
+                            {session.appointmentType === "chat" ? (
+                              <MessageSquare className="h-3.5 w-3.5" />
+                            ) : (
+                              <Video className="h-3.5 w-3.5" />
+                            )}
                             <span>
-                              {session.rawStatus === "ongoing" ? "Rejoin call" : "Start call"}
+                              {session.appointmentType === "chat"
+                                ? session.rawStatus === "ongoing"
+                                  ? "Rejoin chat"
+                                  : "Start chat"
+                                : session.rawStatus === "ongoing"
+                                  ? "Rejoin call"
+                                  : "Start call"}
                             </span>
                           </Button>
                           <Button

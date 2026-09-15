@@ -296,6 +296,7 @@ export interface DashboardSession {
   patientAvatarUrl: string | null;
   time: string;
   type: string;
+  appointmentType: AppointmentType;
   status: string;
   rawStatus: AppointmentStatus;
   timing: AppointmentSessionTiming;
@@ -347,8 +348,11 @@ export function mapToUIAppointment(appointment: AppointmentWithPatient) {
       | "Expired",
     reason: appointment.patient_notes?.trim() || "General consultation",
     notes: parsed.clinicalNote,
-    // In-app secure video page (issues per-user Jitsi tokens server-side).
-    roomUrl: `/video/${appointment.id}`,
+    // Video uses the secure Jitsi room; chat opens the messaging inbox.
+    roomUrl:
+      appointment.appointment_type === "chat"
+        ? "/doctor/chat"
+        : `/video/${appointment.id}`,
     prescription: parsed.prescription,
     createdAt: appointment.created_at,
     scheduledAt: appointment.scheduled_at,
@@ -375,15 +379,18 @@ export function mapToDashboardSession(
     patientAvatarUrl: appointment.patient?.avatar_url ?? null,
     time: formatTimeRange(appointment.scheduled_at, appointment.duration_minutes),
     type: appointment.patient_notes?.trim() || mapAppointmentType(appointment.appointment_type),
+    appointmentType: appointment.appointment_type,
     status: mapTimingToDisplayStatus(appointment.status, timing),
     rawStatus: appointment.status,
     timing,
     canStartCall:
       timing.canStartCall &&
-      ["scheduled", "ongoing"].includes(appointment.status),
+      ["scheduled", "ongoing"].includes(appointment.status) &&
+      (appointment.appointment_type === "video" || appointment.appointment_type === "chat"),
     canJoin:
       timing.canJoin &&
-      ["scheduled", "ongoing"].includes(appointment.status),
+      ["scheduled", "ongoing"].includes(appointment.status) &&
+      (appointment.appointment_type === "video" || appointment.appointment_type === "chat"),
     initials: getInitials(patientName),
     patientAge: calcAge(appointment.patient?.date_of_birth ?? null),
     patientGender: formatGender(appointment.patient?.gender ?? null),

@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import {
-  Video, Clock, Search, Calendar, ChevronLeft, ChevronRight,
+  Video, MessageSquare, Clock, Search, Calendar, ChevronLeft, ChevronRight,
   XCircle, Plus, Filter, MoreHorizontal, X, Star, Loader2, Upload, BadgeCheck, AlertCircle,
 } from "lucide-react";
 import {
@@ -480,8 +480,14 @@ export default function PatientAppointmentsPage() {
                       apt.canJoin ? (
                         <Link href={apt.roomUrl} className="flex-1 lg:flex-none lg:w-full">
                           <Button className="bg-brand-500 hover:bg-brand-600 text-white w-full">
-                            <Video className="h-4 w-4 me-2" />
-                            {t("appointments.joinConsultation")}
+                            {apt.type === "Chat" ? (
+                              <MessageSquare className="h-4 w-4 me-2" />
+                            ) : (
+                              <Video className="h-4 w-4 me-2" />
+                            )}
+                            {apt.type === "Chat"
+                              ? t("appointments.joinChat")
+                              : t("appointments.joinConsultation")}
                           </Button>
                         </Link>
                       ) : (
@@ -490,7 +496,11 @@ export default function PatientAppointmentsPage() {
                           title={t("appointments.joinSoonHint")}
                           className="flex-1 lg:flex-none lg:w-full bg-muted text-muted-foreground cursor-not-allowed"
                         >
-                          <Video className="h-4 w-4 me-2" />
+                          {apt.type === "Chat" ? (
+                            <MessageSquare className="h-4 w-4 me-2" />
+                          ) : (
+                            <Video className="h-4 w-4 me-2" />
+                          )}
                           {t("dashboard.notAvailableYet")}
                         </Button>
                       )
@@ -721,8 +731,14 @@ export default function PatientAppointmentsPage() {
                 (selectedAppointment.canJoin ? (
                   <Link href={selectedAppointment.roomUrl}>
                     <Button className="w-full bg-brand-500 hover:bg-brand-600 text-white">
-                      <Video className="h-4 w-4 me-2" />
-                      {t("appointments.joinConsultation")}
+                      {selectedAppointment.type === "Chat" ? (
+                        <MessageSquare className="h-4 w-4 me-2" />
+                      ) : (
+                        <Video className="h-4 w-4 me-2" />
+                      )}
+                      {selectedAppointment.type === "Chat"
+                        ? t("appointments.joinChat")
+                        : t("appointments.joinConsultation")}
                     </Button>
                   </Link>
                 ) : (
@@ -731,7 +747,11 @@ export default function PatientAppointmentsPage() {
                     title={t("appointments.joinSoonHint")}
                     className="w-full bg-muted text-muted-foreground cursor-not-allowed"
                   >
-                    <Video className="h-4 w-4 me-2" />
+                    {selectedAppointment.type === "Chat" ? (
+                      <MessageSquare className="h-4 w-4 me-2" />
+                    ) : (
+                      <Video className="h-4 w-4 me-2" />
+                    )}
                     {t("dashboard.notAvailableYet")}
                   </Button>
                 ))}

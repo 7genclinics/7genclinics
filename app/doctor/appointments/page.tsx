@@ -5,6 +5,7 @@ import { Card, CardContent } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import {
   Video,
+  MessageSquare,
   Clock,
   Search,
   Calendar,
@@ -344,10 +345,34 @@ export default function DoctorAppointmentsPage() {
     }
   };
 
-  const handleJoinCall = (apt: Appointment) => {
+  const handleJoinCall = async (apt: Appointment) => {
+    if (apt.type === "Chat") {
+      try {
+        if (["Confirmed", "Pending", "Ready", "Starting Soon"].includes(apt.status)) {
+          await updateAppointment(apt.id, { status: "ongoing" });
+        }
+      } catch {
+        // Still open chat even if status update fails.
+      }
+      router.push("/doctor/chat");
+      return;
+    }
     // The secure video page marks the appointment ongoing and joins as host.
     router.push(`/video/${apt.id}`);
   };
+
+  const isJoinableOnline = (apt: Appointment) =>
+    apt.type === "Video" || apt.type === "Chat" || apt.type === "Audio";
+
+  const joinLabel = (apt: Appointment) =>
+    apt.type === "Chat" ? "Join Chat" : "Join Call";
+
+  const JoinIcon = ({ apt }: { apt: Appointment }) =>
+    apt.type === "Chat" ? (
+      <MessageSquare className="h-4 w-4 mr-2" />
+    ) : (
+      <Video className="h-4 w-4 mr-2" />
+    );
 
   const formatDate = (dateStr: string) => formatPkCalendarDate(dateStr);
 
@@ -496,13 +521,14 @@ export default function DoctorAppointmentsPage() {
                       </div>
 
                       <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 shrink-0">
-                        {["Confirmed", "Pending", "Ready", "Starting Soon"].includes(apt.status) && (
+                        {isJoinableOnline(apt) &&
+                          ["Confirmed", "Pending", "Ready", "Starting Soon"].includes(apt.status) && (
                           <Button
                             className="bg-brand-500 hover:bg-brand-600 text-white w-full sm:w-auto font-semibold"
                             onClick={() => handleJoinCall(apt)}
                           >
-                            <Video className="h-4 w-4 mr-2" />
-                            Join Call
+                            <JoinIcon apt={apt} />
+                            {joinLabel(apt)}
                           </Button>
                         )}
                         
@@ -858,13 +884,16 @@ export default function DoctorAppointmentsPage() {
                 </div>
               )}
 
-              {["Confirmed", "Pending", "Ready"].includes(selectedAppointment.status) && (
+              {isJoinableOnline(selectedAppointment) &&
+                ["Confirmed", "Pending", "Ready", "Starting Soon"].includes(selectedAppointment.status) && (
                 <Button
                   className="w-full bg-brand-500 hover:bg-brand-600 text-white font-semibold"
-                  onClick={() => router.push(`/video/${selectedAppointment.id}`)}
+                  onClick={() => handleJoinCall(selectedAppointment)}
                 >
-                  <Video className="h-4 w-4 mr-2" />
-                  Launch Telehealth Room
+                  <JoinIcon apt={selectedAppointment} />
+                  {selectedAppointment.type === "Chat"
+                    ? "Open Chat Consultation"
+                    : "Launch Telehealth Room"}
                 </Button>
               )}
             </div>

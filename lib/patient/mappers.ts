@@ -123,7 +123,8 @@ export function mapToPatientAppointment(apt: AppointmentWithDoctor): PatientUIAp
     canJoin:
       timing.canJoin &&
       ["scheduled", "ongoing"].includes(apt.status) &&
-      payment?.status === "completed",
+      payment?.status === "completed" &&
+      (apt.appointment_type === "video" || apt.appointment_type === "chat"),
     paymentStatus: payment?.status ?? null,
     paymentId: payment?.id ?? null,
     paymentMethod: payment?.payment_method ?? null,
@@ -132,8 +133,9 @@ export function mapToPatientAppointment(apt: AppointmentWithDoctor): PatientUIAp
     isPaid: payment?.status === "completed",
     reason: apt.patient_notes?.trim() || "General consultation",
     notes: parsed.clinicalNote,
-    // In-app secure video page (issues per-user Jitsi tokens server-side).
-    roomUrl: `/video/${apt.id}`,
+    // Video uses the secure Jitsi room; chat opens the messaging inbox.
+    roomUrl:
+      apt.appointment_type === "chat" ? "/patient/chat" : `/video/${apt.id}`,
     prescription: parsed.prescription,
     rating: review?.rating,
     reviewComment: review?.comment ?? undefined,
