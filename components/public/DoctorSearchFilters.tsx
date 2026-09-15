@@ -47,15 +47,6 @@ export function DoctorSearchFilters({ resultCount, className }: DoctorSearchFilt
 
   return (
     <div className={cn("relative space-y-4", className)}>
-      {specialtyOpen && (
-        <button
-          type="button"
-          aria-label="Close specialty filter"
-          className="fixed inset-0 z-30 bg-slate-950/25 backdrop-blur-[2px]"
-          onClick={() => setSpecialtyOpen(false)}
-        />
-      )}
-
       <div className="relative z-40 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
         <div className="flex flex-col gap-2 lg:flex-row">
           <div className="relative lg:w-44">

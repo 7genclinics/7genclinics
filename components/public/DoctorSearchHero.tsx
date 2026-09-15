@@ -17,7 +17,17 @@ import { PAKISTAN_CITIES } from "@/types";
 import type { DoctorWithProfile } from "@/lib/patient/types";
 import { cn } from "@/lib/utils";
 
-const POPULAR_CITIES = ["Lahore", "Karachi", "Islamabad", "Multan", "Peshawar", "Faisalabad"];
+const POPULAR_CITIES = [
+  "Layyah",
+  "Chockazam",
+  "Fatehpur",
+  "Lahore",
+  "Karachi",
+  "Islamabad",
+  "Multan",
+  "Peshawar",
+  "Faisalabad",
+];
 
 const MAX_LIVE_RESULTS = 6;
 
@@ -90,29 +100,27 @@ export function DoctorSearchHero({
   }, [doctorPool, query, city, specialty, hasActiveSearch]);
 
   const visibleResults = liveResults.slice(0, MAX_LIVE_RESULTS);
-  const panelOpen = showResults && hasActiveSearch;
-  const overlayOpen = panelOpen || specialtyOpen;
+  const panelOpen = showResults && hasActiveSearch && !specialtyOpen;
 
   useEffect(() => {
-    if (!overlayOpen) return;
+    if (!panelOpen) return;
     const handlePointerDown = (event: MouseEvent) => {
       if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
         setShowResults(false);
-        setSpecialtyOpen(false);
       }
     };
     document.addEventListener("mousedown", handlePointerDown);
     return () => document.removeEventListener("mousedown", handlePointerDown);
-  }, [overlayOpen]);
+  }, [panelOpen]);
 
   useEffect(() => {
-    if (!overlayOpen) return;
+    if (!panelOpen) return;
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     return () => {
       document.body.style.overflow = prev;
     };
-  }, [overlayOpen]);
+  }, [panelOpen]);
 
   const handleSearch = (e?: React.FormEvent) => {
     e?.preventDefault();
@@ -133,15 +141,12 @@ export function DoctorSearchHero({
 
   return (
     <div className="relative">
-      {overlayOpen && (
+      {panelOpen && (
         <button
           type="button"
-          aria-label="Close search overlays"
+          aria-label="Close search results"
           className="fixed inset-0 z-30 bg-slate-950/30 backdrop-blur-[3px] transition-opacity"
-          onClick={() => {
-            setShowResults(false);
-            setSpecialtyOpen(false);
-          }}
+          onClick={() => setShowResults(false)}
         />
       )}
 
