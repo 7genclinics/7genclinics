@@ -110,9 +110,9 @@ const reasons = [
     image: "/feature_clear_payments.png",
   },
   {
-    title: "Self assessment first",
-    copy: "Not sure who to see? Start with a short screening, then book the right specialty.",
-    image: "/feature_self_assessment.png",
+    title: "Online meetings from home",
+    copy: "Book a secure video consult with a verified doctor. Join on time from your phone or laptop.",
+    image: "/online_meeting.jpg",
   },
 ];
 
@@ -182,11 +182,11 @@ const testimonials = [
   },
   {
     quote:
-      "Used the self assessment, then booked a psychologist. The search filters by city saved me a lot of guesswork.",
+      "Booked an online meeting with a psychologist in my city. The video room was private and easy to join from home.",
     name: "Omar J.",
     city: "Peshawar",
     rating: 5,
-    role: "Assessment",
+    role: "Online meeting",
   },
 ];
 
@@ -529,8 +529,8 @@ export default async function HomePage() {
           <div className="mx-auto grid max-w-6xl items-center gap-10 px-4 sm:px-6 lg:grid-cols-2">
             <div className="relative min-h-[320px] overflow-hidden rounded-3xl">
               <Image
-                src="/online_consultation.jpg"
-                alt="Patient preparing a short self assessment"
+                src="/online_meeting.jpg"
+                alt="Patient on an online video consultation with a doctor"
                 fill
                 sizes="(max-width: 1024px) 100vw, 50vw"
                 className="object-cover"
@@ -538,21 +538,21 @@ export default async function HomePage() {
             </div>
             <div>
               <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-brand-600">
-                Not sure who to see?
+                Prefer care from home?
               </p>
               <h2 className="mt-3 font-heading text-3xl font-bold tracking-tight sm:text-4xl">
-                Start with a short self assessment.
+                Meet your doctor online.
               </h2>
               <p className="mt-4 text-base leading-relaxed text-slate-600">
-                Answer a few questions about sleep, mood, stress, or focus. We’ll point you toward
-                the right specialty so you book a psychiatrist, psychologist, or GP with more
-                confidence.
+                Book a secure video meeting with a PMDC verified doctor. Join on time from your phone
+                or laptop, talk through your concerns, and get notes or a prescription without the
+                commute.
               </p>
               <Link
-                href="/assessment/"
+                href="/doctors/"
                 className="mt-8 inline-flex items-center gap-2 rounded-full bg-brand-500 px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-brand-600"
               >
-                Take the assessment
+                Book an online meeting
                 <ArrowRight className="h-4 w-4" />
               </Link>
             </div>
@@ -690,7 +690,7 @@ export default async function HomePage() {
                 Ready when you are
               </h2>
               <p className="mt-4 text-sm leading-relaxed text-white/85 sm:text-base">
-                Book a secure consult, walk in for same day care, or start with a short assessment.
+                Book a secure online meeting, walk in for same day care, or find a verified doctor near you.
               </p>
               <div className="mt-8 flex flex-wrap items-center gap-3">
                 <Link

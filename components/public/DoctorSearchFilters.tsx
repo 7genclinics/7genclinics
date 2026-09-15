@@ -1,8 +1,10 @@
 "use client";
 
+import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ChevronDown, MapPin, Search, SlidersHorizontal, X } from "lucide-react";
 import { Button } from "@/components/ui/Button";
+import { SpecialtyFilterPicker } from "@/components/public/SpecialtyFilterPicker";
 import {
   ALL_CITIES_LABEL,
   buildDoctorSearchUrl,
@@ -11,7 +13,6 @@ import {
   parseDoctorSearchParams,
   type DoctorSearchFilters,
 } from "@/lib/public/doctor-filters";
-import { FEATURED_SPECIALTIES } from "@/lib/public/catalog";
 import { PAKISTAN_CITIES } from "@/types";
 import { cn } from "@/lib/utils";
 
@@ -26,6 +27,7 @@ export function DoctorSearchFilters({ resultCount, className }: DoctorSearchFilt
   const filters = parseDoctorSearchParams(searchParams);
   const activeCount = getActiveFilterCount(filters);
   const activeTaxonomy = getActiveTaxonomyFilter(filters);
+  const [specialtyOpen, setSpecialtyOpen] = useState(false);
 
   const updateFilters = (patch: Partial<DoctorSearchFilters>, resetKeys?: (keyof DoctorSearchFilters)[]) => {
     const next = { ...filters, ...patch };
@@ -44,9 +46,17 @@ export function DoctorSearchFilters({ resultCount, className }: DoctorSearchFilt
   };
 
   return (
-    <div className={cn("space-y-4", className)}>
-      {/* Primary search row */}
-      <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
+    <div className={cn("relative space-y-4", className)}>
+      {specialtyOpen && (
+        <button
+          type="button"
+          aria-label="Close specialty filter"
+          className="fixed inset-0 z-30 bg-slate-950/25 backdrop-blur-[2px]"
+          onClick={() => setSpecialtyOpen(false)}
+        />
+      )}
+
+      <div className="relative z-40 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
         <div className="flex flex-col gap-2 lg:flex-row">
           <div className="relative lg:w-44">
             <MapPin className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-brand-500" />
@@ -94,8 +104,7 @@ export function DoctorSearchFilters({ resultCount, className }: DoctorSearchFilt
         </div>
       </div>
 
-      {/* Filter chips */}
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="relative z-40 flex flex-wrap items-center gap-2">
         {activeCount > 0 && (
           <button
             type="button"
@@ -108,12 +117,7 @@ export function DoctorSearchFilters({ resultCount, className }: DoctorSearchFilt
         )}
 
         {activeTaxonomy && (
-          <FilterChip
-            active
-            onClick={() =>
-              updateFilters({}, ["symptom", "condition"])
-            }
-          >
+          <FilterChip active onClick={() => updateFilters({}, ["symptom", "condition"])}>
             {activeTaxonomy.label}
           </FilterChip>
         )}
@@ -150,29 +154,24 @@ export function DoctorSearchFilters({ resultCount, className }: DoctorSearchFilt
           Fee up to Rs. 5,000
         </FilterChip>
 
-        <div className="relative">
-          <select
+        <div className="relative min-w-[11rem]">
+          <SpecialtyFilterPicker
             value={filters.specialty ?? "All"}
-            onChange={(e) =>
-              updateFilters({
-                specialty: e.target.value === "All" ? undefined : e.target.value,
-              })
-            }
-            className={cn(
-              "h-9 appearance-none rounded-full border px-4 pr-8 text-xs font-semibold transition-all",
+            open={specialtyOpen}
+            onOpenChange={setSpecialtyOpen}
+            fieldClassName={cn(
+              "h-9 w-full rounded-full border px-3 pl-9 pr-8 text-xs font-semibold transition-all",
               filters.specialty
                 ? "border-brand-500 bg-brand-500 text-white"
                 : "border-slate-200 bg-white text-slate-600 hover:border-brand-200"
             )}
-          >
-            <option value="All">Specialty</option>
-            {FEATURED_SPECIALTIES.map((s) => (
-              <option key={s} value={s}>
-                {s}
-              </option>
-            ))}
-          </select>
-          <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 opacity-60" />
+            panelClassName="min-w-[18rem]"
+            onChange={(next) =>
+              updateFilters({
+                specialty: next === "All" ? undefined : next,
+              })
+            }
+          />
         </div>
 
         <div className="relative">

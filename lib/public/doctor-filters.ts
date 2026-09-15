@@ -167,22 +167,24 @@ function matchesTaxonomyTag(doc: DoctorWithProfile, tagId: string): boolean {
 
 function matchesSpecialty(doc: DoctorWithProfile, specialty: string): boolean {
   const spec = normalizeSearchText(specialty);
+  if (!spec) return true;
+
   const docSpec = normalizeSearchText(doc.specialization ?? "");
   const docSubSpec = normalizeSearchText(doc.sub_specialization ?? "");
 
+  // Only match the doctor's profile specialty fields — not taxonomy tags —
+  // so a Dermatologist does not appear under Psychiatrist / All-style false hits.
+  if (docSpec && (docSpec === spec || docSpec.includes(spec) || spec.includes(docSpec))) {
+    return true;
+  }
   if (
-    docSpec.includes(spec) ||
-    spec.includes(docSpec) ||
-    docSubSpec.includes(spec) ||
-    spec.includes(docSubSpec)
+    docSubSpec &&
+    (docSubSpec === spec || docSubSpec.includes(spec) || spec.includes(docSubSpec))
   ) {
     return true;
   }
 
-  return (doc.taxonomy_tags ?? []).some((tag) => {
-    const label = normalizeSearchText(tag.label);
-    return label.includes(spec) || spec.includes(label);
-  });
+  return false;
 }
 
 export function filterDoctors(

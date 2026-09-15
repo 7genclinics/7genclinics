@@ -67,7 +67,7 @@ export function DoctorSiteFooter({ data }: { data: PublicLandingPageData }) {
     { href: "/#services", label: "Video consultation" },
     { href: "/#services", label: "Clinic appointment" },
     { href: "/#visit", label: "Walk-in visit" },
-    { href: "/assessment/", label: "Self-assessment" },
+    { href: "/doctors/", label: "Online meetings" },
     { href: "/doctors/", label: "Find a doctor" },
   ];
 

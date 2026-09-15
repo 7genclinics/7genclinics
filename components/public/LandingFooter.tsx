@@ -5,7 +5,7 @@ import { BRAND } from "@/lib/brand/site";
 const patientLinks = [
   { href: "/doctors/", label: "Browse doctors" },
   { href: "/clinics/", label: "Clinics and hospitals" },
-  { href: "/assessment/", label: "Self assessment" },
+  { href: "/doctors/", label: "Online meetings" },
   { href: "/register/", label: "Create account" },
   { href: "/login/?role=patient", label: "Patient login" },
 ];

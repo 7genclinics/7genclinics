@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { ArrowRight, ClipboardCheck, Search, X } from "lucide-react";
+import { ArrowRight, Search, Video, X } from "lucide-react";
 import { SpecialtyIcon } from "@/components/public/SpecialtyIcon";
 import { specialtySearchHref, TOP_SPECIALTIES } from "@/lib/public/specialties";
 import { buildDoctorSearchUrl } from "@/lib/public/doctor-filters";
@@ -201,26 +201,26 @@ export function TopSpecialitiesSection() {
               </div>
             </div>
 
-            {/* Bottom Assessment Callout */}
+            {/* Bottom online meeting callout */}
             <div className="mt-7 rounded-2xl border border-teal-100 bg-white/90 p-4 shadow-xs backdrop-blur-xs">
               <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-3">
                   <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-teal-50 text-teal-700">
-                    <ClipboardCheck className="h-5 w-5" />
+                    <Video className="h-5 w-5" />
                   </div>
                   <div>
                     <h4 className="font-heading text-xs font-bold text-slate-900 sm:text-sm">
-                      Not sure what you have?
+                      Prefer an online meeting?
                     </h4>
                     <p className="mt-0.5 text-[11px] leading-tight text-slate-600">
-                      Take a short assessment and get personalized doctor recommendations.
+                      Book a secure video consult and meet your doctor from home.
                     </p>
                   </div>
                 </div>
 
                 <Link
-                  href="/assessment/"
-                  aria-label="Take the self assessment"
+                  href="/doctors/"
+                  aria-label="Book an online meeting"
                   className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#1c7b79] text-white shadow-xs transition-transform hover:scale-105 hover:bg-[#15605e]"
                 >
                   <ArrowRight className="h-4 w-4" />
