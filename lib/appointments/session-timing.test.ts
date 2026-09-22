@@ -75,4 +75,66 @@ describe("getAppointmentSessionTiming", () => {
     assert.equal(timing.canJoin, true);
     assert.equal(timing.canStartCall, true);
   });
+
+  it("accurately handles 15, 30, and 60 minute slot duration boundaries", () => {
+    const scheduledAt = "2026-07-13T10:00:00.000Z";
+    const start = new Date(scheduledAt).getTime();
+
+    // 15-minute slot
+    const timing15Active = getAppointmentSessionTiming({
+      scheduledAt,
+      durationMinutes: 15,
+      status: "ongoing",
+      now: start + 14 * 60_000,
+    });
+    assert.equal(timing15Active.phase, "ongoing");
+    assert.equal(timing15Active.shouldAutoComplete, false);
+
+    const timing15Ended = getAppointmentSessionTiming({
+      scheduledAt,
+      durationMinutes: 15,
+      status: "ongoing",
+      now: start + 15 * 60_000,
+    });
+    assert.equal(timing15Ended.phase, "ongoing_ended");
+    assert.equal(timing15Ended.shouldAutoComplete, true);
+
+    // 30-minute slot
+    const timing30Active = getAppointmentSessionTiming({
+      scheduledAt,
+      durationMinutes: 30,
+      status: "ongoing",
+      now: start + 29 * 60_000,
+    });
+    assert.equal(timing30Active.phase, "ongoing");
+    assert.equal(timing30Active.shouldAutoComplete, false);
+
+    const timing30Ended = getAppointmentSessionTiming({
+      scheduledAt,
+      durationMinutes: 30,
+      status: "ongoing",
+      now: start + 30 * 60_000,
+    });
+    assert.equal(timing30Ended.phase, "ongoing_ended");
+    assert.equal(timing30Ended.shouldAutoComplete, true);
+
+    // 60-minute slot
+    const timing60Active = getAppointmentSessionTiming({
+      scheduledAt,
+      durationMinutes: 60,
+      status: "ongoing",
+      now: start + 59 * 60_000,
+    });
+    assert.equal(timing60Active.phase, "ongoing");
+    assert.equal(timing60Active.shouldAutoComplete, false);
+
+    const timing60Ended = getAppointmentSessionTiming({
+      scheduledAt,
+      durationMinutes: 60,
+      status: "ongoing",
+      now: start + 60 * 60_000,
+    });
+    assert.equal(timing60Ended.phase, "ongoing_ended");
+    assert.equal(timing60Ended.shouldAutoComplete, true);
+  });
 });

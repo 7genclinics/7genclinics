@@ -18,8 +18,9 @@ export async function POST(request: Request) {
       return json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { appointmentId } = (await request.json()) as {
+    const { appointmentId, reason } = (await request.json()) as {
       appointmentId?: string;
+      reason?: string;
     };
     if (!appointmentId) {
       return json({ error: "appointmentId is required" }, { status: 400 });
@@ -29,7 +30,7 @@ export async function POST(request: Request) {
       .from("appointments")
       .select(
         `
-        id, status, patient_id, appointment_type,
+        id, status, patient_id, appointment_type, scheduled_at, duration_minutes,
         doctor:doctor_profiles!appointments_doctor_id_fkey ( user_id )
       `
       )
@@ -48,9 +49,28 @@ export async function POST(request: Request) {
       status: string;
       patient_id: string;
       appointment_type: string;
+      scheduled_at: string;
+      duration_minutes: number;
       doctor: { user_id: string } | null;
     };
-    if (row.doctor?.user_id !== user.id) {
+
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("id, role")
+      .eq("id", user.id)
+      .single();
+
+    const isDoctor = row.doctor?.user_id === user.id;
+    const isPatient = row.patient_id === user.id;
+    const isAdmin = profile?.role === "admin" || profile?.role === "super_admin";
+
+    const scheduledStart = new Date(row.scheduled_at).getTime();
+    const duration = row.duration_minutes || 30;
+    const scheduledEnd = scheduledStart + duration * 60_000;
+    const isTimeExpired = Date.now() >= scheduledEnd || reason === "time_expired";
+
+    // Doctor and admin can end at any time. Patient can end if scheduled slot has expired.
+    if (!isDoctor && !isAdmin && !(isPatient && isTimeExpired)) {
       return json({ error: "Forbidden" }, { status: 403 });
     }
     if (["cancelled", "no_show", "expired_no_show"].includes(row.status)) {
@@ -79,26 +99,41 @@ export async function POST(request: Request) {
       return json({ error: updateError.message }, { status: 500 });
     }
 
+    const endedBy = isTimeExpired ? "time_expired" : isDoctor ? "doctor" : "system";
+    const patientMsg = isTimeExpired
+      ? `Your ${duration}-minute scheduled consultation has concluded.`
+      : "Your doctor has ended this video consultation. You can review the visit from Appointments.";
+
     try {
       const admin = createServiceRoleClient();
       await (admin as any).rpc("create_notification", {
         p_user_id: row.patient_id,
         p_title: "Consultation ended",
-        p_message:
-          "Your doctor has ended this video consultation. You can review the visit from Appointments.",
+        p_message: patientMsg,
         p_type: "appointment",
-        p_metadata: { appointment_id: appointmentId, ended_by: "doctor" },
+        p_metadata: { appointment_id: appointmentId, ended_by: endedBy },
       });
       await sendSystemPushForNotification({
         userId: row.patient_id,
         title: "Consultation ended",
-        message:
-          "Your doctor has ended this video consultation. You can review the visit from Appointments.",
+        message: patientMsg,
         type: "appointment",
-        metadata: { appointment_id: appointmentId, ended_by: "doctor" },
+        metadata: { appointment_id: appointmentId, ended_by: endedBy },
         url: `/patient/appointments?appointment=${appointmentId}`,
         tag: `appointment-ended-${appointmentId}`,
       });
+
+      // If ended due to time expiration, also notify doctor
+      if (isTimeExpired && row.doctor?.user_id) {
+        const doctorMsg = `The ${duration}-minute scheduled consultation has concluded.`;
+        await (admin as any).rpc("create_notification", {
+          p_user_id: row.doctor.user_id,
+          p_title: "Consultation ended",
+          p_message: doctorMsg,
+          p_type: "appointment",
+          p_metadata: { appointment_id: appointmentId, ended_by: endedBy },
+        });
+      }
     } catch {
       /* appointment is already recorded; notification is best-effort */
     }

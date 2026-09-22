@@ -3,7 +3,16 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
-import { Clock, Loader2, PhoneOff, ShieldCheck, Video, XCircle } from "lucide-react";
+import {
+  AlertTriangle,
+  CheckCircle2,
+  Clock,
+  Loader2,
+  PhoneOff,
+  ShieldCheck,
+  Video,
+  XCircle,
+} from "lucide-react";
 import { getCurrentAuthUser } from "@/lib/auth/current-user";
 
 interface JoinInfo {
@@ -27,13 +36,24 @@ type Phase =
   | { kind: "error"; message: string }
   | { kind: "too_early"; opensAt: string; message: string }
   | { kind: "waiting_for_doctor"; info: JoinInfo }
-  | { kind: "in_call"; info: JoinInfo };
+  | { kind: "in_call"; info: JoinInfo }
+  | {
+      kind: "consultation_ended";
+      reason: "manual" | "time_expired" | "doctor_ended";
+      info: JoinInfo;
+    };
 
 declare global {
   interface Window {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     JitsiMeetExternalAPI?: any;
   }
+}
+
+function formatSeconds(totalSeconds: number): string {
+  const m = Math.floor(totalSeconds / 60);
+  const s = totalSeconds % 60;
+  return `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
 }
 
 function loadJitsiScript(info: Pick<JoinInfo, "domain" | "scriptUrl">): Promise<void> {
@@ -52,10 +72,15 @@ export default function VideoConsultationPage() {
   const { appointmentId } = useParams<{ appointmentId: string }>();
   const router = useRouter();
   const [phase, setPhase] = useState<Phase>({ kind: "loading" });
+  const [secondsRemaining, setSecondsRemaining] = useState<number | null>(null);
+  const [dismissedWarning, setDismissedWarning] = useState<"5m" | "1m" | null>(null);
+  const [redirectCountdown, setRedirectCountdown] = useState<number>(8);
   const containerRef = useRef<HTMLDivElement>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const apiRef = useRef<any>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const inCallPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const leavingRef = useRef(false);
 
   const requestJoin = useCallback(async (): Promise<
@@ -163,40 +188,60 @@ export default function VideoConsultationPage() {
     };
   }, [phase.kind, requestJoin, enterCall]);
 
-  const dashboardPath = (role: "moderator" | "participant") =>
-    role === "moderator" ? "/doctor/appointments/" : "/patient/appointments/";
+  const dashboardPath = useCallback((role: "moderator" | "participant") =>
+    role === "moderator" ? "/doctor/appointments/" : "/patient/appointments/", []);
 
   const leaveToDashboard = useCallback((role: "moderator" | "participant") => {
     window.location.replace(dashboardPath(role));
-  }, []);
+  }, [dashboardPath]);
 
-  const recordConsultationEnded = useCallback(async () => {
-    try {
-      await fetch("/api/video/ended", {
-        method: "POST",
-        credentials: "include",
-        keepalive: true,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ appointmentId }),
-      });
-    } catch {
-      /* still leave the room so ads / parent redirects cannot trap the session */
-    }
-  }, [appointmentId]);
+  const recordConsultationEnded = useCallback(
+    async (reason?: "manual" | "time_expired" | "doctor_ended") => {
+      try {
+        await fetch("/api/video/ended", {
+          method: "POST",
+          credentials: "include",
+          keepalive: true,
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            appointmentId,
+            reason: reason ?? "doctor_ended",
+          }),
+        });
+      } catch {
+        /* still leave the room so ads / parent redirects cannot trap the session */
+      }
+    },
+    [appointmentId]
+  );
 
   const endCallAndLeave = useCallback(
-    async (role: "moderator" | "participant", recordEnd: boolean) => {
+    async (
+      role: "moderator" | "participant",
+      recordEnd: boolean,
+      reason: "manual" | "time_expired" | "doctor_ended" = "manual",
+      currentInfo?: JoinInfo
+    ) => {
       if (leavingRef.current) return;
       leavingRef.current = true;
 
-      // Doctor End consultation: close the visit in our DB, then end the room for everyone.
-      if (recordEnd && role === "moderator") {
-        await recordConsultationEnded();
+      if (timerRef.current) clearInterval(timerRef.current);
+      if (inCallPollRef.current) clearInterval(inCallPollRef.current);
+
+      // Close the visit in our DB and tell Jitsi to end the room for everyone.
+      if (recordEnd) {
+        await recordConsultationEnded(reason);
         try {
           apiRef.current?.executeCommand("endConference");
         } catch {
           /* older embeds may not support endConference */
         }
+      }
+
+      try {
+        apiRef.current?.executeCommand("hangup");
+      } catch {
+        /* ignore hangup error if already closing */
       }
 
       if (containerRef.current) {
@@ -208,10 +253,84 @@ export default function VideoConsultationPage() {
         /* iframe already gone */
       }
       apiRef.current = null;
-      window.location.replace(dashboardPath(role));
+
+      // Transition to dedicated consultation ended screen instead of sudden abrupt redirect.
+      const infoToUse = currentInfo ?? (phase.kind === "in_call" ? phase.info : null);
+      if (infoToUse) {
+        setPhase({
+          kind: "consultation_ended",
+          reason,
+          info: infoToUse,
+        });
+      } else {
+        window.location.replace(dashboardPath(role));
+      }
     },
-    [recordConsultationEnded]
+    [recordConsultationEnded, dashboardPath, phase]
   );
+
+  // In-call countdown timer and slot duration enforcement.
+  useEffect(() => {
+    if (phase.kind !== "in_call") return;
+    const { info } = phase;
+    const scheduledStart = new Date(info.scheduledAt).getTime();
+    const duration = info.durationMinutes || 30;
+    const scheduledEnd = scheduledStart + duration * 60_000;
+
+    const updateTimer = () => {
+      const now = Date.now();
+      const remaining = Math.max(0, Math.floor((scheduledEnd - now) / 1000));
+      setSecondsRemaining(remaining);
+
+      // If the slot time is up (00:00), automatically stop and complete the meeting!
+      if (remaining <= 0) {
+        if (timerRef.current) clearInterval(timerRef.current);
+        void endCallAndLeave(info.role, true, "time_expired", info);
+      }
+    };
+
+    updateTimer();
+    timerRef.current = setInterval(updateTimer, 1000);
+
+    // In-call heartbeat / status polling every 10 seconds to detect if ended by other party.
+    inCallPollRef.current = setInterval(async () => {
+      const result = await requestJoin();
+      if (!result.ok) {
+        if (result.status === 409 || result.status === 410) {
+          if (inCallPollRef.current) clearInterval(inCallPollRef.current);
+          void endCallAndLeave(info.role, false, "doctor_ended", info);
+        }
+        return;
+      }
+      if (result.info.status === "completed") {
+        if (inCallPollRef.current) clearInterval(inCallPollRef.current);
+        void endCallAndLeave(info.role, false, "doctor_ended", info);
+      }
+    }, 10_000);
+
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+      if (inCallPollRef.current) clearInterval(inCallPollRef.current);
+    };
+  }, [phase, endCallAndLeave, requestJoin]);
+
+  // Consultation ended screen auto-redirect countdown.
+  useEffect(() => {
+    if (phase.kind !== "consultation_ended") return;
+    const info = phase.info;
+    const interval = setInterval(() => {
+      setRedirectCountdown((prev) => {
+        if (prev <= 1) {
+          clearInterval(interval);
+          window.location.replace(dashboardPath(info.role));
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [phase, dashboardPath]);
 
   // Mount the Jitsi iframe once in-call.
   useEffect(() => {
@@ -408,15 +527,107 @@ export default function VideoConsultationPage() {
     );
   }
 
+  if (phase.kind === "consultation_ended") {
+    const { info, reason } = phase;
+    const isDoctor = info.role === "moderator";
+    const slotDuration = info.durationMinutes || 30;
+
+    return (
+      <Shell>
+        <div className="relative">
+          <div className="h-14 w-14 rounded-full bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center">
+            <CheckCircle2 className="h-8 w-8 text-emerald-400" />
+          </div>
+        </div>
+        <h1 className="text-xl font-bold text-white mt-4 text-center">
+          {reason === "time_expired"
+            ? "Consultation Concluded"
+            : reason === "doctor_ended"
+            ? "Doctor Ended the Consultation"
+            : "Consultation Completed"}
+        </h1>
+        <p className="text-sm text-slate-300 mt-2 max-w-md text-center">
+          {reason === "time_expired"
+            ? `Your scheduled ${slotDuration}-minute consultation has reached its time limit and the video room is closed.`
+            : "This video consultation has ended. Your appointment record has been updated."}
+        </p>
+
+        {/* Appointment metadata summary */}
+        <div className="mt-6 w-full max-w-sm rounded-xl border border-slate-800 bg-slate-900/60 p-4 text-xs text-slate-300 space-y-2">
+          <div className="flex justify-between items-center pb-2 border-b border-slate-800/80">
+            <span className="text-slate-400">Doctor</span>
+            <span className="font-semibold text-white">{info.doctorName}</span>
+          </div>
+          <div className="flex justify-between items-center pb-2 border-b border-slate-800/80">
+            <span className="text-slate-400">Patient</span>
+            <span className="font-semibold text-white">{info.patientName}</span>
+          </div>
+          <div className="flex justify-between items-center">
+            <span className="text-slate-400">Scheduled Duration</span>
+            <span className="font-medium text-brand-300">{slotDuration} minutes</span>
+          </div>
+        </div>
+
+        <div className="mt-6 flex flex-col sm:flex-row gap-3 w-full max-w-sm">
+          <Button
+            className="flex-1 bg-brand-600 hover:bg-brand-500 text-white font-medium"
+            onClick={() => window.location.replace(dashboardPath(info.role))}
+          >
+            Go to {isDoctor ? "Doctor" : "Patient"} Dashboard
+          </Button>
+          <Button
+            variant="outline"
+            className="flex-1 border-slate-700 hover:bg-slate-800 text-slate-200"
+            onClick={() =>
+              window.location.replace(
+                isDoctor ? "/doctor/appointments/" : "/patient/appointments/"
+              )
+            }
+          >
+            All Appointments
+          </Button>
+        </div>
+
+        <p className="text-[11px] text-slate-400 mt-4">
+          Redirecting automatically in {redirectCountdown}s…
+        </p>
+      </Shell>
+    );
+  }
+
   return (
     <div className="fixed inset-0 bg-slate-950 flex flex-col">
-      <div className="flex items-center justify-between px-4 py-2 bg-slate-900 border-b border-slate-800">
-        <div className="flex items-center gap-2 text-xs text-slate-300">
+      <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-2 bg-slate-900 border-b border-slate-800">
+        <div className="flex flex-wrap items-center gap-2 text-xs text-slate-300">
           <span className="h-2 w-2 rounded-full bg-red-500 animate-pulse" />
           <span className="font-semibold uppercase tracking-wider">Live consultation</span>
           <span className="text-slate-500">
             {phase.info.doctorName} / {phase.info.patientName}
           </span>
+
+          {/* Live countdown timer badge */}
+          {secondsRemaining !== null && (
+            secondsRemaining > 300 ? (
+              <div className="flex items-center gap-1.5 rounded-full bg-slate-800/90 border border-slate-700/80 px-2.5 py-1 text-xs text-slate-200 shadow-sm">
+                <Clock className="h-3.5 w-3.5 text-brand-400" />
+                <span className="font-medium">{formatSeconds(secondsRemaining)} remaining</span>
+                <span className="text-slate-400 text-[10px]">({phase.info.durationMinutes || 30}m slot)</span>
+              </div>
+            ) : secondsRemaining > 60 ? (
+              <div className="flex items-center gap-1.5 rounded-full bg-amber-500/15 border border-amber-500/40 px-2.5 py-1 text-xs text-amber-300 shadow-sm">
+                <AlertTriangle className="h-3.5 w-3.5 text-amber-400" />
+                <span className="font-semibold">{formatSeconds(secondsRemaining)} remaining</span>
+                <span className="hidden sm:inline text-amber-300/80 text-[10px]">— Wrap up visit</span>
+              </div>
+            ) : (
+              <div className="flex items-center gap-1.5 rounded-full bg-rose-500/20 border border-rose-500/50 px-2.5 py-1 text-xs text-rose-300 shadow-sm animate-pulse">
+                <AlertTriangle className="h-3.5 w-3.5 text-rose-400" />
+                <span className="font-bold">{formatSeconds(secondsRemaining)} remaining</span>
+                <span className="hidden sm:inline text-rose-300 text-[10px]">— Ending automatically</span>
+              </div>
+            )
+          )}
+
           {!phase.info.jwtConfigured && (
             <span className="hidden sm:inline rounded border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-[10px] font-medium text-amber-300">
               Demo video host — embedded calls disconnect after 5 minutes. Configure 8x8 JaaS for full sessions.
@@ -427,13 +638,45 @@ export default function VideoConsultationPage() {
           size="sm"
           className="bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold h-8"
           onClick={() => {
-            void endCallAndLeave(phase.info.role, phase.info.role === "moderator");
+            void endCallAndLeave(phase.info.role, phase.info.role === "moderator", "manual");
           }}
         >
           <PhoneOff className="h-3.5 w-3.5 mr-1.5" />
           {phase.info.role === "moderator" ? "End consultation" : "Leave"}
         </Button>
       </div>
+
+      {/* 5-minute warning banner */}
+      {secondsRemaining !== null && secondsRemaining <= 300 && secondsRemaining > 60 && dismissedWarning !== "5m" && (
+        <div className="bg-amber-500/15 border-b border-amber-500/30 px-4 py-1.5 flex items-center justify-between text-xs text-amber-200">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="h-3.5 w-3.5 text-amber-400 shrink-0" />
+            <span>
+              5 minutes remaining in your scheduled {phase.info.durationMinutes || 30}-minute consultation. Please begin concluding the visit.
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setDismissedWarning("5m")}
+            className="text-amber-400 hover:text-amber-300 text-xs ml-3 underline"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
+
+      {/* 1-minute urgent warning banner */}
+      {secondsRemaining !== null && secondsRemaining <= 60 && secondsRemaining > 0 && dismissedWarning !== "1m" && (
+        <div className="bg-rose-500/20 border-b border-rose-500/40 px-4 py-1.5 flex items-center justify-between text-xs text-rose-200 animate-pulse">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="h-3.5 w-3.5 text-rose-400 shrink-0" />
+            <span className="font-semibold">
+              Final minute: This room will close automatically when the {phase.info.durationMinutes || 30}-minute slot ends ({secondsRemaining}s remaining).
+            </span>
+          </div>
+        </div>
+      )}
+
       <div ref={containerRef} className="flex-1 [&>iframe]:h-full [&>iframe]:w-full" />
     </div>
   );
