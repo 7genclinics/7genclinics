@@ -1,4 +1,4 @@
-# Free self-hosted Jitsi for Stress Saviour
+# Free self-hosted Jitsi for Apna Clinic
 
 This deploys the official `docker-jitsi-meet` stable release with Prosody JWT
 authentication and lobby support. It does not use JaaS or another paid video
@@ -33,13 +33,13 @@ Prosody JWT auth, token-based owner/member roles, and lobby, then starts the
 stack. Anonymous guests are disabled; both doctor and patient use app-issued
 tokens and therefore never see a Jitsi login form.
 
-## Configure Stress Saviour
+## Configure Apna Clinic
 
 Set these production environment variables on the Next.js deployment:
 
 ```env
 JITSI_DOMAIN=meet.example.com
-JITSI_APP_ID=stress-saviour
+JITSI_APP_ID=apna-clinic
 JITSI_APP_SECRET=<same JWT_APP_SECRET as the VPS>
 JITSI_ROOM_SECRET=<a different random secret>
 ```
@@ -49,30 +49,7 @@ Redeploy the app after setting them. Never expose `JITSI_APP_SECRET` through a
 
 ## Expected flow
 
-1. The join API verifies the Supabase user, appointment participant, payment,
-   status, and time window.
-2. It issues a JWT valid through the appointment end plus a short grace period.
-3. Doctor tokens contain `moderator: true`; patient tokens contain
-   `moderator: false`.
-4. The doctor creates the conference and enables Jitsi lobby mode.
-5. A patient who arrived early waits in the app. Once the doctor starts, the
-   patient enters Jitsi's lobby and the doctor admits them.
-6. Old/cancelled/expired appointment links cannot obtain a fresh token.
-
-JWTs are deliberately short-lived and include a unique `jti`. Prosody JWT is
-stateless, so strict cryptographic single-use enforcement would require a
-custom Prosody replay-cache plugin; the short TTL plus server-side appointment
-checks prevents reusable permanent links.
-
-## Update or restart
-
-Re-run `configure.sh` to select the latest stable upstream tag and recreate the
-containers. To inspect health:
-
-```bash
-cd /opt/docker-jitsi-meet
-docker compose ps
-docker compose logs --tail=100 prosody jicofo jvb web
-```
-
-For production upgrades, back up `/opt/jitsi-config` first.
+1. Doctor opens `/video/[appointmentId]` and receives a moderator JWT.
+2. Patient opens the same route and receives a participant JWT.
+3. Lobby stays on until the doctor joins; guests wait in the lobby.
+4. When the doctor ends the consultation, the room closes for everyone.

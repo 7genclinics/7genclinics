@@ -8,7 +8,7 @@ import { BRAND } from "@/lib/brand/site";
 
 const AUTH_PANELS = {
   patient: {
-    src: "/patient-login-page.jpg",
+    src: "/online_consultation.jpg",
     alt: `Patient care at ${BRAND.name}`,
     title: "Care that meets you where you are",
     description:

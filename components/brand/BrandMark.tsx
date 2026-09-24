@@ -1,7 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
-import { BRAND } from "@/lib/brand/site";
+import { BRAND, BRAND_ASSETS } from "@/lib/brand/site";
 import { CONE_COLORS, CONE_COLOR_LIST } from "@/lib/brand/colors";
 
 type BrandMarkProps = {
@@ -13,7 +13,7 @@ type BrandMarkProps = {
   /** @deprecated Logo includes wordmark — ignored. */
   showWordmark?: boolean;
   inverted?: boolean;
-  /** Light logo for dark backgrounds (footer). */
+  /** Light plate behind logo for dark backgrounds (footer / auth aside). */
   variant?: "default" | "reverse";
   size?: "sm" | "md" | "lg";
 };
@@ -63,11 +63,17 @@ export function BrandMark({
   size = "md",
 }: BrandMarkProps) {
   const s = sizeMap[size];
-  const useReverse = variant === "reverse" || inverted;
+  const onDark = variant === "reverse" || inverted;
   const content = (
-    <span className={cn("inline-flex items-center", className)}>
+    <span
+      className={cn(
+        "inline-flex items-center",
+        onDark && "rounded-xl bg-white px-2.5 py-1.5 shadow-sm",
+        className
+      )}
+    >
       <Image
-        src={useReverse ? "/apna-clinic-logo-reverse.png" : "/apna-clinic-logo.png"}
+        src={BRAND_ASSETS.logo}
         alt={BRAND.name}
         width={220}
         height={s.height}

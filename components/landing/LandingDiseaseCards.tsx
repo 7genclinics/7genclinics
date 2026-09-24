@@ -8,9 +8,9 @@ import { BookButton } from "./LandingBooking";
 
 const FALLBACK_IMAGES = [
   "/anxiety_depression_medical_3d.png",
-  "/stress_burnout_3d.png",
-  "/sleep_issues_3d.png",
-  "/panic_attacks_3d.png",
+  "/anxiety_disorder_medical_3d.png",
+  "/depression_medical_3d.png",
+  "/bipolar_disorder_medical_3d.png",
   "/wellness_concept.jpg",
   "/online_consultation.jpg",
 ];
@@ -61,7 +61,7 @@ export function LandingDiseaseCards({
               </h3>
               <p className="mt-2 flex-1 text-sm leading-relaxed text-slate-600">
                 {item.description.trim() ||
-                  `Personalized assessment and treatment for ${item.label.toLowerCase()}.`}
+                  `Care plans and specialist support for ${item.label.toLowerCase()}.`}
               </p>
               <BookButton
                 className="mt-5 h-10 w-full rounded-full bg-brand-800 hover:bg-brand-900"

@@ -83,8 +83,8 @@ export const patientMessagesEn = {
     payments: "Billing & Payments",
     profile: "Profile Settings",
     chat: "Messages",
-    assessment: "Behavioral Assessment",
-    assessments: "Assessment History",
+    assessment: "Care plan",
+    assessments: "My care",
     portal: "Patient Portal",
   },
   nav: {
@@ -285,8 +285,8 @@ export const patientMessagesEn = {
     subtitle: "Chat with your doctors and clinic desk",
   },
   assessment: {
-    title: "Behavioral Assessment",
-    history: "Assessment History",
+    title: "Care plan",
+    history: "My care",
   },
 } as const satisfies MessageTree;
 
@@ -373,8 +373,8 @@ export const patientMessagesUr = {
     payments: "بلنگ اور ادائیگیاں",
     profile: "پروفائل سیٹنگز",
     chat: "پیغامات",
-    assessment: "رویے کی تشخیص",
-    assessments: "تشخیص کی تاریخ",
+    assessment: "کیئر پلان",
+    assessments: "میری کیئر",
     portal: "مریض پورٹل",
   },
   nav: {
@@ -575,8 +575,8 @@ export const patientMessagesUr = {
     subtitle: "اپنے ڈاکٹرز اور کلینک ڈیسک سے بات کریں",
   },
   assessment: {
-    title: "رویے کی تشخیص",
-    history: "تشخیص کی تاریخ",
+    title: "کیئر پلان",
+    history: "میری کیئر",
   },
 } as const satisfies MessageTree;
 

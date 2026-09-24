@@ -10,7 +10,7 @@ import { BookButton } from "./LandingBooking";
 const FALLBACK_IMAGES = [
   "/wellness_concept.jpg",
   "/online_consultation.jpg",
-  "/patient-login-page.jpg",
+  "/clinic-hero-background-clean.jpg",
 ];
 
 function defaultBenefits(service: PublicLandingService): string[] {

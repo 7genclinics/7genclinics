@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { BRAND } from "@/lib/brand/site";
+import { BRAND, BRAND_ASSETS } from "@/lib/brand/site";
 import { SITE_ORIGIN, canonicalUrl } from "@/lib/seo/site";
 
 type PageMetaInput = {
@@ -20,7 +20,11 @@ export function pageMetadata({
   image,
 }: PageMetaInput): Metadata {
   const url = canonicalUrl(path);
-  const ogImage = image || `${SITE_ORIGIN}/apna-clinic-favicon.png`;
+  const ogImage = image
+    ? image.startsWith("http")
+      ? image
+      : `${SITE_ORIGIN}${image}`
+    : `${SITE_ORIGIN}${BRAND_ASSETS.ogImage}`;
 
   return {
     title,
@@ -36,7 +40,7 @@ export function pageMetadata({
       siteName: BRAND.name,
       type: ogType === "profile" ? "profile" : "website",
       locale: "en_PK",
-      images: [{ url: ogImage }],
+      images: [{ url: ogImage, width: 1200, height: 630, alt: BRAND.domainLabel }],
     },
     twitter: {
       card: "summary_large_image",

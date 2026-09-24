@@ -51,8 +51,8 @@ const BY_TYPE: Record<string, Record<PortalRole, string>> = {
     receptionist: "/reception/chat",
   },
   assessment: {
-    patient: "/patient/assessments",
-    doctor: "/doctor/assessments",
+    patient: "/patient/dashboard",
+    doctor: "/doctor/dashboard",
     admin: "/admin/patients",
     receptionist: "/reception/patients",
   },

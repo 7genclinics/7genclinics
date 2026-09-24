@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Syne, Manrope, Poppins, Playfair_Display, Noto_Nastaliq_Urdu } from "next/font/google";
 import { ServiceWorkerRegistration } from "@/components/pwa/ServiceWorkerRegistration";
-import { BRAND } from "@/lib/brand/site";
+import { BRAND, BRAND_ASSETS } from "@/lib/brand/site";
 import { SITE_ORIGIN, SITE_URL } from "@/lib/seo/site";
 import "./globals.css";
 
@@ -62,20 +62,29 @@ export const metadata: Metadata = {
     siteName: BRAND.name,
     title: `${BRAND.name}, Pakistan's best online and physical clinic platform`,
     description: BRAND.description,
+    images: [
+      {
+        url: BRAND_ASSETS.ogImage,
+        width: 1200,
+        height: 630,
+        alt: BRAND.domainLabel,
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
     title: `${BRAND.name}, Pakistan's best online and physical clinic platform`,
     description: BRAND.description,
+    images: [BRAND_ASSETS.ogImage],
   },
   icons: {
     icon: [
-      { url: "/apna-clinic-favicon.png", type: "image/png", sizes: "any" },
-      { url: "/apna-clinic-favicon.png", type: "image/png", sizes: "32x32" },
-      { url: "/apna-clinic-favicon.png", type: "image/png", sizes: "192x192" },
-      { url: "/apna-clinic-favicon.png", type: "image/png", sizes: "512x512" },
+      { url: BRAND_ASSETS.favicon, type: "image/png", sizes: "any" },
+      { url: BRAND_ASSETS.icon32, type: "image/png", sizes: "32x32" },
+      { url: BRAND_ASSETS.icon192, type: "image/png", sizes: "192x192" },
+      { url: BRAND_ASSETS.icon512, type: "image/png", sizes: "512x512" },
     ],
-    apple: [{ url: "/apna-clinic-favicon.png", sizes: "180x180", type: "image/png" }],
+    apple: [{ url: BRAND_ASSETS.favicon, sizes: "180x180", type: "image/png" }],
   },
   manifest: "/site.webmanifest",
   appleWebApp: {

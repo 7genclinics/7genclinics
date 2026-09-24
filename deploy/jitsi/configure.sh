@@ -105,4 +105,4 @@ docker compose up -d
 echo
 echo "Jitsi ${TAG} is starting at https://${JITSI_DOMAIN}"
 echo "Open UDP 10000 and TCP 80/443 in the VPS firewall/security group."
-echo "Use the same JWT_APP_ID and JWT_APP_SECRET in the Stress Saviour app."
+echo "Use the same JWT_APP_ID and JWT_APP_SECRET in the Apna Clinic app."

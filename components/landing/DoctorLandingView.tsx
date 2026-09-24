@@ -73,7 +73,7 @@ export function DoctorLandingView({
   const photo = content.heroImageUrl || doctor.avatarUrl;
   const firstName = doctor.fullName.split(" ")[0];
   const aboutText = content.aboutBody.trim() || doctor.bio || content.shortIntro;
-  const aboutImage = content.aboutImageUrl || "/patient-login-page.jpg";
+  const aboutImage = content.aboutImageUrl || "/online_consultation.jpg";
   const aboutTitle = splitHeadline(content.aboutHeadline);
   const trust = (content.trustItems.length ? content.trustItems : []).slice(0, 4);
   const quotedReviews = reviews.filter((row) => row.comment?.trim());
@@ -498,7 +498,7 @@ export function DoctorLandingView({
 
       {isSectionVisible(content, "cta") && (
         <section className="relative isolate overflow-hidden bg-brand-950 py-16 text-white sm:py-24">
-          <div className="absolute inset-0 bg-[url('/patient-login-page.jpg')] bg-cover bg-center opacity-20" />
+          <div className="absolute inset-0 bg-[url('/clinic-hero-background-clean.jpg')] bg-cover bg-center opacity-20" />
           <div className="absolute inset-0 bg-brand-950/75" />
           <div className="relative mx-auto max-w-3xl px-4 text-center sm:px-6">
             <h2 className="font-serif text-3xl font-semibold tracking-tight sm:text-4xl">

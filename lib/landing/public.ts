@@ -307,6 +307,40 @@ export type PublicLandingLookup =
   | { kind: "redirect"; slug: string }
   | { kind: "not_found" };
 
+async function buildDefaultPublicLanding(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  doctor: PublicLandingDoctor,
+  defaults: LandingClinicDefaults,
+  opts?: { slug?: string; status?: LandingPageStatus },
+): Promise<Extract<PublicLandingLookup, { kind: "ok" }>> {
+  const content = parseLandingContent(emptyLandingContent(doctor, defaults), doctor, defaults);
+  const availability = await loadAvailability(supabase, doctor.id);
+  const duration = availability[0]?.slot_duration_minutes ?? 30;
+  const [services, reviews, organization] = await Promise.all([
+    loadServices(supabase, doctor, content, duration),
+    loadReviews(supabase, doctor.id),
+    loadListedOrganization(supabase, doctor.id),
+  ]);
+
+  const slug = opts?.slug || doctor.slug || doctor.id;
+  doctor.slug = slug;
+
+  return {
+    kind: "ok",
+    data: {
+      doctor,
+      content,
+      status: opts?.status ?? "draft",
+      slug,
+      isPreview: false,
+      services,
+      reviews,
+      availability,
+      organization,
+    },
+  };
+}
+
 export async function getPublicLandingPage(
   slugOrId: string,
   opts: { preview?: boolean } = {},
@@ -323,7 +357,14 @@ export async function getPublicLandingPage(
     : landingQuery.eq("slug", slugOrId);
 
   const { data: landing, error } = await landingQuery.maybeSingle();
-  if (error || !landing) return { kind: "not_found" };
+
+  // No custom landing page: still show a default public profile for approved doctors.
+  if (error || !landing) {
+    if (!isUuid(slugOrId)) return { kind: "not_found" };
+    const doctor = await loadDoctor(supabase, slugOrId);
+    if (!doctor) return { kind: "not_found" };
+    return buildDefaultPublicLanding(supabase, doctor, defaults, { slug: slugOrId });
+  }
 
   const row = landing as LandingRow;
   const doctor = await loadDoctor(supabase, row.doctor_id);
@@ -353,7 +394,14 @@ export async function getPublicLandingPage(
     }
   }
 
+  // Unpublished landing: fall back to a bookable default profile (do not 404).
   if (!isPreview && row.status !== "published") {
+    if (isUuid(slugOrId) || row.slug === slugOrId) {
+      return buildDefaultPublicLanding(supabase, doctor, defaults, {
+        slug: row.slug || slugOrId,
+        status: row.status,
+      });
+    }
     return { kind: "not_found" };
   }
 

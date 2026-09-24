@@ -62,7 +62,7 @@ describe("self-hosted Jitsi JWT", () => {
   before(() => {
     clearVideoEnv();
     process.env.JITSI_DOMAIN = "meet.example.com";
-    process.env.JITSI_APP_ID = "stress-saviour";
+    process.env.JITSI_APP_ID = "apna-clinic";
     process.env.JITSI_APP_SECRET = "test-secret-that-is-long-enough-for-hs256";
   });
 
@@ -98,8 +98,8 @@ describe("self-hosted Jitsi JWT", () => {
       .digest("base64url");
 
     assert.equal(header.alg, "HS256");
-    assert.equal(payload.aud, "stress-saviour");
-    assert.equal(payload.iss, "stress-saviour");
+    assert.equal(payload.aud, "apna-clinic");
+    assert.equal(payload.iss, "apna-clinic");
     assert.equal(payload.sub, "meet.example.com");
     assert.equal(payload.room, "ss-test-room");
     assert.equal(payload.exp, expiresAt);

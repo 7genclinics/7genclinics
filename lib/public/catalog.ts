@@ -47,7 +47,6 @@ export const MENTAL_SYMPTOMS: CatalogItem[] = [
     icon: "flame",
     color: "text-orange-600",
     bg: "bg-orange-100",
-    image: "/stress_burnout_3d.png",
     ring: "from-orange-300 to-amber-200",
   },
   {
@@ -58,7 +57,6 @@ export const MENTAL_SYMPTOMS: CatalogItem[] = [
     icon: "moon",
     color: "text-brand-600",
     bg: "bg-brand-50",
-    image: "/sleep_issues_3d.png",
     ring: "from-brand-300 to-brand-100",
   },
   {
@@ -69,7 +67,7 @@ export const MENTAL_SYMPTOMS: CatalogItem[] = [
     icon: "zap",
     color: "text-amber-600",
     bg: "bg-amber-100",
-    image: "/panic_attacks_3d.png",
+    image: "/anxiety_disorder_medical_3d.png",
     ring: "from-amber-300 to-yellow-200",
   },
   {
@@ -80,7 +78,6 @@ export const MENTAL_SYMPTOMS: CatalogItem[] = [
     icon: "users",
     color: "text-pink-600",
     bg: "bg-pink-100",
-    image: "/relationship_issues_3d.png",
     ring: "from-pink-300 to-rose-200",
   },
   {
@@ -91,7 +88,6 @@ export const MENTAL_SYMPTOMS: CatalogItem[] = [
     icon: "heart-crack",
     color: "text-rose-600",
     bg: "bg-rose-100",
-    image: "/grief_loss_3d.png",
     ring: "from-rose-300 to-pink-200",
   },
   {
@@ -161,7 +157,7 @@ export const MENTAL_CONDITIONS: CatalogItem[] = [
     color: "text-slate-600",
     bg: "bg-slate-100",
     ring: "from-slate-300 to-slate-200",
-    image: "/ptsd_medical_3d.png",
+    image: "/anxiety_disorder_medical_3d.png",
   },
   {
     id: "schizophrenia",
@@ -172,7 +168,6 @@ export const MENTAL_CONDITIONS: CatalogItem[] = [
     color: "text-emerald-600",
     bg: "bg-emerald-100",
     ring: "from-emerald-300 to-green-200",
-    image: "/schizophrenia_medical_3d.png",
   },
   {
     id: "eating-disorder",
@@ -205,7 +200,6 @@ export const MENTAL_CONDITIONS: CatalogItem[] = [
     color: "text-brand-600",
     bg: "bg-brand-50",
     ring: "from-brand-400 to-brand-200",
-    image: "/insomnia_medical_3d.png",
   },
 ];
 

@@ -1,6 +1,6 @@
 import Image from "next/image";
 
-/** Welcome-banner watermark using the Gen Marketing logo. */
+/** Welcome-banner watermark — Gen Marketing partner mark on dashboards. */
 export function DashboardBrandDecoration() {
   return (
     <Image

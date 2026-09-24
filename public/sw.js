@@ -194,7 +194,7 @@ self.addEventListener("push", (event) => {
     }
   }
 
-  const title = payload.title || "Stress Saviors";
+  const title = payload.title || "Apna Clinic";
   const url = absoluteUrl(payload.url || "/") || "/";
   const options = {
     body: payload.body || "You have a new notification.",
@@ -204,7 +204,7 @@ self.addEventListener("push", (event) => {
     // Custom sound is best-effort; most mobile OSes use the system default tone.
     sound: absoluteUrl(payload.sound || DEFAULT_SOUND),
     silent: false,
-    tag: payload.tag || "stress-saviors",
+    tag: payload.tag || "apna-clinic",
     renotify: true,
     vibrate: [200, 100, 200],
     // Keep alert visible longer on phones so the user does not miss it.
