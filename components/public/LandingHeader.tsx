@@ -45,8 +45,8 @@ export function LandingHeader({ overlay = false }: LandingHeaderProps) {
           : "border-b border-brand-900/8 bg-white/95 shadow-[0_1px_0_rgba(18,53,58,0.04)] backdrop-blur-md"
       )}
     >
-      <div className="relative mx-auto flex h-[4.25rem] max-w-6xl items-center justify-between px-4 sm:px-6">
-        <BrandMark size="md" inverted={inverted} />
+      <div className="relative mx-auto flex h-[4.75rem] max-w-6xl items-center justify-between px-4 sm:px-6">
+        <BrandMark size="lg" inverted={inverted} />
 
         <nav className="hidden items-center gap-9 md:flex">
           {MAIN_LANDING_NAV.map((link) => (
@@ -125,7 +125,7 @@ export function LandingHeader({ overlay = false }: LandingHeaderProps) {
 
         <div
           className={cn(
-            "absolute inset-x-0 top-[4.25rem] max-h-[calc(100dvh-4.25rem)] overflow-y-auto border-b border-brand-100 bg-white transition-all duration-200",
+            "absolute inset-x-0 top-[4.75rem] max-h-[calc(100dvh-4.75rem)] overflow-y-auto border-b border-brand-100 bg-white transition-all duration-200",
             mobileOpen ? "translate-y-0 opacity-100" : "-translate-y-2 opacity-0"
           )}
         >

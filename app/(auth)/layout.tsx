@@ -14,7 +14,7 @@ export default function AuthLayout({
       <div className="flex flex-col min-h-screen bg-[#f4faf9]">
         <div className="flex items-center justify-between px-6 py-4 lg:justify-end">
           <div className="lg:hidden">
-            <BrandMark size="sm" />
+            <BrandMark size="lg" />
           </div>
           <Link
             href="/"

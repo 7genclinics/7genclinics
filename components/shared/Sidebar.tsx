@@ -132,12 +132,12 @@ export function Sidebar({ role, isOpen = false, onClose, allowedHrefs }: Sidebar
   const sidebarContent = (
     <div className="flex h-full flex-col overflow-y-auto border-e border-border bg-card px-4 py-6">
       {/* Brand */}
-      <div className="mb-8 flex items-center justify-between px-2">
-        <BrandMark size="sm" />
+      <div className="mb-8 flex items-center justify-between gap-2 px-1">
+        <BrandMark size="xl" className="min-w-0 flex-1" />
         {onClose && (
           <button
             onClick={onClose}
-            className="rounded-lg p-1.5 hover:bg-accent hover:text-accent-foreground md:hidden cursor-pointer"
+            className="shrink-0 rounded-lg p-1.5 hover:bg-accent hover:text-accent-foreground md:hidden cursor-pointer"
           >
             <X className="h-5 w-5" />
           </button>

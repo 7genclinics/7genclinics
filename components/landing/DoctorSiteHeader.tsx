@@ -49,7 +49,7 @@ export function DoctorSiteHeader({
     >
       <DoctorTopBar content={content} />
       <div className="mx-auto flex h-[4.4rem] max-w-6xl items-center justify-between gap-4 px-4 sm:px-6">
-        <BrandMark href="/" size="md" />
+        <BrandMark href="/" size="lg" />
 
         <nav className="hidden items-center gap-6 lg:flex">
           {MAIN_LANDING_NAV.map((link) => (

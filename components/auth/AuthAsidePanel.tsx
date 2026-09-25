@@ -57,7 +57,7 @@ function AuthAsideContent() {
       <div className="absolute inset-0 bg-gradient-to-t from-slate-900/90 via-slate-900/25 to-slate-900/40" />
 
       <div className="relative z-10 flex h-full min-h-screen flex-col p-10 text-white">
-        <BrandMark href="/" size="md" inverted />
+        <BrandMark href="/" size="xl" inverted />
 
         <div className="mt-auto space-y-4 max-w-md pb-2">
           <div className="space-y-3">

@@ -13,15 +13,19 @@ type BrandMarkProps = {
   /** @deprecated Logo includes wordmark — ignored. */
   showWordmark?: boolean;
   inverted?: boolean;
-  /** Light plate behind logo for dark backgrounds (footer / auth aside). */
+  /** Soft light plate behind logo on dark backgrounds (footer / auth aside). */
   variant?: "default" | "reverse";
-  size?: "sm" | "md" | "lg";
+  size?: "sm" | "md" | "lg" | "xl";
 };
 
+/** Intrinsic logo ratio from public/apnaclinic-logo.png (593×421). */
+const LOGO_ASPECT = 593 / 421;
+
 const sizeMap = {
-  sm: { height: 32, className: "h-8 w-auto" },
-  md: { height: 40, className: "h-9 w-auto sm:h-10" },
-  lg: { height: 48, className: "h-11 w-auto sm:h-12" },
+  sm: { height: 40, className: "h-10 w-auto" },
+  md: { height: 52, className: "h-12 w-auto sm:h-[3.25rem]" },
+  lg: { height: 64, className: "h-14 w-auto sm:h-16" },
+  xl: { height: 80, className: "h-[4.5rem] w-auto sm:h-20" },
 } as const;
 
 const FACETS: { points: string; fill: string }[] = [
@@ -64,22 +68,23 @@ export function BrandMark({
 }: BrandMarkProps) {
   const s = sizeMap[size];
   const onDark = variant === "reverse" || inverted;
+  const width = Math.round(s.height * LOGO_ASPECT);
   const content = (
     <span
       className={cn(
         "inline-flex items-center",
-        onDark && "rounded-xl bg-white px-2.5 py-1.5 shadow-sm",
+        onDark && "rounded-2xl bg-white/95 px-3 py-2 shadow-sm backdrop-blur-sm",
         className
       )}
     >
       <Image
         src={BRAND_ASSETS.logo}
         alt={BRAND.name}
-        width={220}
+        width={width}
         height={s.height}
         priority
         unoptimized
-        className={cn(s.className, markClassName)}
+        className={cn("object-contain object-left", s.className, markClassName)}
       />
     </span>
   );

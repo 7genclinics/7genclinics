@@ -75,7 +75,7 @@ export function DoctorSiteFooter({ data }: { data: PublicLandingPageData }) {
     <footer className="bg-white text-slate-600">
       <div className="mx-auto grid max-w-6xl gap-10 px-4 py-14 sm:px-6 lg:grid-cols-12">
         <div className="lg:col-span-4">
-          <BrandMark href="/" size="md" />
+          <BrandMark href="/" size="lg" />
           <p className="mt-4 max-w-sm text-sm leading-relaxed text-slate-600">
             {content.footerTagline || BRAND.tagline}
           </p>
