@@ -3,7 +3,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
-import { User, Mail, Phone, MapPin, Building, Activity, FileText,
+import { User, Mail, Phone, MapPin, Activity, FileText,
   ShieldCheck, Lock, Bell, Clock, CreditCard,
   Check, Upload, X, Eye, Loader2, GraduationCap,
 } from "lucide-react";
@@ -22,6 +22,11 @@ import { TaxonomyTagPicker } from "@/components/shared/TaxonomyTagPicker";
 import { uploadDoctorCertificate, removeDoctorCertificate, validateCertificateFile } from "@/lib/storage/certificates";
 import type { DoctorCertificate } from "@/lib/doctor/types";
 import { getErrorMessage } from "@/lib/errors";
+import {
+  doctorHasReceivingAccount,
+  parseDoctorReceivingSettings,
+  type DoctorReceivingSettings,
+} from "@/lib/payments/doctor-accounts";
 
 export default function DoctorProfilePage() {
   const { profile, doctorProfile, documents, setProfile, setDoctorProfile, setDocuments, refresh } =
@@ -58,12 +63,9 @@ export default function DoctorProfilePage() {
     autoApprove: documents.telehealth_settings?.autoApprove ?? true,
   });
 
-  const [payout, setPayout] = useState({
-    method: documents.payout_settings?.method ?? ("bank" as "bank" | "easypaisa" | "jazzcash"),
-    bankName: documents.payout_settings?.bankName ?? "",
-    iban: documents.payout_settings?.iban ?? "",
-    walletNumber: documents.payout_settings?.walletNumber ?? "",
-  });
+  const [payout, setPayout] = useState<DoctorReceivingSettings>(() =>
+    parseDoctorReceivingSettings(documents.payout_settings)
+  );
 
   const [security, setSecurity] = useState({
     currentPassword: "",
@@ -105,9 +107,7 @@ export default function DoctorProfilePage() {
       enableChat: documents.telehealth_settings?.enableChat ?? false,
       autoApprove: documents.telehealth_settings?.autoApprove ?? true,
     }));
-    if (documents.payout_settings) {
-      setPayout(documents.payout_settings);
-    }
+    setPayout(parseDoctorReceivingSettings(documents.payout_settings));
   }, [profile, doctorProfile, documents]);
 
   const showToast = (message: string) => {
@@ -205,15 +205,19 @@ export default function DoctorProfilePage() {
   };
 
   const handleSavePayout = async () => {
+    if (!doctorHasReceivingAccount(payout)) {
+      showToast("Add at least one JazzCash, EasyPaisa, or bank account.");
+      return;
+    }
     setIsSaving(true);
     try {
       const result = await updateDoctorDocuments(doctorProfile.id, documents, {
         payout_settings: payout,
       });
       setDocuments(result.documents);
-      showToast("Payout routing details updated.");
+      showToast("Patient payment accounts saved. Patients will pay these accounts.");
     } catch {
-      showToast("Failed to save payout details.");
+      showToast("Failed to save payment accounts.");
     } finally {
       setIsSaving(false);
     }
@@ -239,8 +243,7 @@ export default function DoctorProfilePage() {
     }
   };
 
-  const commission = Math.round(telehealth.consultationFee * 0.1);
-  const netEarnings = telehealth.consultationFee - commission;
+  const consultationFee = telehealth.consultationFee;
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto pb-10">
@@ -257,7 +260,7 @@ export default function DoctorProfilePage() {
         <div>
           <h2 className="text-2xl font-bold tracking-tight">Account & Practice Settings</h2>
           <p className="text-sm text-muted-foreground mt-1">
-            Manage your clinical availability, professional credentials, dynamic consultation fees, and payout routing.
+            Manage your clinical availability, credentials, consultation fee, and the accounts patients pay.
           </p>
         </div>
       </div>
@@ -317,7 +320,7 @@ export default function DoctorProfilePage() {
                 }`}
               >
                 <CreditCard className="h-4 w-4" />
-                <span>Payout Methods</span>
+                <span>Payment Accounts</span>
               </button>
               <button
                 onClick={() => setActiveTab("security")}
@@ -649,15 +652,14 @@ export default function DoctorProfilePage() {
                     className="w-full h-2 bg-secondary rounded-lg appearance-none cursor-pointer accent-brand-500"
                   />
                   
-                  <div className="grid grid-cols-2 gap-4 p-4 rounded-xl bg-muted/40 border border-border/60 text-xs">
-                    <div>
-                      <p className="text-muted-foreground">Platform Commission (10%)</p>
-                      <p className="font-semibold text-foreground mt-0.5">PKR {commission}</p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground">Net Payout per Session</p>
-                      <p className="font-bold text-emerald-600 dark:text-emerald-400 mt-0.5">PKR {netEarnings}</p>
-                    </div>
+                  <div className="p-4 rounded-xl bg-muted/40 border border-border/60 text-xs">
+                    <p className="text-muted-foreground">You receive</p>
+                    <p className="font-bold text-emerald-600 dark:text-emerald-400 mt-0.5">
+                      PKR {consultationFee.toLocaleString()} per session
+                    </p>
+                    <p className="text-muted-foreground mt-1">
+                      Patients pay this fee to your accounts. There is no admin payout step.
+                    </p>
                   </div>
                 </div>
 
@@ -757,103 +759,77 @@ export default function DoctorProfilePage() {
           {activeTab === "payout" && (
             <Card>
               <CardHeader>
-                <CardTitle>Payout Methods & Invoicing</CardTitle>
+                <CardTitle>Patient payment accounts</CardTitle>
                 <CardDescription>
-                  Choose how you want to receive your accumulated consultation fees. Disbursed semimonthly.
+                  Patients pay the consultation fee to these accounts. You verify the screenshot and the amount is yours. Add every method you accept.
                 </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="grid grid-cols-3 gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setPayout({ ...payout, method: "bank" })}
-                    className={`flex flex-col items-center justify-center p-4 rounded-xl border text-center cursor-pointer transition-all duration-200 ${
-                      payout.method === "bank"
-                        ? "border-brand-500 bg-brand-400/5 text-brand-600 dark:text-brand-300 font-semibold"
-                        : "border-border hover:bg-accent text-muted-foreground hover:text-foreground"
-                    }`}
-                  >
-                    <Building className="h-5 w-5 mb-2" />
-                    <span className="text-xs">Bank Account</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setPayout({ ...payout, method: "easypaisa" })}
-                    className={`flex flex-col items-center justify-center p-4 rounded-xl border text-center cursor-pointer transition-all duration-200 ${
-                      payout.method === "easypaisa"
-                        ? "border-brand-500 bg-brand-400/5 text-brand-600 dark:text-brand-300 font-semibold"
-                        : "border-border hover:bg-accent text-muted-foreground hover:text-foreground"
-                    }`}
-                  >
-                    <CreditCard className="h-5 w-5 mb-2" />
-                    <span className="text-xs">EasyPaisa</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setPayout({ ...payout, method: "jazzcash" })}
-                    className={`flex flex-col items-center justify-center p-4 rounded-xl border text-center cursor-pointer transition-all duration-200 ${
-                      payout.method === "jazzcash"
-                        ? "border-brand-500 bg-brand-400/5 text-brand-600 dark:text-brand-300 font-semibold"
-                        : "border-border hover:bg-accent text-muted-foreground hover:text-foreground"
-                    }`}
-                  >
-                    <CreditCard className="h-5 w-5 mb-2" />
-                    <span className="text-xs">JazzCash</span>
-                  </button>
+              <CardContent className="space-y-4">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-muted-foreground">Account title</label>
+                  <input
+                    type="text"
+                    value={payout.accountTitle}
+                    onChange={(e) => setPayout({ ...payout, accountTitle: e.target.value })}
+                    placeholder="Name shown to the patient"
+                    className="w-full h-10 px-4 rounded-lg border border-border bg-card text-sm"
+                  />
                 </div>
-
-                {payout.method === "bank" ? (
-                  <div className="space-y-4 animate-in fade-in duration-200">
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-semibold text-muted-foreground">Bank Name</label>
-                      <div className="relative">
-                        <Building className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                        <input
-                          type="text"
-                          value={payout.bankName}
-                          onChange={(e) => setPayout({ ...payout, bankName: e.target.value })}
-                          required
-                          className="w-full h-10 pl-9 pr-4 rounded-lg border border-border bg-card text-sm focus:outline-none focus:ring-2 focus:ring-brand-400/20 focus:border-brand-400 transition-all"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-semibold text-muted-foreground">IBAN (International Bank Account Number)</label>
-                      <div className="relative">
-                        <Building className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                        <input
-                          type="text"
-                          value={payout.iban}
-                          onChange={(e) => setPayout({ ...payout, iban: e.target.value })}
-                          required
-                          className="w-full h-10 pl-9 pr-4 rounded-lg border border-border bg-card text-sm focus:outline-none focus:ring-2 focus:ring-brand-400/20 focus:border-brand-400 transition-all font-mono"
-                        />
-                      </div>
-                    </div>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-muted-foreground">JazzCash number</label>
+                    <input
+                      type="tel"
+                      value={payout.jazzcash}
+                      onChange={(e) => setPayout({ ...payout, jazzcash: e.target.value })}
+                      placeholder="03xx xxxxxxx"
+                      className="w-full h-10 px-4 rounded-lg border border-border bg-card text-sm"
+                    />
                   </div>
-                ) : (
-                  <div className="space-y-1.5 animate-in fade-in duration-200">
-                    <label className="text-xs font-semibold text-muted-foreground">Mobile Wallet Number</label>
-                    <div className="relative">
-                      <Phone className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                      <input
-                        type="tel"
-                        placeholder="e.g. +92 300 1234567"
-                        value={payout.walletNumber}
-                        onChange={(e) => setPayout({ ...payout, walletNumber: e.target.value })}
-                        required
-                        className="w-full h-10 pl-9 pr-4 rounded-lg border border-border bg-card text-sm focus:outline-none focus:ring-2 focus:ring-brand-400/20 focus:border-brand-400 transition-all"
-                      />
-                    </div>
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-muted-foreground">EasyPaisa number</label>
+                    <input
+                      type="tel"
+                      value={payout.easypaisa}
+                      onChange={(e) => setPayout({ ...payout, easypaisa: e.target.value })}
+                      placeholder="03xx xxxxxxx"
+                      className="w-full h-10 px-4 rounded-lg border border-border bg-card text-sm"
+                    />
                   </div>
-                )}
+                </div>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-muted-foreground">Bank name</label>
+                    <input
+                      type="text"
+                      value={payout.bankName}
+                      onChange={(e) => setPayout({ ...payout, bankName: e.target.value })}
+                      className="w-full h-10 px-4 rounded-lg border border-border bg-card text-sm"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-muted-foreground">Account number</label>
+                    <input
+                      type="text"
+                      value={payout.accountNumber}
+                      onChange={(e) => setPayout({ ...payout, accountNumber: e.target.value })}
+                      className="w-full h-10 px-4 rounded-lg border border-border bg-card text-sm font-mono"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-muted-foreground">IBAN</label>
+                  <input
+                    type="text"
+                    value={payout.iban}
+                    onChange={(e) => setPayout({ ...payout, iban: e.target.value })}
+                    className="w-full h-10 px-4 rounded-lg border border-border bg-card text-sm font-mono"
+                  />
+                </div>
               </CardContent>
               <CardFooter className="border-t border-border/60 py-4 flex justify-end">
                 <Button onClick={handleSavePayout} disabled={isSaving} className="bg-brand-500 hover:bg-brand-600 text-white font-semibold">
-                  {isSaving ? "Saving payout details..." : "Save Payout Method"}
+                  {isSaving ? "Saving payment accounts..." : "Save payment accounts"}
                 </Button>
               </CardFooter>
             </Card>

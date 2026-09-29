@@ -12,7 +12,6 @@ import type {
 } from "./types";
 import { createNotification } from "@/lib/notifications/api";
 import { finalizeAppointmentCancellation } from "@/lib/appointments/cancel";
-import { GRACE_MINUTES_AFTER_START } from "@/lib/appointments/session-timing";
 import { DOCTOR_TAXONOMY_SELECT } from "@/lib/doctor/taxonomy";
 import { resolveDoctorRow, resolveDoctorRows } from "@/lib/public/doctor-select";
 
@@ -490,6 +489,17 @@ export async function updateAppointmentStatusAdmin(
   reason?: string,
   adminId?: string
 ) {
+  if (status === "scheduled") {
+    const { data: current, error: currentError } = await table("appointments")
+      .select("status")
+      .eq("id", appointmentId)
+      .maybeSingle();
+    if (currentError) throw currentError;
+    if (current?.status === "pending_payment") {
+      throw new Error("Only the assigned doctor can confirm a booking after reviewing the payment proof.");
+    }
+  }
+
   const updates: Record<string, unknown> = { status };
   if (status === "cancelled") {
     updates.cancellation_reason = reason?.trim() || "Cancelled by administrator.";
@@ -531,325 +541,46 @@ async function safeNotify(fn: () => Promise<void>) {
   try { await fn(); } catch (err) { console.warn("Notification skipped:", err); }
 }
 
-/** Best-effort notification to the doctor when a payout is cleared. Never throws. */
-async function notifyDoctorPayout(doctorUserId: string, amount: number, reference: string) {
-  await safeNotify(() => createNotification(
-    doctorUserId,
-    "Payout cleared",
-    `A payout of PKR ${Math.round(amount).toLocaleString("en-PK")} has been settled to your account (Ref: ${reference}).`,
-    "payout",
-    { reference }
-  ));
-}
-
-function payoutReference() {
-  return `PO-${Date.now().toString(36).toUpperCase()}-${Math.random()
-    .toString(36)
-    .slice(2, 6)
-    .toUpperCase()}`;
-}
-
-/** Mark a single payment as settled/cleared to the doctor. */
+/** Doctors receive patient fees directly. Admin no longer clears payouts. */
 export async function markPaymentPaid(
-  paymentId: string,
-  adminId: string,
-  options?: { reference?: string; notifyDoctorUserId?: string; receiptUrl?: string }
+  _paymentId: string,
+  _adminId: string,
+  _options?: { reference?: string; notifyDoctorUserId?: string; receiptUrl?: string }
 ): Promise<AdminPayment> {
-  const { data: existing, error: fetchErr } = await table("payments")
-    .select("id, refund_status, status")
-    .eq("id", paymentId)
-    .maybeSingle();
-  if (fetchErr) throw fetchErr;
-  const row = existing as { id: string; refund_status?: string; status: string } | null;
-  if (!row) throw new Error("Payment not found");
-  if (row.status !== "completed") throw new Error("Only collected payments can be settled");
-  const rs = row.refund_status ?? "not_applicable";
-  if (rs !== "not_applicable") {
-    throw new Error("Cannot settle a payment with an active or completed refund");
-  }
-
-  const reference = options?.reference?.trim() || payoutReference();
-  const { data, error } = await table("payments")
-    .update({
-      payout_status: "paid",
-      paid_at: new Date().toISOString(),
-      paid_by: adminId,
-      payout_reference: reference,
-      ...(options?.receiptUrl ? { payout_receipt_url: options.receiptUrl } : {}),
-    } as Database["public"]["Tables"]["payments"]["Update"])
-    .eq("id", paymentId)
-    .select(PAYMENT_ADMIN_SELECT)
-    .single();
-
-  if (error) throw error;
-  const payment = data as AdminPayment;
-  if (options?.notifyDoctorUserId) {
-    await notifyDoctorPayout(
-      options.notifyDoctorUserId,
-      Number(payment.doctor_earning),
-      reference
-    );
-  }
-  return payment;
+  throw new Error("Doctors receive patient payments directly. There is nothing for admin to clear.");
 }
 
-/** Revert a settlement back to pending (correction / clawback). */
-export async function markPaymentPending(paymentId: string): Promise<AdminPayment> {
-  const { data, error } = await table("payments")
-    .update({
-      payout_status: "pending",
-      paid_at: null,
-      paid_by: null,
-      payout_reference: null,
-    } as Database["public"]["Tables"]["payments"]["Update"])
-    .eq("id", paymentId)
-    .select(PAYMENT_ADMIN_SELECT)
-    .single();
-
-  if (error) throw error;
-  return data as AdminPayment;
+/** Doctors already hold the patient fee. Admin cannot revert a payout. */
+export async function markPaymentPending(_paymentId: string): Promise<AdminPayment> {
+  throw new Error("Doctors receive patient payments directly. There is nothing for admin to clear.");
 }
 
-// --- Patient payment proof approval ---
+// Patient payment proofs are reviewed by the assigned doctor.
 
-async function notifyPatientPayment(
-  patientId: string,
-  title: string,
-  message: string,
-  metadata?: Record<string, unknown>
-) {
-  await safeNotify(() => createNotification(patientId, title, message, "payment", metadata));
-}
-
-/** Approve a patient's payment proof and confirm their booking. */
+/** Patient payment proofs are reviewed by the assigned doctor, not admin. */
 export async function approvePatientPayment(
-  paymentId: string,
-  adminId: string
+  _paymentId: string,
+  _adminId: string
 ): Promise<AdminPayment> {
-  const { data: existing, error: fetchError } = await table("payments")
-    .select("id, status, proof_url, appointment_id, patient_id, amount")
-    .eq("id", paymentId)
-    .maybeSingle();
-
-  if (fetchError) throw fetchError;
-  if (!existing) throw new Error("Payment not found");
-  const row = existing as {
-    id: string;
-    status: string;
-    proof_url: string | null;
-    appointment_id: string;
-    patient_id: string;
-    amount: number;
-  };
-  if (row.status !== "pending") throw new Error("Only pending payments can be approved");
-  if (!row.proof_url) throw new Error("No payment proof uploaded yet");
-
-  // A booking whose slot already started (past the join grace window) would
-  // become an expired appointment the moment it is confirmed. Block approval
-  // so the admin rejects/refunds instead of charging for a dead session.
-  const { data: aptData, error: aptFetchError } = await table("appointments")
-    .select("scheduled_at, status, appointment_type, doctor_id")
-    .eq("id", row.appointment_id)
-    .maybeSingle();
-  if (aptFetchError) throw aptFetchError;
-  const apt = aptData as {
-    scheduled_at: string;
-    status: string;
-    appointment_type?: string;
-    doctor_id?: string;
-  } | null;
-  if (!apt) throw new Error("Appointment for this payment was not found");
-  if (apt.status !== "pending_payment") {
-    throw new Error("This appointment is no longer awaiting payment confirmation");
-  }
-  const graceEndMs =
-    new Date(apt.scheduled_at).getTime() + GRACE_MINUTES_AFTER_START * 60_000;
-  if (Date.now() > graceEndMs) {
-    throw new Error(
-      "This appointment's scheduled time has already passed, so it cannot be confirmed. Reject the payment proof instead so the patient can re-book (and refund if the amount was received)."
-    );
-  }
-
-  const txnId = `TXN-${row.id.slice(0, 8).toUpperCase()}`;
-  const now = new Date().toISOString();
-
-  const { data: payment, error: payError } = await table("payments")
-    .update({
-      status: "completed",
-      transaction_id: txnId,
-      reviewed_by: adminId,
-      reviewed_at: now,
-      rejection_reason: null,
-    } as Database["public"]["Tables"]["payments"]["Update"])
-    .eq("id", paymentId)
-    .select(PAYMENT_ADMIN_SELECT)
-    .single();
-
-  if (payError) throw payError;
-
-  const { error: aptError } = await table("appointments")
-    .update({ status: "scheduled" } as Database["public"]["Tables"]["appointments"]["Update"])
-    .eq("id", row.appointment_id);
-
-  if (aptError) throw aptError;
-
-  const aptRow = payment as AdminPayment & {
-    doctor?: { user_id?: string; profile?: { full_name?: string } | null } | { user_id?: string; profile?: { full_name?: string } | null }[] | null;
-  };
-  const doctorRel = Array.isArray(aptRow.doctor) ? aptRow.doctor[0] : aptRow.doctor;
-  let doctorUserId = doctorRel?.user_id;
-  if (!doctorUserId && apt.doctor_id) {
-    const { data: docRow } = await table("doctor_profiles")
-      .select("user_id")
-      .eq("id", apt.doctor_id)
-      .maybeSingle();
-    doctorUserId = (docRow as { user_id?: string } | null)?.user_id;
-  }
-  const doctorName = doctorRel?.profile?.full_name
-    ? `Dr. ${doctorRel.profile.full_name}`
-    : "";
-  const when = new Date(apt.scheduled_at).toLocaleString("en-PK", {
-    weekday: "short",
-    day: "numeric",
-    month: "short",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: true,
-    timeZone: "Asia/Karachi",
-  });
-  const amountLabel = `PKR ${Math.round(Number(row.amount)).toLocaleString("en-PK")}`;
-
-  await notifyPatientPayment(
-    row.patient_id,
-    "Payment approved",
-    `Your payment of ${amountLabel} was approved. Your appointment${doctorName ? ` with ${doctorName}` : ""} on ${when} is now confirmed.`,
-    {
-      payment_id: paymentId,
-      appointment_id: row.appointment_id,
-      event: "payment_approved",
-    }
-  );
-
-  if (doctorUserId) {
-    await safeNotify(() => createNotification(
-      doctorUserId,
-      "Payment approved — booking confirmed",
-      `Payment for the ${when} visit is confirmed. The appointment is on your schedule.`,
-      "appointment",
-      { appointment_id: row.appointment_id, payment_id: paymentId, event: "payment_approved" }
-    ));
-  }
-
-  await safeNotify(async () => {
-    await fetch("/api/appointments/notify", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        type: "payment_approved",
-        appointmentId: row.appointment_id,
-        patientId: row.patient_id,
-        scheduledAt: apt.scheduled_at,
-        consultationFee: Number(row.amount),
-        appointmentType: apt.appointment_type,
-      }),
-    });
-  });
-
-  return payment as AdminPayment;
+  throw new Error("Patient payment proofs are approved by the assigned doctor.");
 }
 
-/** Reject a patient's payment proof. Booking stays unconfirmed. */
+/** Patient payment proofs are reviewed by the assigned doctor, not admin. */
 export async function rejectPatientPayment(
-  paymentId: string,
-  adminId: string,
-  reason?: string
+  _paymentId: string,
+  _adminId: string,
+  _reason?: string
 ): Promise<AdminPayment> {
-  const { data: existing, error: fetchError } = await table("payments")
-    .select("id, status, patient_id, amount, appointment_id")
-    .eq("id", paymentId)
-    .maybeSingle();
-
-  if (fetchError) throw fetchError;
-  if (!existing) throw new Error("Payment not found");
-  const row = existing as {
-    id: string;
-    status: string;
-    patient_id: string;
-    amount: number;
-    appointment_id: string;
-  };
-  if (row.status !== "pending") throw new Error("Only pending payments can be rejected");
-
-  const rejectionReason =
-    reason?.trim() || "Payment proof could not be verified. Please upload a valid screenshot.";
-
-  const { data: payment, error: payError } = await table("payments")
-    .update({
-      reviewed_by: adminId,
-      reviewed_at: new Date().toISOString(),
-      rejection_reason: rejectionReason,
-    } as Database["public"]["Tables"]["payments"]["Update"])
-    .eq("id", paymentId)
-    .select(PAYMENT_ADMIN_SELECT)
-    .single();
-
-  if (payError) throw payError;
-
-  await notifyPatientPayment(
-    row.patient_id,
-    "Payment rejected",
-    `${rejectionReason} You can upload a new screenshot from My Appointments.`,
-    { payment_id: paymentId, appointment_id: row.appointment_id, event: "payment_rejected" }
-  );
-
-  await safeNotify(async () => {
-    await fetch("/api/appointments/notify", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        type: "payment_rejected",
-        appointmentId: row.appointment_id,
-        patientId: row.patient_id,
-        scheduledAt: new Date().toISOString(),
-        reason: rejectionReason,
-      }),
-    });
-  });
-
-  return payment as AdminPayment;
+  throw new Error("Patient payment proofs are rejected by the assigned doctor.");
 }
 
-/**
- * Settle every outstanding (completed + pending) payment for one doctor in a
- * single batch. Returns the updated rows and the shared payout reference.
- */
+/** Doctors receive patient fees directly. Admin no longer settles batches. */
 export async function settleDoctorPayments(
-  doctorProfileId: string,
-  adminId: string,
-  options?: { notifyDoctorUserId?: string; receiptUrl?: string }
+  _doctorProfileId: string,
+  _adminId: string,
+  _options?: { notifyDoctorUserId?: string; receiptUrl?: string }
 ): Promise<{ updated: AdminPayment[]; reference: string; total: number }> {
-  const reference = payoutReference();
-  const { data, error } = await table("payments")
-    .update({
-      payout_status: "paid",
-      paid_at: new Date().toISOString(),
-      paid_by: adminId,
-      payout_reference: reference,
-      ...(options?.receiptUrl ? { payout_receipt_url: options.receiptUrl } : {}),
-    } as Database["public"]["Tables"]["payments"]["Update"])
-    .eq("doctor_id", doctorProfileId)
-    .eq("status", "completed")
-    .eq("payout_status", "pending")
-    .eq("refund_status", "not_applicable")
-    .select(PAYMENT_ADMIN_SELECT);
-
-  if (error) throw error;
-  const updated = (data ?? []) as AdminPayment[];
-  const total = updated.reduce((sum, p) => sum + Number(p.doctor_earning), 0);
-  if (options?.notifyDoctorUserId && total > 0) {
-    await notifyDoctorPayout(options.notifyDoctorUserId, total, reference);
-  }
-  return { updated, reference, total };
+  throw new Error("Doctors receive patient payments directly. There is nothing for admin to clear.");
 }
 
 // --- Aggregation helpers (pure) ---

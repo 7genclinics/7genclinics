@@ -362,7 +362,7 @@ export default function PatientPaymentsPage() {
       <div className="flex items-center gap-3 p-4 rounded-xl border border-blue-500/10 bg-brand-500/5 text-xs text-muted-foreground">
         <ShieldCheck className="h-5 w-5 text-blue-500 shrink-0" />
         <span>
-          All transactions are secured with 128-bit SSL encryption. We support JazzCash, EasyPaisa, and card payments.
+          All consultation payments go to the doctor. JazzCash, EasyPaisa, and bank transfer use the accounts the doctor saved.
         </span>
       </div>
 

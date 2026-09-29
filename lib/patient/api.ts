@@ -352,6 +352,15 @@ export async function bookAppointment(params: {
   } = await supabase.auth.getUser();
   if (!user) throw new Error("Not signed in");
 
+  const accountsRes = await fetch(`/api/doctors/${params.doctorProfileId}/payment-accounts`);
+  const accountsBody = (await accountsRes.json()) as {
+    accounts?: Array<{ method: string }>;
+  };
+  const offered = accountsBody.accounts ?? [];
+  if (!offered.some((account) => account.method === params.paymentMethod)) {
+    throw new Error("This doctor does not accept that payment method. Choose one of their accounts.");
+  }
+
   const { data: inserted, error: aptError } = await table("appointments")
     .insert({
       patient_id: user.id,
@@ -411,8 +420,8 @@ export async function bookAppointment(params: {
     () =>
       table("appointments").select(APPOINTMENT_SELECT_BASE).eq("id", inserted.id).single(),
   );
-  const platformFee = Math.round(params.consultationFee * 0.1 * 100) / 100;
-  const doctorEarning = params.consultationFee - platformFee;
+  const platformFee = 0;
+  const doctorEarning = params.consultationFee;
 
   const { data: payment, error: payError } = await table("payments")
     .insert({

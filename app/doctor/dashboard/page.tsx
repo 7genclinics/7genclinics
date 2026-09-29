@@ -133,19 +133,17 @@ export default function DoctorDashboardPage() {
         (p) => new Date(p.created_at) >= monthStart
       );
       setMonthlyEarnings(
-        monthPayments.reduce((sum, p) => sum + Number(p.doctor_earning), 0)
+        monthPayments.reduce((sum, p) => sum + Number(p.amount), 0)
       );
       setPendingPaymentReviews(
         payments.filter((p) => p.status === "pending" && p.proof_url).length
       );
 
       setWallet({
-        disbursable: earnedPayments
-          .filter((p) => p.payout_status === "paid")
-          .reduce((sum, p) => sum + Number(p.doctor_earning), 0),
-        pending: earnedPayments
-          .filter((p) => p.payout_status !== "paid")
-          .reduce((sum, p) => sum + Number(p.doctor_earning), 0),
+        disbursable: earnedPayments.reduce((sum, p) => sum + Number(p.amount), 0),
+        pending: payments
+          .filter((p) => p.status === "pending")
+          .reduce((sum, p) => sum + Number(p.amount), 0),
       });
 
       const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -154,7 +152,7 @@ export default function DoctorDashboardPage() {
         const key = getPkDateWithOffset(-i);
         const amount = earnedPayments
           .filter((p) => getPkDateKey(p.created_at) === key)
-          .reduce((sum, p) => sum + Number(p.doctor_earning), 0);
+          .reduce((sum, p) => sum + Number(p.amount), 0);
         const [y, m, d] = key.split("-").map(Number);
         const weekday = new Date(Date.UTC(y, m - 1, d, 12)).getUTCDay();
         chartDays.push({ name: dayNames[weekday], amount });
@@ -350,7 +348,7 @@ export default function DoctorDashboardPage() {
   };
 
   const requestEarlyPayout = () => {
-    showToast("Early disbursal requests are reviewed by finance within 24 hours.");
+    window.location.href = "/doctor/payments";
   };
 
   const saveQuickNote = async () => {
@@ -745,20 +743,19 @@ export default function DoctorDashboardPage() {
             <CardContent className="space-y-4">
               <div className="grid grid-cols-2 gap-3 text-xs bg-muted/40 p-3 rounded-xl border">
                 <div>
-                  <p className="text-muted-foreground">Cleared</p>
+                  <p className="text-muted-foreground">Received</p>
                   <p className="text-sm font-bold text-emerald-600 mt-0.5">{formatCurrency(wallet.disbursable)}</p>
                 </div>
                 <div>
-                  <p className="text-muted-foreground">Pending Settlement</p>
+                  <p className="text-muted-foreground">Awaiting review</p>
                   <p className="text-sm font-bold text-amber-600 mt-0.5">{formatCurrency(wallet.pending)}</p>
                 </div>
               </div>
-              <div className="text-[10px] text-muted-foreground flex justify-between">
-                <span>Cleared payouts update live</span>
-                <span className="font-semibold text-foreground">Synced with admin</span>
+              <div className="text-[10px] text-muted-foreground">
+                Confirmed patient payments are already in your account.
               </div>
               <Button onClick={requestEarlyPayout} size="sm" className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs py-4">
-                Request Early Disbursal
+                Review payment proofs
               </Button>
             </CardContent>
           </Card>

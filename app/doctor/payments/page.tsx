@@ -83,7 +83,7 @@ export default function DoctorPaymentsPage() {
       <div>
         <h1 className="font-heading text-2xl font-bold tracking-tight">Payment approvals</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Review patient payment screenshots and approve them to confirm the booking.
+          Review the screenshot. Approving confirms the booking and records the full fee as received in your account.
         </p>
       </div>
 

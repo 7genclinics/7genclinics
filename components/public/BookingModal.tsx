@@ -13,7 +13,9 @@ import {
   shouldRefreshSlotsAfterBookingError,
 } from "@/lib/booking/slot-status";
 import { useDoctorSlotAvailability } from "@/lib/hooks/useDoctorSlotAvailability";
-import type { AppointmentType } from "@/types";
+import type { AppointmentType, PaymentMethod } from "@/types";
+import type { PaymentAccountDetails } from "@/lib/payment/config";
+import { isBookableDoctorMethod } from "@/lib/payments/doctor-accounts";
 
 export interface BookingDoctorInfo {
   id: string;
@@ -54,6 +56,8 @@ export function BookingModal({
   const [bookNotes, setBookNotes] = useState("");
   const [booking, setBooking] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [accounts, setAccounts] = useState<PaymentAccountDetails[]>([]);
+  const [accountsLoading, setAccountsLoading] = useState(true);
 
   const {
     bookedSlots,
@@ -71,6 +75,25 @@ export function BookingModal({
     doctorId: doctor.id,
     date: bookDate,
   });
+
+  useEffect(() => {
+    let cancelled = false;
+    setAccountsLoading(true);
+    fetch(`/api/doctors/${doctor.id}/payment-accounts`)
+      .then((res) => res.json())
+      .then((body: { accounts?: PaymentAccountDetails[] }) => {
+        if (!cancelled) setAccounts(body.accounts ?? []);
+      })
+      .catch(() => {
+        if (!cancelled) setAccounts([]);
+      })
+      .finally(() => {
+        if (!cancelled) setAccountsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [doctor.id]);
 
   useEffect(() => {
     const firstFree = findFirstAvailable();
@@ -109,6 +132,18 @@ export function BookingModal({
       return;
     }
 
+    if (!accountsLoading && accounts.length === 0) {
+      setError("This doctor has not added a payment account yet.");
+      setBooking(false);
+      return;
+    }
+    const method = accounts[0]?.method;
+    if (!method || !isBookableDoctorMethod(method)) {
+      setError("This doctor has not added a payment account yet.");
+      setBooking(false);
+      return;
+    }
+
     try {
       const scheduledAt = pkDateTimeToUtcIso(bookDate, bookTime);
       await bookAppointment({
@@ -118,7 +153,7 @@ export function BookingModal({
         patientNotes: bookNotes,
         consultationFee: doctor.consultationFeeRaw,
         durationMinutes: sessionDuration,
-        paymentMethod: "jazzcash",
+        paymentMethod: method as PaymentMethod,
         serviceId,
       });
       onSuccess();
@@ -214,8 +249,8 @@ export function BookingModal({
           </div>
 
           <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
-            Consultation fee: <strong>{doctor.consultationFee}</strong>. After booking, pay to the
-            admin account and upload your payment screenshot from My Appointments to confirm.
+            Consultation fee: <strong>{doctor.consultationFee}</strong>. After booking, pay the doctor's
+            account and upload your payment screenshot from My Appointments. The doctor confirms the booking.
           </p>
 
           <div className="flex gap-3 pt-2">
@@ -227,6 +262,8 @@ export function BookingModal({
               className="flex-1 bg-brand-500 text-white hover:bg-brand-600"
               disabled={
                 booking ||
+                accountsLoading ||
+                accounts.length === 0 ||
                 slotsLoading ||
                 !hasAvailabilityConfigured ||
                 timeOptions.length === 0 ||

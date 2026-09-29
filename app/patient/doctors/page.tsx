@@ -11,7 +11,8 @@ import { ALL_CITIES_LABEL, filterDoctors, getActiveFilterCount } from "@/lib/pub
 import { UserAvatar } from "@/components/shared/UserAvatar";
 import { PaymentProofUpload } from "@/components/patient/PaymentProofUpload";
 import { SlotTimePicker } from "@/components/booking/SlotTimePicker";
-import { BOOKING_PAYMENT_METHODS, PLATFORM_PAYMENT_ACCOUNTS, type BookablePaymentMethod } from "@/lib/payment/config";
+import type { PaymentAccountDetails, BookablePaymentMethod } from "@/lib/payment/config";
+import { isBookableDoctorMethod } from "@/lib/payments/doctor-accounts";
 import { pkDateTimeToUtcIso } from "@/lib/booking/timezone";
 import { getPkTodayDate, isSlotInPast } from "@/lib/booking/slots";
 import {
@@ -52,6 +53,8 @@ export default function PatientDoctorsPage() {
   const [proofFile, setProofFile] = useState<File | null>(null);
   const [booking, setBooking] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [doctorAccounts, setDoctorAccounts] = useState<PaymentAccountDetails[]>([]);
+  const [accountsLoading, setAccountsLoading] = useState(false);
 
   const {
     bookedSlots,
@@ -139,6 +142,33 @@ export default function PatientDoctorsPage() {
     specialty: undefined,
   });
 
+  useEffect(() => {
+    if (!bookingDoctor) {
+      setDoctorAccounts([]);
+      return;
+    }
+    let cancelled = false;
+    setAccountsLoading(true);
+    fetch(`/api/doctors/${bookingDoctor.id}/payment-accounts`)
+      .then((res) => res.json())
+      .then((body: { accounts?: PaymentAccountDetails[] }) => {
+        if (cancelled) return;
+        const accounts = body.accounts ?? [];
+        setDoctorAccounts(accounts);
+        const first = accounts[0];
+        if (first && isBookableDoctorMethod(first.method)) setPaymentMethod(first.method);
+      })
+      .catch(() => {
+        if (!cancelled) setDoctorAccounts([]);
+      })
+      .finally(() => {
+        if (!cancelled) setAccountsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [bookingDoctor]);
+
   const filteredDoctors = useMemo(
     () => filterDoctors(doctors, doctorFilters),
     [doctors, doctorFilters],
@@ -174,6 +204,11 @@ export default function PatientDoctorsPage() {
       setError(t("doctors.noSlots"));
       return;
     }
+    if (accountsLoading) return;
+    if (doctorAccounts.length === 0) {
+      setError("This doctor has not added a JazzCash, EasyPaisa, or bank account yet.");
+      return;
+    }
     if (
       isSlotInPast(bookDate, bookTime) ||
       !isSlotSelectable(bookTime, bookedSlots, blockedSlots)
@@ -188,6 +223,11 @@ export default function PatientDoctorsPage() {
   const handleBookSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!bookingDoctor) return;
+    const selectedAccount = doctorAccounts.find((account) => account.method === paymentMethod);
+    if (!selectedAccount) {
+      setError("Choose one of this doctor's payment accounts.");
+      return;
+    }
     setBooking(true);
     setError(null);
 
@@ -536,7 +576,7 @@ export default function PatientDoctorsPage() {
                 <div className="flex items-start gap-2 p-3 rounded-lg bg-amber-50 border border-amber-200 text-xs text-amber-900">
                   <CreditCard className="h-4 w-4 shrink-0 mt-0.5" />
                   <span>
-                    Consultation fee: <strong>{bookingDoctor.consultationFee}</strong>. You must pay this amount and upload a screenshot on the next step. Admin will verify payment before confirming your booking.
+                    Consultation fee: <strong>{bookingDoctor.consultationFee}</strong>. On the next step you pay this amount to the doctor's account and can upload a screenshot. The doctor confirms the booking.
                   </span>
                 </div>
                 <div className="flex gap-3 pt-2">
@@ -556,7 +596,7 @@ export default function PatientDoctorsPage() {
                 <div className="flex items-start gap-2 p-3 rounded-lg bg-brand-50 border border-brand-100 text-xs text-blue-900">
                   <ShieldCheck className="h-4 w-4 shrink-0 mt-0.5" />
                   <span>
-                    Pay <strong>{bookingDoctor.consultationFee}</strong> to the admin account below. Upload your payment screenshot now, or add it later from My Appointments. Your booking is confirmed after admin approval.
+                    Pay <strong>{bookingDoctor.consultationFee}</strong> to the doctor's account below. Upload your payment screenshot now, or add it later from My Appointments. Your doctor confirms the booking after checking the payment.
                   </span>
                 </div>
                 <div>
@@ -566,18 +606,23 @@ export default function PatientDoctorsPage() {
                     onChange={(e) => setPaymentMethod(e.target.value as BookablePaymentMethod)}
                     className="w-full h-10 px-4 rounded-lg border border-border text-sm"
                   >
-                    {BOOKING_PAYMENT_METHODS.map((method) => (
-                      <option key={method} value={method}>
-                        {PLATFORM_PAYMENT_ACCOUNTS[method].label}
+                    {doctorAccounts.map((account) => (
+                      <option key={account.method} value={account.method}>
+                        {account.label}
                       </option>
                     ))}
                   </select>
                 </div>
                 <div className="p-4 rounded-lg border border-border bg-muted/30 space-y-2 text-sm">
-                  <p className="font-semibold">{PLATFORM_PAYMENT_ACCOUNTS[paymentMethod].accountTitle}</p>
-                  <p className="font-mono text-base">{PLATFORM_PAYMENT_ACCOUNTS[paymentMethod].accountNumber}</p>
+                  <p className="font-semibold">{doctorAccounts.find((account) => account.method === paymentMethod)?.accountTitle}</p>
+                  {doctorAccounts.find((account) => account.method === paymentMethod)?.bankName && (
+                    <p className="text-xs text-muted-foreground">
+                      {doctorAccounts.find((account) => account.method === paymentMethod)?.bankName}
+                    </p>
+                  )}
+                  <p className="font-mono text-base">{doctorAccounts.find((account) => account.method === paymentMethod)?.accountNumber}</p>
                   <p className="text-xs text-muted-foreground">
-                    {PLATFORM_PAYMENT_ACCOUNTS[paymentMethod].instructions}
+                    {doctorAccounts.find((account) => account.method === paymentMethod)?.instructions}
                   </p>
                 </div>
                 <div>

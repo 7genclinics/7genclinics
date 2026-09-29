@@ -10,10 +10,14 @@ export interface DoctorCertificate {
 export interface DoctorDocuments {
   certificates?: DoctorCertificate[];
   payout_settings?: {
-    method: "bank" | "easypaisa" | "jazzcash";
-    bankName: string;
-    iban: string;
-    walletNumber: string;
+    method?: "bank" | "easypaisa" | "jazzcash";
+    bankName?: string;
+    iban?: string;
+    walletNumber?: string;
+    accountTitle?: string;
+    jazzcash?: string;
+    easypaisa?: string;
+    accountNumber?: string;
   };
   telehealth_settings?: {
     sessionDuration: number;

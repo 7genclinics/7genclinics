@@ -35,7 +35,7 @@ import { matchesAnyFlexibleText } from "@/lib/search/flexible-match";
 import { UserAvatar } from "@/components/shared/UserAvatar";
 import { AppointmentFinancialDetails } from "@/components/shared/AppointmentFinancialDetails";
 import { PaymentProofUpload } from "@/components/patient/PaymentProofUpload";
-import { fetchPlatformPaymentAccounts, FALLBACK_PAYMENT_ACCOUNTS, type PaymentAccountDetails, type BookablePaymentMethod } from "@/lib/payment/config";
+import type { PaymentAccountDetails, BookablePaymentMethod } from "@/lib/payment/config";
 import { getErrorMessage } from "@/lib/errors";
 import { usePaymentsRealtime } from "@/lib/realtime/usePaymentsRealtime";
 import { useLocale } from "@/contexts/LocaleContext";
@@ -62,9 +62,7 @@ export default function PatientAppointmentsPage() {
   const seenPaidIds = useRef<Set<string> | null>(null);
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [uploadProofFile, setUploadProofFile] = useState<File | null>(null);
-  const [platformAccounts, setPlatformAccounts] = useState<PaymentAccountDetails[]>(
-    Object.values(FALLBACK_PAYMENT_ACCOUNTS)
-  );
+  const [accountsByDoctor, setAccountsByDoctor] = useState<Record<string, PaymentAccountDetails[]>>({});
   const itemsPerPage = 6;
 
   const clearBookedQuery = useCallback(() => {
@@ -80,12 +78,8 @@ export default function PatientAppointmentsPage() {
     if (!silent) setLoading(true);
     setError(null);
     try {
-      const [data, accounts] = await Promise.all([
-        getPatientAppointments(),
-        fetchPlatformPaymentAccounts(),
-      ]);
+      const data = await getPatientAppointments();
       setAppointments(data.map(mapToPatientAppointment));
-      if (accounts.length > 0) setPlatformAccounts(accounts);
     } catch (err) {
       if (!silent) {
         setError(getErrorMessage(err, "Failed to load appointments"));
@@ -157,7 +151,7 @@ export default function PatientAppointmentsPage() {
     if (booked === "pending" && awaitingReview) {
       setBannerKind("pending");
       setSuccessMessage(
-        "Payment proof submitted! Please wait for admin to verify. You will receive a notification once confirmed."
+        "Payment proof submitted! Your doctor will verify it. You will receive a notification once the booking is confirmed."
       );
       return;
     }
@@ -278,15 +272,35 @@ export default function PatientAppointmentsPage() {
     setShowUploadModal(true);
   };
 
-  const getPaymentAccount = (method: PatientUIAppointment["paymentMethod"]) => {
-    const key = (method ?? "jazzcash") as BookablePaymentMethod;
-    return (
-      platformAccounts.find((a) => a.method === key) ??
-      platformAccounts[0] ??
-      FALLBACK_PAYMENT_ACCOUNTS[key] ??
-      FALLBACK_PAYMENT_ACCOUNTS.jazzcash
-    );
+  const getPaymentAccount = (apt: PatientUIAppointment | null) => {
+    if (!apt) return null;
+    const accounts = accountsByDoctor[apt.doctorId] ?? [];
+    const key = (apt.paymentMethod ?? accounts[0]?.method) as BookablePaymentMethod | undefined;
+    return accounts.find((account) => account.method === key) ?? accounts[0] ?? null;
   };
+
+  useEffect(() => {
+    const ids = [...new Set(appointments.map((apt) => apt.doctorId).filter(Boolean))];
+    if (ids.length === 0) return;
+    let cancelled = false;
+    Promise.all(
+      ids.map(async (id) => {
+        const res = await fetch(`/api/doctors/${id}/payment-accounts`);
+        const body = (await res.json()) as { accounts?: PaymentAccountDetails[] };
+        return [id, body.accounts ?? []] as const;
+      })
+    )
+      .then((rows) => {
+        if (cancelled) return;
+        setAccountsByDoctor(Object.fromEntries(rows));
+      })
+      .catch(() => {
+        if (!cancelled) setAccountsByDoctor({});
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [appointments]);
 
   if (loading) {
     return (
@@ -678,15 +692,24 @@ export default function PatientAppointmentsPage() {
                   <div>
                     <p className="text-sm font-semibold text-orange-900">Pay to confirm this booking</p>
                     <p className="text-xs text-orange-800 mt-1">
-                      Transfer {formatCurrency(selectedAppointment.consultationFee)} to the admin account, then add your payment screenshot below.
+                      Transfer {formatCurrency(selectedAppointment.consultationFee)} to your doctor's account, then add your payment screenshot below.
                     </p>
                   </div>
                   <div className="p-3 rounded-lg border border-orange-200 bg-white text-sm space-y-1">
-                    <p className="font-semibold">{getPaymentAccount(selectedAppointment.paymentMethod).accountTitle}</p>
-                    <p className="font-mono">{getPaymentAccount(selectedAppointment.paymentMethod).accountNumber}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {getPaymentAccount(selectedAppointment.paymentMethod).instructions}
-                    </p>
+                    {getPaymentAccount(selectedAppointment) ? (
+                      <>
+                        <p className="font-semibold">{getPaymentAccount(selectedAppointment)?.accountTitle}</p>
+                        {getPaymentAccount(selectedAppointment)?.bankName && (
+                          <p className="text-xs text-muted-foreground">{getPaymentAccount(selectedAppointment)?.bankName}</p>
+                        )}
+                        <p className="font-mono">{getPaymentAccount(selectedAppointment)?.accountNumber}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {getPaymentAccount(selectedAppointment)?.instructions}
+                        </p>
+                      </>
+                    ) : (
+                      <p className="text-xs text-orange-800">This doctor has not published a payment account yet.</p>
+                    )}
                   </div>
                   {selectedAppointment.paymentRejectionReason && (
                     <p className="text-xs text-red-600 flex items-start gap-1.5">
@@ -713,7 +736,7 @@ export default function PatientAppointmentsPage() {
               )}
               {selectedAppointment.status === "Payment Review" && (
                 <div className="rounded-xl border border-violet-200 bg-violet-50 p-4 text-sm text-violet-900">
-                  Payment proof submitted. Waiting for admin approval to confirm your booking.
+                  Payment proof submitted. Waiting for your doctor to confirm the booking.
                   {selectedAppointment.paymentProofUrl && (
                     <div className="mt-3 rounded-lg border border-violet-200 overflow-hidden bg-white">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -850,12 +873,12 @@ export default function PatientAppointmentsPage() {
             </div>
             <div className="p-6 space-y-4">
               <p className="text-sm text-muted-foreground">
-                Pay the consultation fee to the admin account, then upload your payment screenshot. Admin will confirm your booking after review.
+                Pay the consultation fee to your doctor's account, then upload the screenshot. Your doctor confirms the booking after checking it.
               </p>
-              {selectedAppointment && (
+              {selectedAppointment && getPaymentAccount(selectedAppointment) && (
                 <div className="p-3 rounded-lg border border-border bg-muted/30 text-sm space-y-1">
-                  <p className="font-semibold">{getPaymentAccount(selectedAppointment.paymentMethod).accountTitle}</p>
-                  <p className="font-mono">{getPaymentAccount(selectedAppointment.paymentMethod).accountNumber}</p>
+                  <p className="font-semibold">{getPaymentAccount(selectedAppointment)?.accountTitle}</p>
+                  <p className="font-mono">{getPaymentAccount(selectedAppointment)?.accountNumber}</p>
                 </div>
               )}
               <PaymentProofUpload onFileSelect={setUploadProofFile} disabled={actionLoading} />

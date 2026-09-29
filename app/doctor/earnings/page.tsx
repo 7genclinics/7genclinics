@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { 
-  Download, Wallet, DollarSign, TrendingUp, Calendar as CalendarIcon, ArrowUpRight, Check, X, Search, Calculator
+  Download, Wallet, DollarSign, TrendingUp, Calendar as CalendarIcon, ArrowUpRight, Check, Search, Calculator
 } from "lucide-react";
 import { 
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
@@ -38,7 +38,6 @@ export default function DoctorEarningsPage() {
   const [sessionsPerWeek, setSessionsPerWeek] = useState(15);
   const [sessionFee, setSessionFee] = useState(doctorProfile.consultation_fee || 3000);
 
-  const [showPayoutModal, setShowPayoutModal] = useState(false);
   const [accruedBalance, setAccruedBalance] = useState(0);
   const [clearedTotal, setClearedTotal] = useState(0);
   const [totalEarned, setTotalEarned] = useState(0);
@@ -66,13 +65,14 @@ export default function DoctorEarningsPage() {
       // Only collected (patient-paid) consultations count toward earnings.
       // Exclude payments with active or completed refunds.
       const completed = payments.filter(isDoctorNetEarning);
-      const cleared = completed.filter((p) => p.payout_status === "paid");
-      const pending = completed.filter((p) => p.payout_status !== "paid");
+      const received = completed.reduce((sum, p) => sum + Number(p.amount), 0);
+      const awaitingProof = payments
+        .filter((p) => p.status === "pending")
+        .reduce((sum, p) => sum + Number(p.amount), 0);
 
-      // Pending settlement = earned but not yet cleared by admin.
-      setAccruedBalance(pending.reduce((sum, p) => sum + Number(p.doctor_earning), 0));
-      setClearedTotal(cleared.reduce((sum, p) => sum + Number(p.doctor_earning), 0));
-      setTotalEarned(completed.reduce((sum, p) => sum + Number(p.doctor_earning), 0));
+      setAccruedBalance(awaitingProof);
+      setClearedTotal(received);
+      setTotalEarned(received);
 
       setIndividualTransactions(
         completed.map((p) => ({
@@ -84,11 +84,11 @@ export default function DoctorEarningsPage() {
             day: "numeric",
           }),
           gross: Number(p.amount),
-          net: Number(p.doctor_earning),
+          net: Number(p.amount),
           method: p.appointment
             ? `${mapAppointmentType(p.appointment.appointment_type)} Consult`
             : "Consultation",
-          payoutStatus: p.payout_status === "paid" ? "Paid" : "Pending",
+          payoutStatus: "Paid",
         }))
       );
 
@@ -109,7 +109,7 @@ export default function DoctorEarningsPage() {
         chartData.push({
           name: monthNames[date.getMonth()],
           gross: monthPayments.reduce((sum, p) => sum + Number(p.amount), 0),
-          net: monthPayments.reduce((sum, p) => sum + Number(p.doctor_earning), 0),
+          net: monthPayments.reduce((sum, p) => sum + Number(p.amount), 0),
         });
       }
       setMonthlyRevenueData(chartData);
@@ -138,17 +138,21 @@ export default function DoctorEarningsPage() {
             year: "numeric",
           }),
           grossEarnings: Number(p.amount),
-          platformCommission: Number(p.platform_fee),
-          netPaid: Number(p.doctor_earning),
-          status: p.payout_status === "paid" ? "Paid" : "Pending",
+          platformCommission: 0,
+          netPaid: Number(p.amount),
+          status: "Paid",
           datePaid: p.paid_at
             ? new Date(p.paid_at).toLocaleDateString("en-PK", {
                 month: "long",
                 day: "numeric",
                 year: "numeric",
               })
-            : "—",
-          reference: p.payout_reference ?? "—",
+            : new Date(p.created_at).toLocaleDateString("en-PK", {
+                month: "long",
+                day: "numeric",
+                year: "numeric",
+              }),
+          reference: p.transaction_id ?? "Received",
         }))
       );
     } catch {
@@ -190,8 +194,7 @@ export default function DoctorEarningsPage() {
       ["Doctor", doctorProfile.specialization],
       ["Earning Period", pay.period],
       ["Gross Fee (PKR)", String(pay.grossEarnings)],
-      ["Platform Commission (PKR)", String(pay.platformCommission)],
-      ["Net Disbursement (PKR)", String(pay.netPaid)],
+      ["Amount received (PKR)", String(pay.netPaid)],
       ["Status", pay.status],
       ["Date Disbursed", pay.datePaid],
       ["Reference", pay.reference],
@@ -207,12 +210,6 @@ export default function DoctorEarningsPage() {
     link.click();
     URL.revokeObjectURL(url);
     showToast(`Receipt ${pay.id} downloaded.`);
-  };
-
-  const handleRequestPayout = () => {
-    if (accruedBalance <= 0) return;
-    showToast("Early disbursal request submitted. Finance team will process within 24 hours.");
-    setShowPayoutModal(false);
   };
 
   const CustomTooltip = ({ active, payload, label }: any) => {
@@ -257,21 +254,11 @@ export default function DoctorEarningsPage() {
       )}
 
       {/* Header Description */}
-      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
-        <div>
-          <h2 className="text-2xl font-bold tracking-tight">Earnings & Finances</h2>
-          <p className="text-sm text-muted-foreground mt-1">
-            Track your consultation fees, request custom payouts, and model weekly earnings.
-          </p>
-        </div>
-        {accruedBalance > 0 && (
-          <Button 
-            onClick={() => setShowPayoutModal(true)} 
-            className="bg-brand-500 hover:bg-brand-600 text-white font-semibold"
-          >
-            Request Payout
-          </Button>
-        )}
+      <div>
+        <h2 className="text-2xl font-bold tracking-tight">Earnings & Finances</h2>
+        <p className="text-sm text-muted-foreground mt-1">
+          Patient fees you verified are already in your account. There is no admin payout to wait for.
+        </p>
       </div>
 
       {/* Finances Overview Cards */}
@@ -279,7 +266,7 @@ export default function DoctorEarningsPage() {
         <Card className="bg-gradient-to-br from-brand-400/10 to-transparent border-brand-400/20">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-semibold text-muted-foreground flex items-center justify-between">
-              Pending Settlement
+              Awaiting your review
               <Wallet className="h-4 w-4 text-brand-500" />
             </CardTitle>
           </CardHeader>
@@ -288,7 +275,7 @@ export default function DoctorEarningsPage() {
               <p className="text-3xl font-bold text-foreground">{formatCurrency(accruedBalance)}</p>
             </div>
             <p className="text-xs text-muted-foreground mt-2 flex items-center gap-1">
-              <CalendarIcon className="h-3 w-3" /> Earned, awaiting admin clearance
+              <CalendarIcon className="h-3 w-3" /> Proofs not confirmed yet
             </p>
           </CardContent>
         </Card>
@@ -305,7 +292,7 @@ export default function DoctorEarningsPage() {
               <p className="text-3xl font-bold">{formatCurrency(totalEarned)}</p>
             </div>
             <p className="text-xs text-muted-foreground mt-2 flex items-center gap-1">
-              <ArrowUpRight className="h-3 w-3 text-emerald-600" /> Lifetime net of commission
+              <ArrowUpRight className="h-3 w-3 text-emerald-600" /> Full patient fees you confirmed
             </p>
           </CardContent>
         </Card>
@@ -313,14 +300,14 @@ export default function DoctorEarningsPage() {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-semibold text-muted-foreground flex items-center justify-between">
-              Total Cleared
+              Received
               <TrendingUp className="h-4 w-4 text-emerald-600" />
             </CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-3xl font-bold">{formatCurrency(clearedTotal)}</p>
             <p className="text-xs text-muted-foreground mt-2">
-              Lifetime payouts settled by admin
+              Paid straight to your accounts
             </p>
           </CardContent>
         </Card>
@@ -328,21 +315,21 @@ export default function DoctorEarningsPage() {
         <Card className="bg-slate-50 dark:bg-slate-900/50">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-semibold text-muted-foreground flex items-center justify-between">
-              Linked Payout Account
+              Your payment accounts
               <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-base font-semibold truncate mt-1">Meezan Bank Ltd.</p>
-            <p className="text-xs text-muted-foreground mt-1 font-mono bg-card px-2 py-1 rounded border border-border inline-block">
-              IBAN: ...2304
+            <p className="text-base font-semibold truncate mt-1">Patients pay you directly</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              JazzCash, EasyPaisa, and bank details from your profile.
             </p>
-            <button 
-              onClick={() => showToast("Redirecting to profile console payout settings...")} 
-              className="block text-brand-500 hover:text-brand-600 mt-2 text-xs font-semibold cursor-pointer"
+            <a
+              href="/doctor/profile"
+              className="block text-brand-500 hover:text-brand-600 mt-2 text-xs font-semibold"
             >
-              Update bank details
-            </button>
+              Update payment accounts
+            </a>
           </CardContent>
         </Card>
       </div>
@@ -354,7 +341,7 @@ export default function DoctorEarningsPage() {
             <Calculator className="h-5 w-5 text-brand-500" />
             <div>
               <CardTitle>Clinical Projection Calculator</CardTitle>
-              <CardDescription>Plan your weekly sessions and model your monthly take-home revenue after platform commission (10%)</CardDescription>
+              <CardDescription>Plan weekly sessions. You keep the full consultation fee.</CardDescription>
             </div>
           </div>
         </CardHeader>
@@ -393,7 +380,7 @@ export default function DoctorEarningsPage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-3 gap-3 text-center bg-muted/20 p-4 rounded-xl border border-border">
+            <div className="grid grid-cols-2 gap-3 text-center bg-muted/20 p-4 rounded-xl border border-border">
               <div className="flex flex-col justify-center">
                 <p className="text-[10px] text-muted-foreground uppercase font-bold">Monthly Gross</p>
                 <p className="text-lg font-bold text-foreground mt-1">
@@ -401,15 +388,9 @@ export default function DoctorEarningsPage() {
                 </p>
               </div>
               <div className="flex flex-col justify-center border-x border-border/80 px-2">
-                <p className="text-[10px] text-muted-foreground uppercase font-bold">Platform Fee (10%)</p>
-                <p className="text-xs font-semibold text-rose-600 mt-1">
-                  -PKR {(((sessionsPerWeek * sessionFee) * 4) * 0.1).toLocaleString()}
-                </p>
-              </div>
-              <div className="flex flex-col justify-center">
-                <p className="text-[10px] text-muted-foreground uppercase font-bold">Net Take-Home</p>
+                <p className="text-[10px] text-muted-foreground uppercase font-bold">You receive</p>
                 <p className="text-lg font-black text-brand-500 mt-1">
-                  PKR {(((sessionsPerWeek * sessionFee) * 4) * 0.9).toLocaleString()}
+                  PKR {((sessionsPerWeek * sessionFee) * 4).toLocaleString()}
                 </p>
               </div>
             </div>
@@ -424,7 +405,7 @@ export default function DoctorEarningsPage() {
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <div>
               <CardTitle>Revenue Trend</CardTitle>
-              <CardDescription>Gross vs Net earnings over the last 6 months</CardDescription>
+              <CardDescription>Fees received from patients</CardDescription>
             </div>
             <div className="flex gap-2">
               <Button 
@@ -602,8 +583,8 @@ export default function DoctorEarningsPage() {
       <Card>
         <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 gap-3">
           <div>
-            <CardTitle>Disbursal History</CardTitle>
-            <CardDescription>Semimonthly automatic and custom payouts history</CardDescription>
+            <CardTitle>Payments received</CardTitle>
+            <CardDescription>Fees patients paid to you and you confirmed</CardDescription>
           </div>
           <div className="relative w-full sm:max-w-xs">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
@@ -621,13 +602,12 @@ export default function DoctorEarningsPage() {
             <table className="w-full text-sm text-left">
               <thead className="text-xs uppercase bg-muted/50 border-b border-border text-muted-foreground font-semibold">
                 <tr>
-                  <th className="px-6 py-4">Payout ID</th>
-                  <th className="px-6 py-4">Earning Period</th>
-                  <th className="px-6 py-4">Gross Fees</th>
-                  <th className="px-6 py-4">Commission Share</th>
-                  <th className="px-6 py-4">Net Disbursement</th>
+                  <th className="px-6 py-4">Payment</th>
+                  <th className="px-6 py-4">Date</th>
+                  <th className="px-6 py-4">Fee</th>
+                  <th className="px-6 py-4">Received</th>
                   <th className="px-6 py-4">Status</th>
-                  <th className="px-6 py-4">Date Disbursed</th>
+                  <th className="px-6 py-4">Confirmed</th>
                   <th className="px-6 py-4 text-right">Invoice</th>
                 </tr>
               </thead>
@@ -637,7 +617,6 @@ export default function DoctorEarningsPage() {
                     <td className="px-6 py-4 font-mono text-xs">{pay.id}</td>
                     <td className="px-6 py-4 font-medium">{pay.period}</td>
                     <td className="px-6 py-4 text-xs">PKR {pay.grossEarnings.toLocaleString()}</td>
-                    <td className="px-6 py-4 text-xs text-muted-foreground">PKR {pay.platformCommission.toLocaleString()}</td>
                     <td className="px-6 py-4 font-semibold text-emerald-600 dark:text-emerald-400">PKR {pay.netPaid.toLocaleString()}</td>
                     <td className="px-6 py-4">
                       <span className={`inline-block text-[10px] px-2 py-0.5 rounded-full font-bold ${
@@ -664,8 +643,8 @@ export default function DoctorEarningsPage() {
                 ))}
                 {filteredPayouts.length === 0 && (
                   <tr>
-                    <td colSpan={8} className="py-8 text-center text-xs text-muted-foreground bg-muted/10">
-                      No payout records match your search filter.
+                    <td colSpan={7} className="py-8 text-center text-xs text-muted-foreground bg-muted/10">
+                      No received payments match your search.
                     </td>
                   </tr>
                 )}
@@ -674,51 +653,6 @@ export default function DoctorEarningsPage() {
           </div>
         </CardContent>
       </Card>
-
-      {/* Early Payout Modal */}
-      {showPayoutModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-          <div className="bg-card rounded-2xl max-w-sm w-full shadow-2xl animate-in fade-in duration-150">
-            <div className="p-6 border-b border-border flex items-center justify-between">
-              <h3 className="text-lg font-bold">Initiate Early Payout</h3>
-              <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => setShowPayoutModal(false)}>
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
-            <div className="p-6 space-y-4">
-              <div className="bg-emerald-500/5 border border-emerald-500/10 p-4 rounded-xl text-center">
-                <p className="text-xs text-muted-foreground">Available for Immediate Disbursal</p>
-                <p className="text-3xl font-black text-emerald-600 mt-1">PKR {accruedBalance.toLocaleString()}</p>
-                <p className="text-[10px] text-muted-foreground mt-1">Includes 10% platform commission deduction</p>
-              </div>
-
-              <div className="space-y-3 bg-muted/40 p-3 rounded-xl border text-xs">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Destination Bank:</span>
-                  <span className="font-semibold text-foreground">Meezan Bank Ltd.</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Account Holder:</span>
-                  <span className="font-semibold text-foreground">Dr. Ayesha Khan</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Settlement Time:</span>
-                  <span className="font-semibold text-brand-500">Immediate (15 mins)</span>
-                </div>
-              </div>
-
-              <div className="flex gap-3 pt-2">
-                <Button variant="outline" className="flex-1" onClick={() => setShowPayoutModal(false)}>
-                  Cancel
-                </Button>
-                <Button onClick={handleRequestPayout} className="flex-1 bg-brand-500 hover:bg-brand-600 text-white font-semibold">
-                  Confirm Payout
-                </Button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

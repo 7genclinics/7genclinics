@@ -104,6 +104,11 @@ export async function reviewPatientPaymentAsDoctor(input: {
       reviewed_by: input.reviewerUserId,
       reviewed_at: now,
       rejection_reason: null,
+      platform_fee: 0,
+      doctor_earning: Number(payment.amount),
+      payout_status: "paid",
+      paid_at: now,
+      paid_by: input.reviewerUserId,
     })
     .eq("id", payment.id);
   if (payError) throw new Error(payError.message);
