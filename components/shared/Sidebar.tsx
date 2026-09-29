@@ -78,6 +78,7 @@ export function Sidebar({ role, isOpen = false, onClose, allowedHrefs }: Sidebar
       { name: "Reception / Staff", href: "/doctor/staff", icon: UserCheck },
       { name: "My clinic", href: "/doctor/clinic", icon: Building2 },
       { name: "Earnings", href: "/doctor/earnings", icon: DollarSign },
+      { name: "Payments", href: "/doctor/payments", icon: CreditCard },
       { name: "Subscription", href: "/doctor/subscription", icon: Repeat },
       { name: "Profile Settings", href: "/doctor/profile", icon: User },
     ],

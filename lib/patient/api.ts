@@ -506,7 +506,7 @@ export async function submitPaymentProof(paymentId: string, file: File) {
   if (!user) throw new Error("Not signed in");
 
   const { data: payment, error: fetchError } = await table("payments")
-    .select("id, patient_id, status, appointment_id, amount")
+    .select("id, patient_id, status, appointment_id, amount, doctor_id")
     .eq("id", paymentId)
     .maybeSingle();
 
@@ -530,20 +530,35 @@ export async function submitPaymentProof(paymentId: string, file: File) {
 
   if (updateError) throw updateError;
 
-  const amount = Number((payment as { amount: number }).amount);
+  const paymentRow = payment as {
+    amount: number;
+    appointment_id: string;
+    doctor_id: string;
+  };
+  const amount = Number(paymentRow.amount);
   await safeNotify(() => createNotification(
     user.id,
     "Payment proof submitted",
-    `Your payment of PKR ${Math.round(amount).toLocaleString("en-PK")} is under review. We will notify you once admin confirms your booking.`,
+    `Your payment of PKR ${Math.round(amount).toLocaleString("en-PK")} is under review. Your doctor will confirm the booking after checking the screenshot.`,
     "payment",
     { payment_id: paymentId }
   ));
-  await safeNotify(() => notifyAllAdmins(
-    "Payment proof to review",
-    `A patient submitted a payment screenshot (PKR ${Math.round(amount).toLocaleString("en-PK")}). Approve to confirm the booking.`,
-    "payment",
-    { payment_id: paymentId, appointment_id: (payment as { appointment_id: string }).appointment_id }
-  ));
+
+  await safeNotify(async () => {
+    const { data: doctor } = await table("doctor_profiles")
+      .select("user_id")
+      .eq("id", paymentRow.doctor_id)
+      .maybeSingle();
+    const doctorUserId = (doctor as { user_id?: string } | null)?.user_id;
+    if (!doctorUserId) return;
+    await createNotification(
+      doctorUserId,
+      "Payment proof to review",
+      `A patient submitted a payment screenshot (PKR ${Math.round(amount).toLocaleString("en-PK")}). Approve it to confirm the booking.`,
+      "payment",
+      { payment_id: paymentId, appointment_id: paymentRow.appointment_id }
+    );
+  });
 
   return proofUrl;
 }

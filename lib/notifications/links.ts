@@ -22,7 +22,7 @@ const BY_TYPE: Record<string, Record<PortalRole, string>> = {
   },
   payment: {
     patient: "/patient/payments",
-    doctor: "/doctor/earnings",
+    doctor: "/doctor/payments",
     admin: "/admin/payments",
     receptionist: "/reception/billing",
   },

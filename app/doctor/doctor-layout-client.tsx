@@ -32,6 +32,7 @@ function DoctorLayoutShell({ children }: { children: React.ReactNode }) {
     if (path.includes("/clinic")) return "My Clinic";
     if (path.includes("/staff")) return "Reception & Staff";
     if (path.includes("/subscription")) return "Subscription";
+    if (path.includes("/payments")) return "Payment Approvals";
     if (path.includes("/earnings")) return "Earnings & Reports";
     if (path.includes("/profile")) return "Professional Profile";
     if (path.includes("/chat")) return "Messages";

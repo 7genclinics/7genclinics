@@ -263,7 +263,7 @@ export default function PatientAppointmentsPage() {
       setShowUploadModal(false);
       setShowDetailsModal(false);
       setUploadProofFile(null);
-      setSuccessMessage("Payment proof uploaded. Admin will review and confirm your booking.");
+      setSuccessMessage("Payment proof uploaded. Your doctor will review it and confirm your booking.");
       await loadAppointments();
     } catch (err) {
       setError(getErrorMessage(err, "Failed to upload payment proof"));

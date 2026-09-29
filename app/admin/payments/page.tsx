@@ -439,61 +439,11 @@ export default function AdminPaymentsPage() {
               Pending Payment Approvals ({pendingApprovals.length})
             </CardTitle>
             <CardDescription>
-              Review patient payment screenshots and approve to confirm bookings.
+              Patient payment screenshots are reviewed by the assigned doctor from their Payments page.
             </CardDescription>
           </CardHeader>
-          <CardContent className="p-0">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm text-left">
-                <thead className="text-xs uppercase bg-violet-100/50 border-b border-violet-200 text-violet-900">
-                  <tr>
-                    <th className="px-6 py-3 font-semibold">Patient</th>
-                    <th className="px-6 py-3 font-semibold">Doctor</th>
-                    <th className="px-6 py-3 font-semibold">Amount</th>
-                    <th className="px-6 py-3 font-semibold">Method</th>
-                    <th className="px-6 py-3 font-semibold">Submitted</th>
-                    <th className="px-6 py-3 font-semibold">Proof</th>
-                    <th className="px-6 py-3 font-semibold text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-violet-100">
-                  {pendingApprovals.map((p) => (
-                    <tr key={p.id} className="hover:bg-violet-50/50">
-                      <td className="px-6 py-4 font-medium">{p.patient?.full_name ?? "Patient"}</td>
-                      <td className="px-6 py-4">{p.doctor?.profile?.full_name ?? "Doctor"}</td>
-                      <td className="px-6 py-4 font-semibold">{formatPKR(Number(p.amount))}</td>
-                      <td className="px-6 py-4">{METHOD_LABEL[p.payment_method]}</td>
-                      <td className="px-6 py-4 text-xs text-muted-foreground">{formatDate(p.created_at)}</td>
-                      <td className="px-6 py-4">
-                        <button
-                          onClick={() => setViewProofPayment(p)}
-                          title="View payment attachment"
-                          className="inline-flex items-center gap-1.5 text-xs text-violet-700 hover:text-violet-900 font-medium hover:underline"
-                        >
-                          <Paperclip className="h-3.5 w-3.5" />
-                          View
-                        </button>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center justify-end gap-2">
-                          <Button variant="outline" size="sm" onClick={() => setReviewPayment(p)}>
-                            Review Proof
-                          </Button>
-                          <Button
-                            size="sm"
-                            className="bg-emerald-600 hover:bg-emerald-700 text-white"
-                            disabled={actionId === p.id}
-                            onClick={() => handleApprovePayment(p.id)}
-                          >
-                            {actionId === p.id ? <Loader2 className="h-4 w-4 animate-spin" /> : "Approve"}
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+          <CardContent className="px-6 pb-6 text-sm text-violet-900">
+            Doctors approve or reject these proofs. Superadmin no longer confirms patient bookings from here.
           </CardContent>
         </Card>
       )}

@@ -79,6 +79,8 @@ export interface PaymentWithPatient extends Pick<
   | "refund_status"
   | "refund_amount"
   | "created_at"
+  | "proof_url"
+  | "rejection_reason"
 > {
   patient: Pick<Profile, "id" | "full_name"> | null;
   appointment: { appointment_type: AppointmentType } | null;

@@ -79,6 +79,7 @@ export default function DoctorDashboardPage() {
   >([]);
   const [wallet, setWallet] = useState({ disbursable: 0, pending: 0 });
   const [monthlyEarnings, setMonthlyEarnings] = useState(0);
+  const [pendingPaymentReviews, setPendingPaymentReviews] = useState(0);
   const [uniquePatients, setUniquePatients] = useState(0);
   const [newPatientsThisWeek, setNewPatientsThisWeek] = useState(0);
 
@@ -133,6 +134,9 @@ export default function DoctorDashboardPage() {
       );
       setMonthlyEarnings(
         monthPayments.reduce((sum, p) => sum + Number(p.doctor_earning), 0)
+      );
+      setPendingPaymentReviews(
+        payments.filter((p) => p.status === "pending" && p.proof_url).length
       );
 
       setWallet({
@@ -414,6 +418,18 @@ export default function DoctorDashboardPage() {
         description={`Your clinical room is open. You have ${todaySessions.filter((s) => !s.completed).length} consultations scheduled on your agenda today.`}
         decoration={<DashboardBrandDecoration />}
       />
+
+      {pendingPaymentReviews > 0 && (
+        <Link
+          href="/doctor/payments"
+          className="flex items-center justify-between rounded-2xl border border-violet-200 bg-violet-50 px-4 py-3 text-sm text-violet-950"
+        >
+          <span className="font-semibold">
+            {pendingPaymentReviews} payment proof{pendingPaymentReviews === 1 ? "" : "s"} waiting for your approval
+          </span>
+          <span className="font-semibold text-violet-700">Review</span>
+        </Link>
+      )}
 
       {/* Stats Grid */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
