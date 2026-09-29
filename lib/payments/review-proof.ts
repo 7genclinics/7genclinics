@@ -57,13 +57,20 @@ export async function reviewPatientPaymentAsDoctor(input: {
   const now = new Date().toISOString();
 
   if (input.action === "reject") {
+    const graceEndMs =
+      new Date(aptData.scheduled_at).getTime() + GRACE_MINUTES_AFTER_START * 60_000;
+    const slotPassed = Date.now() > graceEndMs;
     const rejectionReason =
       input.reason?.trim() ||
-      "Payment proof could not be verified. Please upload a valid screenshot.";
+      (slotPassed
+        ? "This appointment time has passed, so the payment cannot be confirmed. Please book a new slot."
+        : "Payment proof could not be verified. Please upload a valid screenshot.");
 
     const { error } = await supabase
       .from("payments")
       .update({
+        status: slotPassed ? "failed" : "pending",
+        proof_url: null,
         reviewed_by: input.reviewerUserId,
         reviewed_at: now,
         rejection_reason: rejectionReason,
@@ -71,15 +78,29 @@ export async function reviewPatientPaymentAsDoctor(input: {
       .eq("id", payment.id);
     if (error) throw new Error(error.message);
 
+    if (slotPassed && aptData.status === "pending_payment") {
+      const { error: cancelError } = await supabase
+        .from("appointments")
+        .update({
+          status: "cancelled",
+          cancellation_reason: rejectionReason,
+          cancelled_by: input.reviewerUserId,
+        })
+        .eq("id", payment.appointment_id);
+      if (cancelError) throw new Error(cancelError.message);
+    }
+
     await createNotification(
       payment.patient_id,
       "Payment rejected",
-      `${rejectionReason} You can upload a new screenshot from My Appointments.`,
+      slotPassed
+        ? `${rejectionReason}`
+        : `${rejectionReason} You can upload a new screenshot from My Appointments.`,
       "payment",
       { payment_id: payment.id, appointment_id: payment.appointment_id, event: "payment_rejected" }
     );
 
-    return { ok: true as const, status: "rejected" as const };
+    return { ok: true as const, status: "rejected" as const, slotPassed };
   }
 
   if (!payment.proof_url) throw new Error("No payment proof uploaded yet");

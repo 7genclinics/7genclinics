@@ -136,7 +136,7 @@ export default function DoctorDashboardPage() {
         monthPayments.reduce((sum, p) => sum + Number(p.amount), 0)
       );
       setPendingPaymentReviews(
-        payments.filter((p) => p.status === "pending" && p.proof_url).length
+        payments.filter((p) => p.status === "pending" && p.proof_url && !p.rejection_reason).length
       );
 
       setWallet({

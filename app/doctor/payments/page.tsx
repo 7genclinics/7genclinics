@@ -40,7 +40,7 @@ export default function DoctorPaymentsPage() {
   usePaymentsRealtime({ doctorId: doctorProfile.id, onChange: () => { void load(); } });
 
   const pending = useMemo(
-    () => payments.filter((p) => p.status === "pending" && p.proof_url),
+    () => payments.filter((p) => p.status === "pending" && p.proof_url && !p.rejection_reason),
     [payments]
   );
 
@@ -62,7 +62,12 @@ export default function DoctorPaymentsPage() {
       if (!response.ok) throw new Error(body.error || "Review failed");
       setReview(null);
       setReason("");
-      showToast(action === "approve" ? "Payment approved. Booking is confirmed." : "Payment proof rejected.");
+      setPayments((current) => current.filter((row) => row.id !== paymentId || action === "approve"));
+      showToast(
+        action === "approve"
+          ? "Payment approved. Booking is confirmed."
+          : "Payment proof rejected. It is no longer waiting for approval."
+      );
       await load();
     } catch (err) {
       setError(getErrorMessage(err, "Could not review payment"));
