@@ -9,7 +9,7 @@ export const BRAND = {
   description:
     "Pakistan's best platform for online and physical clinic care. Book PMDC verified doctors for video from home, or walk into the clinic for same day tokens and desk billing.",
   supportEmail: "7genclinics@gmail.com",
-  phone: "+92 300 1234567",
+  phone: "+92309 4157123",
   citiesLabel: "Layyah, Chockazam, Fatehpur, Karor, Lahore, Karachi, Islamabad",
 } as const;
 

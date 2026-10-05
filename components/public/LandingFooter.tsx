@@ -101,12 +101,14 @@ export function LandingFooter() {
           <p>
             © {new Date().getFullYear()} {BRAND.name}
           </p>
-          <Link
-            href="/login?role=admin&redirect=/admin/dashboard"
-            className="transition-colors hover:text-white/70"
-          >
-            Admin
-          </Link>
+          <nav className="flex flex-wrap items-center gap-x-5 gap-y-2">
+            <Link href="/privacy/" className="transition-colors hover:text-white/70">
+              Privacy Policy
+            </Link>
+            <Link href="/legal/" className="transition-colors hover:text-white/70">
+              Legal
+            </Link>
+          </nav>
         </div>
       </div>
     </footer>
