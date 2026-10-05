@@ -120,22 +120,22 @@ const clinicFloor = [
   {
     title: "Check in",
     copy: "Show your booking or register as a walk in. Reception confirms your details.",
-    image: "/workflow_check_in.png",
+    image: "/01-check-in-pakistan.png",
   },
   {
     title: "Get a token",
     copy: "You join today’s waiting list. The screen and desk both know your place.",
-    image: "/workflow_get_token.png",
+    image: "/02-get-a-token-pakistan.png",
   },
   {
     title: "See the doctor",
     copy: "When your number is called, you go in. Notes, diagnosis, and Rx are recorded.",
-    image: "/workflow_see_doctor.png",
+    image: "/03-see-the-doctor-pakistan.png",
   },
   {
     title: "Pay at the desk",
     copy: "If you did not prepay online, reception collects the fee and can print a receipt.",
-    image: "/workflow_pay_at_desk.png",
+    image: "/04-pay-at-the-desk-pakistan.png",
   },
 ];
 
@@ -501,21 +501,19 @@ export default async function HomePage() {
                   key={item.title}
                   className="overflow-hidden rounded-2xl bg-white/5 ring-1 ring-white/10"
                 >
-                  <div className="relative aspect-square w-full overflow-hidden bg-[#F4F8F8]">
+                  <div className="relative aspect-square w-full overflow-hidden bg-brand-900">
                     <Image
                       src={item.image}
-                      alt=""
+                      alt={item.title}
                       fill
                       sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
-                      className="object-cover"
+                      className="object-cover object-center"
                     />
                   </div>
                   <div className="p-6">
-                    <div className="flex items-center justify-between">
-                      <span className="font-heading text-sm font-semibold text-white/35">
-                        0{i + 1}
-                      </span>
-                    </div>
+                    <span className="font-heading text-sm font-semibold text-white/35">
+                      0{i + 1}
+                    </span>
                     <h3 className="mt-3 font-heading text-lg font-semibold">{item.title}</h3>
                     <p className="mt-2 text-sm leading-relaxed text-white/60">{item.copy}</p>
                   </div>
