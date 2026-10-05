@@ -189,70 +189,66 @@ export default function DoctorPlansPage() {
       <LandingHeader />
 
       <main>
-        <section className="relative overflow-hidden border-b border-slate-200/80 bg-gradient-to-br from-[#eef8f7] via-[#f7fbfb] to-[#eef4f8]">
-          <div
-            aria-hidden
-            className="pointer-events-none absolute -left-20 top-24 h-72 w-72 rounded-full bg-brand-400/15 blur-3xl"
-          />
-          <div
-            aria-hidden
-            className="pointer-events-none absolute -right-16 bottom-10 h-80 w-80 rounded-full bg-sky-300/20 blur-3xl"
-          />
-
-          <div className="relative mx-auto grid max-w-6xl items-center gap-10 px-4 pb-14 pt-28 sm:px-6 lg:grid-cols-[0.95fr_1.05fr] lg:gap-8 lg:pb-16 lg:pt-32">
-            <div className="relative z-10 max-w-xl">
+        <section className="relative overflow-x-hidden border-b border-slate-200/80 bg-[#eaf4f2]">
+          <div className="relative mx-auto grid max-w-6xl items-center gap-8 px-4 pb-12 pt-5 sm:gap-10 sm:px-6 sm:pb-14 sm:pt-12 lg:grid-cols-[minmax(0,26rem)_minmax(0,1fr)] lg:gap-x-10 lg:pb-16 lg:pt-28 xl:grid-cols-[minmax(0,28rem)_minmax(0,1fr)] xl:gap-x-14">
+            <div className="relative z-10 min-w-0 max-w-xl lg:max-w-none">
               <span className="inline-flex rounded-full bg-brand-500/10 px-3.5 py-1.5 text-[11px] font-semibold uppercase tracking-[0.18em] text-brand-700">
                 Plans for Doctors
               </span>
 
-              <h1 className="mt-5 font-heading text-[2.4rem] font-bold leading-[1.08] tracking-tight text-brand-950 sm:text-5xl lg:text-[3.15rem]">
+              <h1 className="mt-4 font-heading text-[2.15rem] font-bold leading-[1.08] tracking-tight text-brand-950 sm:mt-5 sm:text-5xl lg:text-[3.15rem]">
                 Grow Your Practice with{" "}
                 <span className="text-brand-500">{BRAND.name.replace(" ", "")}</span>
               </h1>
 
-              <p className="mt-5 text-lg font-medium leading-relaxed text-brand-900/85 sm:text-xl">
+              <p className="mt-4 text-base font-medium leading-relaxed text-brand-900/85 sm:mt-5 sm:text-xl">
                 Manage your patients, consultations, team and online presence — all from one
                 platform.
               </p>
-              <p className="mt-3 max-w-md text-sm leading-relaxed text-slate-500 sm:text-base">
+              <p className="mt-2.5 max-w-md text-sm leading-relaxed text-slate-500 sm:mt-3 sm:text-base">
                 Choose the plan that fits your practice and let {BRAND.name.replace(" ", "")} help
                 you manage and grow digitally.
               </p>
 
-              <div className="mt-8">
-                <Link
-                  href="#plans"
-                  className="inline-flex items-center gap-2 rounded-full bg-brand-500 px-7 py-3.5 text-sm font-semibold text-white shadow-[0_14px_30px_-14px_rgba(13,148,136,0.95)] transition-transform hover:bg-brand-600 hover:scale-[1.02]"
-                >
-                  Choose Your Plan
-                  <ArrowRight className="h-4 w-4" />
-                </Link>
-              </div>
+              {/* Mobile: stats first, CTA below. Desktop: CTA then stats. */}
+              <div className="mt-7 flex flex-col sm:mt-8">
+                <div className="order-1 grid grid-cols-4 gap-1.5 sm:order-2 sm:mt-10 sm:gap-x-4">
+                  {heroHighlights.map((item) => (
+                    <div key={item.label} className="flex min-w-0 flex-col items-center gap-1.5 text-center sm:gap-2">
+                      <span className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-brand-500/30 bg-white text-brand-600 shadow-sm sm:h-12 sm:w-12">
+                        <item.icon className="h-4 w-4 sm:h-5 sm:w-5" />
+                      </span>
+                      <span className="max-w-[4.75rem] text-[10px] font-semibold leading-snug text-brand-900/75 sm:max-w-[7.5rem] sm:text-[11px]">
+                        {item.label}
+                      </span>
+                    </div>
+                  ))}
+                </div>
 
-              <div className="mt-10 grid grid-cols-2 gap-x-4 gap-y-5 sm:grid-cols-4">
-                {heroHighlights.map((item) => (
-                  <div key={item.label} className="flex flex-col items-center gap-2 text-center">
-                    <span className="inline-flex h-12 w-12 items-center justify-center rounded-full border border-brand-500/30 bg-white text-brand-600 shadow-sm">
-                      <item.icon className="h-5 w-5" />
-                    </span>
-                    <span className="max-w-[7.5rem] text-[11px] font-semibold leading-snug text-brand-900/75">
-                      {item.label}
-                    </span>
-                  </div>
-                ))}
+                <div className="order-2 mt-7 sm:order-1 sm:mt-0">
+                  <Link
+                    href="#plans"
+                    className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-brand-500 px-7 py-3.5 text-sm font-semibold text-white shadow-[0_14px_30px_-14px_rgba(13,148,136,0.95)] transition-transform hover:bg-brand-600 hover:scale-[1.02] sm:w-auto"
+                  >
+                    Choose Your Plan
+                    <ArrowRight className="h-4 w-4" />
+                  </Link>
+                </div>
               </div>
             </div>
 
-            <div className="relative mx-auto w-full max-w-xl lg:max-w-none lg:pl-2">
-              <Image
-                src="/Smiling%20doctor%20beside%20clinic%20dashboard.png"
-                alt="Doctor with Apna Clinic dashboard and online consultation"
-                width={1774}
-                height={887}
-                priority
-                sizes="(max-width: 1024px) 100vw, 560px"
-                className="h-auto w-full object-contain drop-shadow-[0_28px_60px_rgba(18,53,58,0.12)]"
-              />
+            <div className="relative min-w-0 justify-self-stretch lg:justify-self-end lg:pl-2 xl:pl-0">
+              <div className="mx-auto w-full max-w-2xl overflow-hidden rounded-[8px] lg:mx-0 lg:ml-auto lg:max-w-[min(100%,640px)] lg:-mr-1 xl:max-w-[720px] xl:-mr-4 2xl:-mr-8">
+                <Image
+                  src="/Smiling%20doctor%20beside%20clinic%20dashboard.png"
+                  alt="Doctor with Apna Clinic dashboard and online consultation"
+                  width={1774}
+                  height={887}
+                  priority
+                  sizes="(max-width: 1024px) 100vw, 720px"
+                  className="h-auto w-full object-contain"
+                />
+              </div>
             </div>
           </div>
         </section>
@@ -505,7 +501,7 @@ export default function DoctorPlansPage() {
           />
 
           <div className="relative mx-auto grid max-w-6xl items-center gap-10 px-4 sm:px-6 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)] lg:gap-8 lg:px-6">
-            <div className="relative mx-auto w-full max-w-md lg:mx-0 lg:max-w-none lg:self-end">
+            <div className="relative mx-auto w-full max-w-none sm:max-w-md lg:mx-0 lg:max-w-none lg:self-end">
               <div className="relative aspect-[4/5] w-full overflow-hidden rounded-[8px] sm:aspect-[3/4] lg:aspect-auto lg:h-[28rem] xl:h-[32rem]">
                 <Image
                   src="/doc_female_portrait.jpg"
