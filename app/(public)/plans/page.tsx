@@ -6,7 +6,6 @@ import {
   Check,
   ClipboardList,
   Globe2,
-  Headphones,
   LayoutDashboard,
   Megaphone,
   Stethoscope,
@@ -15,7 +14,7 @@ import {
 } from "lucide-react";
 import { LandingHeader } from "@/components/public/LandingHeader";
 import { LandingFooter } from "@/components/public/LandingFooter";
-import { BrandMark, ConeStripe } from "@/components/brand/BrandMark";
+import { ConeStripe } from "@/components/brand/BrandMark";
 import { BRAND } from "@/lib/brand/site";
 import { pageMetadata } from "@/lib/seo/metadata";
 
@@ -133,117 +132,57 @@ export default function DoctorPlansPage() {
       <LandingHeader />
 
       <main>
-        <section className="relative overflow-hidden border-b border-brand-900/6 bg-gradient-to-br from-[#eef7f6] via-white to-[#f4f8fb]">
-          <div
-            aria-hidden
-            className="pointer-events-none absolute -right-24 top-10 h-72 w-72 rounded-full bg-brand-400/10 blur-3xl"
+        <section className="relative isolate min-h-[640px] overflow-hidden bg-[#f3faf9] sm:min-h-[700px] lg:min-h-[760px]">
+          <Image
+            src="/Smiling%20doctor%20beside%20clinic%20dashboard.png"
+            alt=""
+            fill
+            priority
+            sizes="100vw"
+            className="object-cover object-[72%_center] sm:object-right"
           />
-          <div
-            aria-hidden
-            className="pointer-events-none absolute -left-16 bottom-0 h-56 w-56 rounded-full bg-brand-500/8 blur-3xl"
-          />
+          <div className="absolute inset-0 bg-gradient-to-r from-[#f4fbfb] from-0% via-[#f4fbfb]/95 via-[42%] to-transparent to-[78%] sm:via-[#f4fbfb]/80" />
+          <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-[#f7fbfb] to-transparent" />
 
-          <div className="relative mx-auto grid max-w-6xl items-center gap-12 px-4 pb-16 pt-28 sm:px-6 lg:grid-cols-[1.05fr_0.95fr] lg:pb-20 lg:pt-32">
-            <div>
-              <div className="mb-6 inline-flex items-center gap-3 rounded-full border border-brand-900/8 bg-white/80 px-3 py-1.5 shadow-sm backdrop-blur">
-                <BrandMark size="sm" />
-                <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-brand-600">
-                  Plans for Doctors
-                </span>
-              </div>
+          <div className="relative mx-auto flex min-h-[640px] max-w-6xl flex-col justify-center px-4 py-16 sm:min-h-[700px] sm:px-6 lg:min-h-[760px] lg:py-20">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-brand-600">
+              Plans for doctors
+            </p>
+            <h1 className="mt-4 max-w-xl font-heading text-[2.5rem] font-bold leading-[1.08] tracking-tight text-brand-950 sm:text-5xl lg:text-[3.35rem]">
+              Grow Your Practice with{" "}
+              <span className="text-brand-500">{BRAND.name.replace(" ", "")}</span>
+            </h1>
+            <p className="mt-5 max-w-md text-base leading-relaxed text-slate-600 sm:text-lg">
+              Manage your patients, consultations, team and online presence — all from one
+              platform. Choose the plan that fits how you want to grow.
+            </p>
 
-              <h1 className="max-w-xl font-heading text-[2.35rem] font-bold leading-[1.12] tracking-tight text-brand-950 sm:text-5xl">
-                Grow Your Practice with{" "}
-                <span className="text-brand-500">{BRAND.name.replace(" ", "")}</span>
-              </h1>
-              <p className="mt-5 max-w-lg text-base leading-relaxed text-slate-600 sm:text-lg">
-                Manage your patients, consultations, team and online presence — all from one
-                platform. Choose the plan that fits how you want to grow.
-              </p>
-
-              <div className="mt-8 flex flex-wrap gap-3">
-                <Link
-                  href="#plans"
-                  className="inline-flex items-center gap-2 rounded-full bg-brand-500 px-6 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-brand-600"
-                >
-                  Choose Your Plan
-                  <ArrowRight className="h-4 w-4" />
-                </Link>
-                <Link
-                  href="/register/?role=doctor"
-                  className="inline-flex items-center gap-2 rounded-full border border-brand-900/12 bg-white px-6 py-3 text-sm font-semibold text-brand-900 transition-colors hover:border-brand-500/40 hover:text-brand-600"
-                >
-                  Get Started
-                </Link>
-              </div>
-
-              <div className="mt-10 grid grid-cols-2 gap-3 sm:grid-cols-4">
-                {heroHighlights.map((item) => (
-                  <div
-                    key={item.label}
-                    className="flex flex-col items-start gap-2 rounded-2xl border border-brand-900/6 bg-white/70 px-3 py-3"
-                  >
-                    <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-brand-500/10 text-brand-600">
-                      <item.icon className="h-4 w-4" />
-                    </span>
-                    <span className="text-xs font-semibold leading-snug text-brand-900/80">
-                      {item.label}
-                    </span>
-                  </div>
-                ))}
-              </div>
+            <div className="mt-8 flex flex-wrap gap-3">
+              <Link
+                href="#plans"
+                className="inline-flex items-center gap-2 rounded-full bg-brand-500 px-6 py-3 text-sm font-semibold text-white shadow-[0_10px_24px_-12px_rgba(13,148,136,0.9)] transition-colors hover:bg-brand-600"
+              >
+                Choose Your Plan
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+              <Link
+                href="/register/?role=doctor"
+                className="inline-flex items-center gap-2 rounded-full border border-brand-900/12 bg-white/90 px-6 py-3 text-sm font-semibold text-brand-900 backdrop-blur transition-colors hover:border-brand-500/40 hover:text-brand-600"
+              >
+                Get Started
+              </Link>
             </div>
 
-            <div className="relative mx-auto w-full max-w-lg lg:max-w-none">
-              <div className="relative aspect-[4/5] overflow-hidden rounded-[2rem] border border-brand-900/8 bg-white shadow-[0_24px_80px_-28px_rgba(13,82,88,0.35)]">
-                <Image
-                  src="/doc_male_portrait.jpg"
-                  alt="Doctor using Apna Clinic to grow their practice"
-                  fill
-                  priority
-                  sizes="(max-width: 1024px) 90vw, 480px"
-                  className="object-cover object-top"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-brand-950/55 via-transparent to-transparent" />
-
-                <div className="absolute left-4 top-5 hidden w-[52%] overflow-hidden rounded-2xl border border-white/50 bg-white/95 shadow-xl backdrop-blur sm:block">
-                  <div className="border-b border-brand-900/6 px-3 py-2">
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-brand-500">
-                      Dashboard
-                    </p>
-                    <p className="mt-0.5 text-xs font-semibold text-brand-950">Welcome, Doctor</p>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2 p-3">
-                    {[
-                      { label: "Patients", value: "128" },
-                      { label: "This week", value: "14" },
-                      { label: "Online", value: "Ready" },
-                      { label: "Marketing", value: "Active" },
-                    ].map((stat) => (
-                      <div key={stat.label} className="rounded-xl bg-[#f4f8f8] px-2.5 py-2">
-                        <p className="text-[10px] text-slate-500">{stat.label}</p>
-                        <p className="text-sm font-bold text-brand-900">{stat.value}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="absolute bottom-5 right-4 w-[46%] overflow-hidden rounded-2xl border border-white/60 bg-white shadow-xl">
-                  <div className="relative aspect-[4/5]">
-                    <Image
-                      src="/online_meeting.jpg"
-                      alt="Online consultation on Apna Clinic"
-                      fill
-                      sizes="180px"
-                      className="object-cover"
-                    />
-                  </div>
-                  <div className="px-3 py-2">
-                    <p className="text-[10px] font-semibold text-brand-500">Online Consultation</p>
-                    <p className="text-xs font-medium text-brand-950">Join from home</p>
-                  </div>
-                </div>
-              </div>
+            <div className="mt-10 flex max-w-xl flex-wrap gap-2">
+              {heroHighlights.map((item) => (
+                <span
+                  key={item.label}
+                  className="inline-flex items-center gap-2 rounded-full border border-brand-900/8 bg-white/85 px-3 py-1.5 text-xs font-semibold text-brand-900/80 shadow-sm backdrop-blur"
+                >
+                  <item.icon className="h-3.5 w-3.5 text-brand-500" />
+                  {item.label}
+                </span>
+              ))}
             </div>
           </div>
         </section>
@@ -265,56 +204,60 @@ export default function DoctorPlansPage() {
               </p>
             </div>
 
-            <div className="mt-12 grid gap-6 lg:grid-cols-2">
-              <article className="flex flex-col rounded-3xl border border-brand-900/10 bg-[#f7fbfb] p-7 sm:p-8">
+            <div className="mt-12 grid items-stretch gap-6 lg:grid-cols-2">
+              <article className="flex flex-col rounded-[1.75rem] border border-brand-900/10 bg-white p-7 shadow-[0_16px_40px_-32px_rgba(18,53,58,0.45)] sm:p-9">
                 <p className="text-sm font-semibold text-brand-600">Basic Marketing Plan</p>
-                <div className="mt-3 flex items-end gap-2">
-                  <span className="font-heading text-4xl font-bold tracking-tight">PKR 10,000</span>
-                  <span className="pb-1 text-sm text-slate-500">/ month</span>
+                <div className="mt-4 flex items-end gap-2">
+                  <span className="font-heading text-4xl font-bold tracking-tight sm:text-5xl">PKR 10,000</span>
+                  <span className="pb-1.5 text-sm text-slate-500">/ month</span>
                 </div>
-                <p className="mt-3 text-sm leading-relaxed text-slate-600">
+                <p className="mt-4 max-w-sm text-sm leading-relaxed text-slate-600">
                   A simple solution to take your medical practice online.
                 </p>
-                <ul className="mt-7 space-y-3">
+                <ul className="mt-8 space-y-3.5">
                   {basicFeatures.map((feature) => (
-                    <li key={feature} className="flex items-start gap-2.5 text-sm text-brand-950/85">
-                      <Check className="mt-0.5 h-4 w-4 shrink-0 text-brand-500" strokeWidth={2.5} />
+                    <li key={feature} className="flex items-start gap-3 text-sm text-brand-950/85">
+                      <span className="mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-brand-500/10 text-brand-600">
+                        <Check className="h-3.5 w-3.5" strokeWidth={2.5} />
+                      </span>
                       <span>{feature}</span>
                     </li>
                   ))}
                 </ul>
                 <Link
                   href="/register/?role=doctor"
-                  className="mt-8 inline-flex items-center justify-center gap-2 rounded-full border border-brand-500 bg-white px-5 py-3 text-sm font-semibold text-brand-600 transition-colors hover:bg-brand-50"
+                  className="mt-10 inline-flex items-center justify-center gap-2 rounded-full border border-brand-500 px-5 py-3 text-sm font-semibold text-brand-600 transition-colors hover:bg-brand-50"
                 >
                   Get Basic Plan
                   <ArrowRight className="h-4 w-4" />
                 </Link>
               </article>
 
-              <article className="relative flex flex-col overflow-hidden rounded-3xl border-2 border-brand-500 bg-white p-7 shadow-[0_20px_50px_-30px_rgba(13,148,136,0.55)] sm:p-8">
-                <span className="absolute right-5 top-5 rounded-full bg-brand-500 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-white">
+              <article className="relative flex flex-col overflow-hidden rounded-[1.75rem] border border-brand-500 bg-gradient-to-b from-white to-[#f3fbfa] p-7 shadow-[0_24px_60px_-28px_rgba(13,148,136,0.55)] sm:p-9">
+                <span className="absolute right-6 top-6 rounded-full bg-brand-500 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-white">
                   Recommended
                 </span>
                 <p className="text-sm font-semibold text-brand-600">Pro Marketing Plan</p>
-                <div className="mt-3 flex items-end gap-2">
-                  <span className="font-heading text-4xl font-bold tracking-tight">PKR 25,000</span>
-                  <span className="pb-1 text-sm text-slate-500">/ month</span>
+                <div className="mt-4 flex items-end gap-2">
+                  <span className="font-heading text-4xl font-bold tracking-tight sm:text-5xl">PKR 25,000</span>
+                  <span className="pb-1.5 text-sm text-slate-500">/ month</span>
                 </div>
-                <p className="mt-3 text-sm leading-relaxed text-slate-600">
+                <p className="mt-4 max-w-sm text-sm leading-relaxed text-slate-600">
                   Build a stronger digital presence while managing your practice from one place.
                 </p>
-                <ul className="mt-7 space-y-3">
+                <ul className="mt-8 space-y-3.5">
                   {proFeatures.map((feature) => (
-                    <li key={feature} className="flex items-start gap-2.5 text-sm text-brand-950/85">
-                      <Check className="mt-0.5 h-4 w-4 shrink-0 text-brand-500" strokeWidth={2.5} />
+                    <li key={feature} className="flex items-start gap-3 text-sm text-brand-950/85">
+                      <span className="mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-brand-500 text-white">
+                        <Check className="h-3.5 w-3.5" strokeWidth={2.5} />
+                      </span>
                       <span>{feature}</span>
                     </li>
                   ))}
                 </ul>
                 <Link
                   href="/register/?role=doctor"
-                  className="mt-8 inline-flex items-center justify-center gap-2 rounded-full bg-brand-500 px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-brand-600"
+                  className="mt-10 inline-flex items-center justify-center gap-2 rounded-full bg-brand-500 px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-brand-600"
                 >
                   Choose Pro Plan
                   <ArrowRight className="h-4 w-4" />
@@ -339,22 +282,24 @@ export default function DoctorPlansPage() {
               </p>
             </div>
 
-            <div className="mt-10 overflow-hidden rounded-3xl border border-brand-900/8 bg-white shadow-sm">
-              <div className="grid grid-cols-[1.4fr_0.8fr_0.8fr] border-b border-brand-900/8 bg-[#eef6f6] px-4 py-4 text-xs font-semibold uppercase tracking-wide text-brand-900/70 sm:px-6 sm:text-sm">
+            <div className="mt-10 overflow-hidden rounded-[1.75rem] border border-brand-900/8 bg-white shadow-[0_18px_50px_-36px_rgba(18,53,58,0.5)]">
+              <div className="grid grid-cols-[1.5fr_0.7fr_0.7fr] border-b border-brand-900/8 bg-[#f7fbfb] px-4 py-4 text-[11px] font-semibold uppercase tracking-[0.14em] text-brand-900/55 sm:px-8 sm:text-xs">
                 <span>Features</span>
                 <span className="text-center">Basic · 10K</span>
                 <span className="text-center text-brand-600">Pro · 25K</span>
               </div>
-              {comparisonRows.map((row) => (
+              {comparisonRows.map((row, index) => (
                 <div
                   key={row.label}
-                  className="grid grid-cols-[1.4fr_0.8fr_0.8fr] items-center border-b border-brand-900/6 px-4 py-4 last:border-b-0 sm:px-6"
+                  className={`grid grid-cols-[1.5fr_0.7fr_0.7fr] items-center px-4 py-4 sm:px-8 ${
+                    index % 2 === 0 ? "bg-white" : "bg-[#fbfefd]"
+                  }`}
                 >
                   <span className="pr-3 text-sm font-medium text-brand-950">{row.label}</span>
                   <div className="flex justify-center">
                     <CellValue value={row.basic} />
                   </div>
-                  <div className="flex justify-center">
+                  <div className="flex justify-center rounded-xl bg-brand-500/[0.06] py-2">
                     <CellValue value={row.pro} />
                   </div>
                 </div>
@@ -404,14 +349,14 @@ export default function DoctorPlansPage() {
               </h2>
             </div>
 
-            <ol className="mt-12 grid gap-5 lg:grid-cols-3">
+            <ol className="relative mt-12 grid gap-5 lg:grid-cols-3">
               {steps.map((step) => (
                 <li
                   key={step.n}
-                  className="rounded-2xl border border-brand-900/8 bg-white p-6 shadow-sm"
+                  className="rounded-[1.5rem] border border-brand-900/8 bg-white p-7 shadow-[0_16px_40px_-32px_rgba(18,53,58,0.45)]"
                 >
-                  <p className="font-heading text-3xl font-extrabold tracking-tight text-brand-500">
-                    {step.n}
+                  <p className="font-heading text-sm font-bold tracking-[0.18em] text-brand-500">
+                    Step {step.n}
                   </p>
                   <h3 className="mt-4 font-heading text-xl font-semibold tracking-tight">
                     {step.title}
@@ -423,48 +368,35 @@ export default function DoctorPlansPage() {
           </div>
         </section>
 
-        <section className="relative overflow-hidden bg-white py-20 sm:py-24">
-          <div className="mx-auto grid max-w-6xl items-center gap-10 px-4 sm:px-6 lg:grid-cols-2">
-            <div className="relative min-h-[320px] overflow-hidden rounded-3xl border border-brand-900/8">
-              <Image
-                src="/doc_female_portrait.jpg"
-                alt="Doctor ready to grow their practice on Apna Clinic"
-                fill
-                sizes="(max-width: 1024px) 100vw, 50vw"
-                className="object-cover object-top"
-              />
-            </div>
-            <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-brand-600">
-                Ready when you are
-              </p>
-              <h2 className="mt-3 font-heading text-3xl font-bold tracking-tight sm:text-4xl">
-                Ready to Grow Your Practice Online?
-              </h2>
-              <p className="mt-4 text-base leading-relaxed text-slate-600">
-                Join {BRAND.name} and bring practice management, online consultations and digital
-                marketing together.
-              </p>
-              <Link
-                href="/register/?role=doctor"
-                className="mt-8 inline-flex items-center gap-2 rounded-full bg-brand-500 px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-brand-600"
-              >
-                Get Started Today
-                <ArrowRight className="h-4 w-4" />
-              </Link>
-              <p className="mt-4 text-sm text-slate-500">
-                Basic: PKR 10,000/month · Pro: PKR 25,000/month
-              </p>
-              <div className="mt-8 flex flex-wrap gap-4 text-xs font-semibold text-brand-700">
-                <span className="inline-flex items-center gap-1.5">
-                  <Users className="h-3.5 w-3.5" /> More Patients
-                </span>
-                <span className="inline-flex items-center gap-1.5">
-                  <Globe2 className="h-3.5 w-3.5" /> Stronger Presence
-                </span>
-                <span className="inline-flex items-center gap-1.5">
-                  <Headphones className="h-3.5 w-3.5" /> A Growing Practice
-                </span>
+        <section className="bg-[#f4f8f8] py-20 sm:py-24">
+          <div className="mx-auto max-w-6xl px-4 sm:px-6">
+            <div className="overflow-hidden rounded-[2rem] border border-brand-900/8 bg-white px-6 py-12 shadow-[0_24px_60px_-40px_rgba(18,53,58,0.45)] sm:px-12 sm:py-16">
+              <div className="max-w-2xl">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-brand-600">
+                  Get started
+                </p>
+                <h2 className="mt-3 font-heading text-3xl font-bold tracking-tight text-brand-950 sm:text-4xl">
+                  Ready to Grow Your Practice Online?
+                </h2>
+                <p className="mt-4 max-w-xl text-base leading-relaxed text-slate-600">
+                  Join {BRAND.name} and bring practice management, online consultations and digital
+                  marketing together.
+                </p>
+                <Link
+                  href="/register/?role=doctor"
+                  className="mt-8 inline-flex items-center gap-2 rounded-full bg-brand-500 px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-brand-600"
+                >
+                  Get Started Today
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
+                <p className="mt-4 text-sm text-slate-500">
+                  Basic: PKR 10,000/month · Pro: PKR 25,000/month
+                </p>
+              </div>
+              <div className="mt-10 flex flex-wrap gap-3 text-xs font-semibold text-brand-800">
+                <span className="rounded-full border border-brand-900/10 bg-[#f4f8f8] px-3 py-1.5">More Patients</span>
+                <span className="rounded-full border border-brand-900/10 bg-[#f4f8f8] px-3 py-1.5">Stronger Presence</span>
+                <span className="rounded-full border border-brand-900/10 bg-[#f4f8f8] px-3 py-1.5">A Growing Practice</span>
               </div>
             </div>
           </div>
