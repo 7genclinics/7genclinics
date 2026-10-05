@@ -18,7 +18,8 @@ import {
   type SubscriptionPayment,
 } from "@/lib/subscription/types";
 import { getErrorMessage } from "@/lib/errors";
-import { Loader2 } from "lucide-react";
+import { ExternalLink, Loader2 } from "lucide-react";
+import Link from "next/link";
 
 interface Account {
   id: string;
@@ -135,12 +136,23 @@ export function SubscriptionWorkspace({
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-xl font-semibold">Subscription</h2>
-        <p className="text-sm text-muted-foreground">
-          Clinic-wide plan for doctor and reception. Pay outside the app, then upload proof here as{" "}
-          {roleLabel}.
-        </p>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h2 className="text-xl font-semibold">Subscription</h2>
+          <p className="text-sm text-muted-foreground">
+            Clinic-wide plan for doctor and reception. Pay outside the app, then upload proof here as{" "}
+            {roleLabel}.
+          </p>
+        </div>
+        <Link
+          href="/plans/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-2 self-start rounded-full border border-brand-500/30 bg-brand-50 px-4 py-2 text-sm font-semibold text-brand-700 transition-colors hover:bg-brand-100"
+        >
+          Preview Plans for Doctors
+          <ExternalLink className="h-3.5 w-3.5" />
+        </Link>
       </div>
 
       {error && (

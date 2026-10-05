@@ -38,25 +38,25 @@ const services = [
     title: "Video consultation",
     copy: "Join a private room from your phone or laptop. Pay ahead, evenings included.",
     href: "/doctors/",
-    image: "/card_video_consultation.png",
+    image: "/online_meeting.jpg",
   },
   {
     title: "Chat with a doctor",
     copy: "Message based care when you need advice without a live video call.",
     href: "/doctors/",
-    image: "/card_chat_doctor.png",
+    image: "/Chat%20with%20a%20doctor.jpeg",
   },
   {
     title: "Clinic appointment",
     copy: "Reserve a physical slot. Reception checks you in and issues a queue token.",
     href: "/doctors/",
-    image: "/card_clinic_appointment.png",
+    image: "/Clinic%20appointment.jpeg",
   },
   {
     title: "Walk in visit",
     copy: "No booking needed. Register at the desk, wait your turn, settle after the consult.",
     href: "/register/",
-    image: "/card_walk_in_visit.png",
+    image: "/Walk%20in%20visit.jpeg",
   },
 ];
 
@@ -112,7 +112,7 @@ const reasons = [
   {
     title: "Online meetings from home",
     copy: "Book a secure video consult with a verified doctor. Join on time from your phone or laptop.",
-    image: "/online_meeting.jpg",
+    image: "/feature_self_assessment.png",
   },
 ];
 

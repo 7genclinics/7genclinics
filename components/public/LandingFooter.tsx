@@ -13,6 +13,10 @@ const patientLinks = [
 /** Physical clinic module — login then land on the matching dashboard. */
 const clinicFloorLinks = [
   {
+    href: "/plans/",
+    label: "Plans for Doctors",
+  },
+  {
     href: "/login/?role=receptionist&redirect=/reception/dashboard/",
     label: "Reception desk",
   },
