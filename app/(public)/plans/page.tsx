@@ -26,7 +26,6 @@ import {
 } from "lucide-react";
 import { LandingHeader } from "@/components/public/LandingHeader";
 import { LandingFooter } from "@/components/public/LandingFooter";
-import { ConeStripe } from "@/components/brand/BrandMark";
 import { BRAND } from "@/lib/brand/site";
 import { pageMetadata } from "@/lib/seo/metadata";
 
@@ -190,7 +189,7 @@ export default function DoctorPlansPage() {
       <LandingHeader />
 
       <main>
-        <section className="relative overflow-hidden bg-gradient-to-br from-[#eef8f7] via-[#f7fbfb] to-[#eef4f8]">
+        <section className="relative overflow-hidden border-b border-slate-200/80 bg-gradient-to-br from-[#eef8f7] via-[#f7fbfb] to-[#eef4f8]">
           <div
             aria-hidden
             className="pointer-events-none absolute -left-20 top-24 h-72 w-72 rounded-full bg-brand-400/15 blur-3xl"
@@ -244,22 +243,19 @@ export default function DoctorPlansPage() {
               </div>
             </div>
 
-            <div className="relative mx-auto w-full max-w-xl lg:max-w-none">
-              <div className="relative aspect-[5/4] w-full overflow-hidden sm:aspect-[4/3] lg:min-h-[520px] lg:aspect-auto">
-                <Image
-                  src="/Smiling%20doctor%20beside%20clinic%20dashboard.png"
-                  alt="Doctor with Apna Clinic dashboard and online consultation"
-                  fill
-                  priority
-                  sizes="(max-width: 1024px) 100vw, 560px"
-                  className="object-cover object-[78%_center] drop-shadow-[0_28px_60px_rgba(18,53,58,0.16)]"
-                />
-              </div>
+            <div className="relative mx-auto w-full max-w-xl lg:max-w-none lg:pl-2">
+              <Image
+                src="/Smiling%20doctor%20beside%20clinic%20dashboard.png"
+                alt="Doctor with Apna Clinic dashboard and online consultation"
+                width={1774}
+                height={887}
+                priority
+                sizes="(max-width: 1024px) 100vw, 560px"
+                className="h-auto w-full object-contain drop-shadow-[0_28px_60px_rgba(18,53,58,0.12)]"
+              />
             </div>
           </div>
         </section>
-
-        <ConeStripe className="h-1.5" />
 
         <section id="plans" className="bg-[#f7fbfb] py-20 sm:py-24">
           <div className="mx-auto max-w-6xl px-4 sm:px-6">
@@ -510,7 +506,7 @@ export default function DoctorPlansPage() {
 
           <div className="relative mx-auto grid max-w-6xl items-center gap-10 px-4 sm:px-6 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)] lg:gap-8 lg:px-6">
             <div className="relative mx-auto w-full max-w-md lg:mx-0 lg:max-w-none lg:self-end">
-              <div className="relative aspect-[4/5] w-full overflow-hidden sm:aspect-[3/4] lg:aspect-auto lg:h-[28rem] xl:h-[32rem]">
+              <div className="relative aspect-[4/5] w-full overflow-hidden rounded-[8px] sm:aspect-[3/4] lg:aspect-auto lg:h-[28rem] xl:h-[32rem]">
                 <Image
                   src="/doc_female_portrait.jpg"
                   alt="Doctor ready to grow their practice with ApnaClinic"

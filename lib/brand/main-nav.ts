@@ -5,7 +5,4 @@ export const MAIN_LANDING_NAV = [
   { href: "/plans/", label: "Doctor Plans" },
   { href: "/#services", label: "Services" },
   { href: "/#specialities", label: "Specialities" },
-  { href: "/#visit", label: "How it works" },
-  { href: "/#reviews", label: "Reviews" },
-  { href: "/#faq", label: "FAQ" },
 ] as const;
